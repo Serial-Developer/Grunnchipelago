@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using HarmonyLib;
 using UnityEngine;
 
@@ -23,8 +22,8 @@ namespace Grunnchipelago.Client
     }
 
     /// <summary>PlayerManager.AddTool(Item) - PlayerManager.cs:213. Tools have both an
-    /// Item and a KeyItem; the KeyItem path is handled by ObtainKeyItemPatch, this one
-    /// cancels the separate tool grant (and sends the check too, for robustness).</summary>
+    /// Item and a KeyItem; both hooks send the same "Obtain X" check, deduplicated by
+    /// ApClient's sent-locations cache.</summary>
     [HarmonyPatch(typeof(PlayerManager), nameof(PlayerManager.AddTool))]
     public static class AddToolPatch
     {
@@ -49,7 +48,8 @@ namespace Grunnchipelago.Client
         }
     }
 
-    /// <summary>Ghost.Touch() - Ghost.cs:222. Ghost checks by position-sorted index.</summary>
+    /// <summary>Ghost.Touch() - Ghost.cs:222. Ghost checks matched by frozen scene path
+    /// (GameIds.GhostIndexByPath) - immune to ghosts drifting from their spawn point.</summary>
     [HarmonyPatch(typeof(Ghost), nameof(Ghost.Touch))]
     public static class GhostTouchPatch
     {
@@ -57,7 +57,7 @@ namespace Grunnchipelago.Client
         {
             ApClient ap = Plugin.Ap;
             if (ap == null || !ap.Connected) return;
-            int index = PositionIndex.OfGhost(__instance);
+            int index = ScenePaths.GhostIndex(__instance);
             if (index >= 0) ap.SendGhostCheck(index);
         }
     }
@@ -97,7 +97,8 @@ namespace Grunnchipelago.Client
     // ---------- Coinsanity ----------
 
     /// <summary>ItemPickup.Trigger(bool) - ItemPickup.cs:143. Under coinsanity, a placed
-    /// gulden becomes a check; the money add is suppressed via AddGuldenPatch.</summary>
+    /// gulden becomes a check (frozen path table); the money add is suppressed via
+    /// AddGuldenPatch.</summary>
     [HarmonyPatch(typeof(ItemPickup), nameof(ItemPickup.Trigger))]
     public static class ItemPickupGuldenPatch
     {
@@ -106,7 +107,7 @@ namespace Grunnchipelago.Client
             ApClient ap = Plugin.Ap;
             if (ap == null || !ap.Connected || !ap.Coinsanity) return true;
             if (_throughLoadOperation || !__instance.isGulden) return true;
-            int index = PositionIndex.OfGulden(__instance);
+            int index = ScenePaths.GuldenIndex(__instance);
             if (index >= 0) ap.SendGuldenCheck(index);
             ApClient.GuldenPickupGuard = true;   // suppress the money AddGulden is about to do
             return true;                          // let the pickup consume itself as usual
@@ -129,29 +130,96 @@ namespace Grunnchipelago.Client
         }
     }
 
+    // ---------- DeathLink (STRICT, design decision) ----------
+
+    /// <summary>GameManager.SetNightmareState(NightmareState) - GameManager.cs:906. Called
+    /// every frame by HandleNightmare (GameManager.cs:1454), so we edge-detect Hide->Show:
+    /// a nightmare just appeared = a "death" -> send a DeathLink (unless this nightmare
+    /// was itself caused by a received DeathLink).</summary>
+    [HarmonyPatch(typeof(GameManager), nameof(GameManager.SetNightmareState))]
+    public static class SetNightmareStatePatch
+    {
+        private static GameManager.NightmareState last = GameManager.NightmareState.Hide;
+
+        private static void Postfix(GameManager.NightmareState _to)
+        {
+            if (_to == last) return;
+            last = _to;
+            if (_to == GameManager.NightmareState.Show)
+                Plugin.Ap?.OnNightmareShown();
+        }
+    }
+
+    /// <summary>GameManager.ShowNightmareShot() - GameManager.cs:933. Vanilla shows a
+    /// nightmare shot with only 34 % probability while sleeping. When a received DeathLink
+    /// is pending, we replace the roll with a GUARANTEED nightmare (strict death link:
+    /// the death arrives with your next sleep).</summary>
+    [HarmonyPatch(typeof(GameManager), nameof(GameManager.ShowNightmareShot))]
+    public static class ShowNightmareShotPatch
+    {
+        private static bool Prefix(GameManager __instance)
+        {
+            ApClient ap = Plugin.Ap;
+            if (ap == null || !ap.Connected || !ap.HasPendingDeathLink) return true;
+            if (!ap.TryConsumeDeathLink()) return true;
+
+            // Replicate GameManager.ShowNightmareShot's display path (GameManager.cs:933)
+            // without the 66 % early-out.
+            NightmareShots shots = GameManager.nightmareShots;
+            if (shots == null || shots.shotObjects == null || shots.shotObjects.Length == 0)
+                return true;   // world not ready - fall back to vanilla roll
+
+            shots.HideAll();
+            int pick = Random.Range(0, shots.shotObjects.Length);
+            for (int i = 0; i < shots.shotObjects.Length; i++)
+                shots.shotObjects[i].SetActive(i == pick);
+
+            // ResetNightmareValues (GameManager.cs:926, private): showedNightmare = true
+            // + reset both nightmare timers, so HandleNightmare displays the overlay.
+            AccessTools.Field(typeof(GameManager), "showedNightmare").SetValue(null, true);
+            ((Timer)AccessTools.Field(typeof(GameManager), "nightmareWaitTimer").GetValue(null)).Reset();
+            ((Timer)AccessTools.Field(typeof(GameManager), "nightmareShowTimer").GetValue(null)).Reset();
+
+            AudioManager.instance.PlaySoundGlobal(
+                BasicFunctions.PickRandomAudioClipFromArray(AudioManager.instance.showNightmareShot),
+                1.6f, 2.1f, 0.5f, 0.525f);
+
+            Plugin.Log?.LogInfo("[Grunnchipelago] DeathLink applied: forced nightmare.");
+            return false;
+        }
+    }
+
     // ---------- Helpers ----------
 
-    /// <summary>Position-sorted index (x then z), matching design/ids.json ordering.</summary>
-    internal static class PositionIndex
+    /// <summary>Scene-path helpers matching the Dumper's GetPath, used to identify ghost
+    /// and gulden objects against the frozen tables in GameIds.</summary>
+    internal static class ScenePaths
     {
-        public static int OfGhost(Ghost g)
+        public static string Of(Transform t)
         {
-            var sorted = Resources.FindObjectsOfTypeAll<Ghost>()
-                .Where(x => x != null && x.gameObject.scene.IsValid())
-                .OrderBy(x => x.transform.position.x)
-                .ThenBy(x => x.transform.position.z)
-                .ToList();
-            return sorted.IndexOf(g);
+            var parts = new List<string>();
+            while (t != null)
+            {
+                parts.Insert(0, t.name);
+                t = t.parent;
+            }
+            return string.Join("/", parts);
         }
 
-        public static int OfGulden(ItemPickup pickup)
+        public static int GhostIndex(Ghost ghost)
         {
-            var sorted = Resources.FindObjectsOfTypeAll<ItemPickup>()
-                .Where(x => x != null && x.isGulden && x.gameObject.scene.IsValid())
-                .OrderBy(x => x.transform.position.x)
-                .ThenBy(x => x.transform.position.z)
-                .ToList();
-            return sorted.IndexOf(pickup);
+            string path = Of(ghost.transform);
+            if (GameIds.GhostIndexByPath.TryGetValue(path, out int index)) return index;
+            Plugin.Log?.LogWarning($"[Grunnchipelago] Unknown ghost path '{path}' - check not sent.");
+            return -1;
+        }
+
+        public static int GuldenIndex(ItemPickup pickup)
+        {
+            string path = Of(pickup.transform);
+            if (GameIds.GuldenIndexByPath.TryGetValue(path, out int index)) return index;
+            Plugin.Log?.LogWarning($"[Grunnchipelago] Unknown gulden path '{path}' - check not sent.");
+            return -1;
         }
     }
 

@@ -15,6 +15,9 @@ namespace Grunnchipelago.Client
         /// <summary>Set of the running plugin, used by the Harmony patches.</summary>
         public static ApClient Ap { get; private set; }
 
+        /// <summary>Plugin logger, for static contexts (patches).</summary>
+        public static BepInEx.Logging.ManualLogSource Log { get; private set; }
+
         private ConfigEntry<bool> cfgEnabled;
         private ConfigEntry<string> cfgHost;
         private ConfigEntry<int> cfgPort;
@@ -23,6 +26,7 @@ namespace Grunnchipelago.Client
 
         private void Awake()
         {
+            Log = Logger;
             cfgEnabled = Config.Bind("Connection", "Enabled", true,
                 "Master switch. When off, the game is 100 % vanilla.");
             cfgHost = Config.Bind("Connection", "Host", "localhost", "Archipelago server host.");
@@ -47,8 +51,12 @@ namespace Grunnchipelago.Client
         private void Update()
         {
             if (Ap == null) return;
-            // Grant received key items on the main thread.
-            Ap.ApplyPendingItems();
+            // Grant received items on the main thread, but ONLY while actually in-game -
+            // items received in the menu / during a black screen / while switching state
+            // stay queued until we're back (GameManager.cs:848-854 state accessors).
+            bool inGame = GameManager.CurGameState == GameManager.GameState.Game
+                          && !GameManager.BlackScreen && !GameManager.SwitchingState;
+            if (inGame) Ap.ApplyPendingItems();
             // Simple reconnection loop.
             Ap.Tick(Time.deltaTime, cfgHost.Value, cfgPort.Value, cfgSlot.Value, cfgPassword.Value);
         }

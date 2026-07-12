@@ -2,8 +2,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Archipelago.MultiClient.Net;
+using Archipelago.MultiClient.Net.BounceFeatures.DeathLink;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Helpers;
 using Archipelago.MultiClient.Net.Models;
@@ -13,8 +15,7 @@ namespace Grunnchipelago.Client
 {
     /// <summary>
     /// Owns the Archipelago session for a Grunn slot: connection, slot data, sending
-    /// checks (key items, tools, endings, polaroids, ghosts, gulden), goal detection,
-    /// and re-injecting the received inventory each run.
+    /// checks (deduplicated), granting received items, run re-injection, and DeathLink.
     /// </summary>
     public class ApClient
     {
@@ -24,12 +25,22 @@ namespace Grunnchipelago.Client
         private readonly ConcurrentQueue<ItemInfo> pending = new ConcurrentQueue<ItemInfo>();
         private readonly HashSet<EndingType> endingsSeen = new HashSet<EndingType>();
 
+        // Local cache of already-sent location ids. Serves two purposes: dedupes the
+        // double hooks on tools (ObtainKeyItem + AddTool both map to the same
+        // "Obtain X"), and silences re-pickups across runs/sessions (seeded from the
+        // server's AllLocationsChecked at login).
+        private readonly HashSet<long> sentLocations = new HashSet<long>();
+
         private ArchipelagoSession session;
+        private DeathLinkService deathLinkService;
         private volatile bool connecting;
         private float reconnectTimer;
+        private string slotName = "";
 
         private int goal = GameIds.GoalTrueEnding;
         private int guldenReceivedTotal;
+        private int pendingDeathLinks;
+        private bool suppressNextNightmareSend;
 
         // Guards so that server-side grants run the ORIGINAL game methods instead of
         // being re-interpreted as in-game pickups by our prefixes.
@@ -39,6 +50,7 @@ namespace Grunnchipelago.Client
         public bool Connected { get; private set; }
         public bool Coinsanity { get; private set; }
         public bool PersistentShortcuts { get; private set; }
+        public bool DeathLinkEnabled { get; private set; }
 
         public ApClient(ManualLogSource logger)
         {
@@ -51,6 +63,7 @@ namespace Grunnchipelago.Client
         {
             if (connecting || Connected) return;
             connecting = true;
+            slotName = slot;
             log.LogInfo($"[Grunnchipelago] Connecting to {host}:{port} as '{slot}'...");
 
             Task.Run(() =>
@@ -68,9 +81,11 @@ namespace Grunnchipelago.Client
                     if (result is LoginSuccessful success)
                     {
                         ReadSlotData(success.SlotData);
+                        SeedSentLocations();
+                        SetupDeathLink();
                         Connected = true;
                         log.LogInfo($"[Grunnchipelago] Connected. goal={goal}, coinsanity={Coinsanity}, " +
-                                    $"persistent_shortcuts={PersistentShortcuts}.");
+                                    $"persistent_shortcuts={PersistentShortcuts}, death_link={DeathLinkEnabled}.");
                     }
                     else
                     {
@@ -95,6 +110,29 @@ namespace Grunnchipelago.Client
             if (data.TryGetValue(GameIds.SlotGoal, out var g)) goal = Convert.ToInt32(g);
             if (data.TryGetValue(GameIds.SlotCoinsanity, out var c)) Coinsanity = Convert.ToInt64(c) != 0;
             if (data.TryGetValue(GameIds.SlotPersistentShortcuts, out var p)) PersistentShortcuts = Convert.ToInt64(p) != 0;
+            if (data.TryGetValue(GameIds.SlotDeathLink, out var d)) DeathLinkEnabled = Convert.ToInt64(d) != 0;
+        }
+
+        private void SeedSentLocations()
+        {
+            try
+            {
+                lock (sentLocations)
+                    foreach (long id in session.Locations.AllLocationsChecked)
+                        sentLocations.Add(id);
+            }
+            catch (Exception e)
+            {
+                log.LogWarning("[Grunnchipelago] Could not seed checked locations: " + e.Message);
+            }
+        }
+
+        private void SetupDeathLink()
+        {
+            if (!DeathLinkEnabled) return;
+            deathLinkService = session.CreateDeathLinkService();
+            deathLinkService.EnableDeathLink();
+            deathLinkService.OnDeathLinkReceived += OnDeathLinkReceived;
         }
 
         private void OnSocketClosed(string reason)
@@ -115,12 +153,17 @@ namespace Grunnchipelago.Client
             }
         }
 
-        // ---------- Sending checks ----------
+        // ---------- Sending checks (deduplicated) ----------
 
-        private void SendById(long id)
+        private void TrySend(long id, string label)
         {
-            if (Connected && session != null && id > 0)
-                session.Locations.CompleteLocationChecks(id);
+            if (!Connected || session == null || id <= 0) return;
+            lock (sentLocations)
+            {
+                if (!sentLocations.Add(id)) return;   // already sent / already checked
+            }
+            log.LogInfo($"[Grunnchipelago] Check: {label}");
+            session.Locations.CompleteLocationChecks(id);
         }
 
         private void SendByName(string location)
@@ -132,8 +175,7 @@ namespace Grunnchipelago.Client
                 log.LogWarning($"[Grunnchipelago] No location id for '{location}'.");
                 return;
             }
-            log.LogInfo($"[Grunnchipelago] Check: {location}");
-            SendById(id);
+            TrySend(id, location);
         }
 
         /// <summary>Key items AND tools both map to "Obtain &lt;KeyItem&gt;".</summary>
@@ -152,10 +194,10 @@ namespace Grunnchipelago.Client
             SendByName("Polaroid: " + type);
         }
 
-        /// <summary>Ghost / gulden are sent by numeric id from a position-sorted index.</summary>
-        public void SendGhostCheck(int sortedIndex) => SendById(GameIds.GhostBaseId + sortedIndex);
+        /// <summary>Ghost / gulden indices come from the frozen path tables in GameIds.</summary>
+        public void SendGhostCheck(int index) => TrySend(GameIds.GhostBaseId + index, $"Calm Ghost #{index + 1}");
 
-        public void SendGuldenCheck(int sortedIndex) => SendById(GameIds.GuldenBaseId + sortedIndex);
+        public void SendGuldenCheck(int index) => TrySend(GameIds.GuldenBaseId + index, $"Gulden #{index + 1}");
 
         // ---------- Endings & goal ----------
 
@@ -186,6 +228,44 @@ namespace Grunnchipelago.Client
             }
         }
 
+        // ---------- DeathLink (STRICT, design decision) ----------
+
+        private void OnDeathLinkReceived(DeathLink deathLink)
+        {
+            Interlocked.Increment(ref pendingDeathLinks);
+            log.LogInfo($"[Grunnchipelago] DeathLink received from '{deathLink.Source}' - " +
+                        "a nightmare awaits your next sleep.");
+        }
+
+        /// <summary>True if a received DeathLink is waiting to be applied at next sleep.</summary>
+        public bool HasPendingDeathLink => pendingDeathLinks > 0;
+
+        /// <summary>Consume one pending DeathLink (called when the forced nightmare fires).</summary>
+        public bool TryConsumeDeathLink()
+        {
+            if (Interlocked.Decrement(ref pendingDeathLinks) >= 0)
+            {
+                suppressNextNightmareSend = true;   // don't echo this nightmare back
+                return true;
+            }
+            Interlocked.Increment(ref pendingDeathLinks);
+            return false;
+        }
+
+        /// <summary>Called on the Hide->Show nightmare edge (SetNightmareState postfix).</summary>
+        public void OnNightmareShown()
+        {
+            if (!DeathLinkEnabled || !Connected || deathLinkService == null) return;
+            if (suppressNextNightmareSend)
+            {
+                suppressNextNightmareSend = false;   // this nightmare came from a DeathLink
+                return;
+            }
+            log.LogInfo("[Grunnchipelago] Nightmare! Sending DeathLink.");
+            try { deathLinkService.SendDeathLink(new DeathLink(slotName, slotName + " had a nightmare")); }
+            catch (Exception e) { log.LogError("[Grunnchipelago] SendDeathLink failed: " + e.Message); }
+        }
+
         // ---------- Receiving items ----------
 
         private void OnItemReceived(ReceivedItemsHelper helper)
@@ -193,12 +273,13 @@ namespace Grunnchipelago.Client
             while (helper.PeekItem() != null)
             {
                 ItemInfo item = helper.DequeueItem();
-                if (item.ItemName == "Gulden") System.Threading.Interlocked.Increment(ref guldenReceivedTotal);
+                if (item.ItemName == "Gulden") Interlocked.Increment(ref guldenReceivedTotal);
                 pending.Enqueue(item);
             }
         }
 
-        /// <summary>Grant queued items in real time. MUST run on the Unity main thread.</summary>
+        /// <summary>Grant queued items. Called from the Unity main thread, only while
+        /// actually in-game (menu / black screen / transitions keep items queued).</summary>
         public void ApplyPendingItems()
         {
             if (GameManager.instance == null) return;
@@ -218,6 +299,7 @@ namespace Grunnchipelago.Client
                         PlayerManager.instance?.AddTool(tool);   // tool item grants both
                     if (realtime) GameManager.TriggerItemObtainPopup(keyItem);   // no popup spam on re-inject
                     GameManager.instance.ObtainKeyItem(keyItem, false);
+                    log.LogInfo($"[Grunnchipelago] Granted {keyItem}" + (realtime ? "." : " (reinject)."));
                 }
                 catch (Exception e) { log.LogError($"[Grunnchipelago] grant {keyItem} failed: {e.Message}"); }
                 finally { GrantGuard = false; }
@@ -226,9 +308,13 @@ namespace Grunnchipelago.Client
             {
                 // Money only matters under coinsanity. On a fresh run the total is
                 // restored by ReinjectInventory; here we only add the live delta.
-                if (realtime && Coinsanity) GameManager.AddGulden(1, false);
+                if (realtime && Coinsanity)
+                {
+                    GameManager.AddGulden(1, false);
+                    log.LogInfo("[Grunnchipelago] Granted 1 Gulden.");
+                }
             }
-            // Buffs / traps are applied by later milestones.
+            // Buffs / traps land in a later milestone.
         }
 
         /// <summary>Re-grant the whole received inventory after a run reset (design section 5).</summary>
