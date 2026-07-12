@@ -225,14 +225,14 @@ ENDING_RULES: dict[str, Rule] = {
     "SacredFlowers": lambda s, w: _reach(s, w, c.EGLISE) and can_cut_grass(s, w),
     # code PlayerControllerNew: drown underwater (water bodies past the garden).
     "Drown": lambda s, w: _reach(s, w, c.EXTERIEUR),
-    # code GameManager.HandleMist (dark variant): red/dark world reachable via Manoir.
-    "Darkness": lambda s, w: _reach(s, w, c.MANOIR),
+    # regions_v3 (2026-07-12): Darkness closes in outside after midnight -> free.
+    "Darkness": lambda s, w: _reach(s, w, c.JARDIN),
     # code DemonAnimation: small demon reaches you in the final hallway.
     "LongHallway": lambda s, w: _reach(s, w, c.COULOIR_FINAL),
     # code GameManager.InspectStrangeSymbol: in the maze heart (needs Compass).
     "HedgeMaze": lambda s, w: _reach(s, w, c.LABYRINTHE_COEUR),
-    # code GameManager: world-collapse / End Demon barrier (church area).
-    "WorldEnd": lambda s, w: _reach(s, w, c.EGLISE),
+    # regions_v3 (2026-07-12): World End = reach Hell then die (dying is free).
+    "WorldEnd": lambda s, w: _reach(s, w, c.HELL),
     "GoodEnd": _end_good,
     # code Dog.Attack: the angry fisherman's dog attacks. Reaching the cabin approach is
     # enough (dying is free).

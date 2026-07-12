@@ -118,15 +118,14 @@ def connect_all_regions(world: "GrunnWorld") -> None:
         c.HOOIBAAL,
         lambda s: r.complete_zone(s, world, c.PARC, full=False) and s.has("Lighter", p),
     )
-    # regions_v3: Passage des Gnomes <-> Parc/Jardin : DestroyedAllJumpscareGnomes
-    # (achieved by playing; modelled free). FLAG: gnome-destruction state assumed free.
-    link(c.JARDIN, c.PASSAGE_GNOMES)
-    link(c.PARC, c.PASSAGE_GNOMES)
-    # dump: bike_interaction_toRummikub0 (OutsideVillage), preventTypes=[] -> libre confirme.
+    # regions_v3 (2026-07-12): Passage des Gnomes <-> Parc/Jardin :
+    # DestroyedAllJumpscareGnomes = Hammer only.
+    link(c.JARDIN, c.PASSAGE_GNOMES, lambda s: s.has("Hammer", p))
+    link(c.PARC, c.PASSAGE_GNOMES, lambda s: s.has("Hammer", p))
+    # dump (2026-07-12): bike is a round trip Exterieur (OutsideVillage) <-> RummikubSpace
+    # (toRummikub0 = out, toPath = return, both preventTypes=[]). The return is implicit
+    # via AP's origin-return assumption, so only the outbound edge is modelled.
     link(c.EXTERIEUR, c.ZONE_VELO)
-    # dump: bike_interaction_toPath (NonEuclidian/Rummikub, RummikubSpace), preventTypes=[].
-    # FLAG: destination (WindyPath / cabane pecheur approach) a confirmer cote destination.
-    link(c.ZONE_VELO, c.CABANE_PECHEUR)
     # regions_v3: Embarcadere Ferry libre a pied ; traversee = DayIndexIs(2) (free) + ToyBoat.
     link(c.EXTERIEUR, c.FERRY, lambda s: s.has("ToyBoat", p))
     # regions_v3: fisherman cabin approach is free; ENTERING (interior) needs Bone for the

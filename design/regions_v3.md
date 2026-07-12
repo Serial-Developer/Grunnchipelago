@@ -100,10 +100,14 @@ zone_logic.json / dump. Chaque connexion porte sa source :
 - **Jardin** -> **Labyrinthe (entrée)** : précipice = `(Plank OU OldPlank)` OU `(Coin + accès Église)` — la pluie place une planche seule (DeepGapPlacePlank / ClosedGapWith*) [D+J17/18]
 - **Labyrinthe** -> **Cœur** : `Compass` obligatoire (sinon bad ending) [J20]
 - **Parc** -> **Jardin botte de foin / Marchande** : 20% de complétion du Parc (ParkUnlockedHooibaalGarden) + `Lighter` (bougies, LitAllHooiGardenCandles) [D+J19+J-Q2]
-- **Passage des Gnomes** <-> Parc/Jardin : `DestroyedAllJumpscareGnomes` (hub RoundHallway) [D]
-- **Extérieur** -> **Zone après le vélo** : vélo (BikeTravelToRummikub) [D]
+- **Passage des Gnomes** <-> Parc/Jardin : `DestroyedAllJumpscareGnomes` — casser les gnomes = **`Hammer` uniquement** (pas d'équivalence épée/truelle ici) [D+J 2026-07-12] (hub RoundHallway)
+- **Extérieur (OutsideVillage, près du bateau)** <-> **Zone après le vélo** : vélo aller-retour, aucun item, fonctionne comme un portail — BikeTravelToRummikub (aller) / BikeTravelToPath (retour vers le vélo de l'extérieur, PAS vers WindyPath) [D+J 2026-07-12]
 - **Ferry** : `DayIndexIs(2)` + `ToyBoat` au gamin (GaveToyToFerryKid) [D]
 - **Bus** : `BoughtBusTicket` (10 gulden) -> fin Bus [D]
+
+### Fins — conditions précisées (J 2026-07-12)
+- **Darkness** : rester dehors (n'importe où) après minuit — logiquement LIBRE dès le départ
+- **WorldEnd** : atteindre la zone Hell et mourir (timer OU combat du démon sans PurifiedStone) — règle = accès Hell, aucun item supplémentaire
 
 ## Règles d'équivalence d'items (pour la logique AP)
 
