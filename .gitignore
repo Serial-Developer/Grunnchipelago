@@ -1,0 +1,38 @@
+# Archipelago checkout (vendored dependency, not versioned here)
+Archipelago/
+
+# Build artifacts
+dist/
+apworld/**/__pycache__/
+
+# Python
+__pycache__/
+*.pyc
+.venv*/
+venv*/
+
+# C# / .NET (Grunnchipelago.Dumper)
+bin/
+obj/
+*.user
+
+# Game binaries / decompiled assemblies (never commit game DLLs)
+*.dll
+*.exe
+*.pdb
+
+# BepInEx download artifact
+BepInEx_win_*/
+BepInEx_win_*.zip
+
+# Editor / OS
+.vs/
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+.DS_Store
+
+# Local spoilers / seeds
+*_Spoiler.txt
+*.archipelago

@@ -1,0 +1,895 @@
+{
+  "meta": {
+    "generated": "2026-07-12T01:33:12.301Z",
+    "baseId": 478660000,
+    "note": "IDs stables dérivés des ordres d'enum du jeu + positions triées. Ne plus renuméroter après publication."
+  },
+  "itemCounts": {
+    "keyitem": 54,
+    "buff": 3,
+    "trap": 8,
+    "filler": 1
+  },
+  "locationCounts": {
+    "keyitem": 54,
+    "ending": 11,
+    "polaroid": 35,
+    "ghost": 8,
+    "gulden": 15
+  },
+  "items": {
+    "GardenKey": {
+      "id": 478660001,
+      "category": "keyitem"
+    },
+    "Apple": {
+      "id": 478660002,
+      "category": "keyitem"
+    },
+    "Worm": {
+      "id": 478660003,
+      "category": "keyitem"
+    },
+    "Trowel": {
+      "id": 478660004,
+      "category": "keyitem"
+    },
+    "Shears": {
+      "id": 478660005,
+      "category": "keyitem"
+    },
+    "WateringCan": {
+      "id": 478660006,
+      "category": "keyitem"
+    },
+    "Plank": {
+      "id": 478660007,
+      "category": "keyitem"
+    },
+    "Coin": {
+      "id": 478660008,
+      "category": "keyitem"
+    },
+    "Hammer": {
+      "id": 478660009,
+      "category": "keyitem"
+    },
+    "SeveredHand": {
+      "id": 478660010,
+      "category": "keyitem"
+    },
+    "PizzaBox": {
+      "id": 478660011,
+      "category": "keyitem"
+    },
+    "OfficeKey": {
+      "id": 478660012,
+      "category": "keyitem"
+    },
+    "Lighter": {
+      "id": 478660013,
+      "category": "keyitem"
+    },
+    "Cd": {
+      "id": 478660014,
+      "category": "keyitem"
+    },
+    "GnomeIdol": {
+      "id": 478660015,
+      "category": "keyitem"
+    },
+    "OldKey": {
+      "id": 478660016,
+      "category": "keyitem"
+    },
+    "ToiletKey": {
+      "id": 478660017,
+      "category": "keyitem"
+    },
+    "ToiletPaper": {
+      "id": 478660018,
+      "category": "keyitem"
+    },
+    "Doorknob": {
+      "id": 478660019,
+      "category": "keyitem"
+    },
+    "Trumpet": {
+      "id": 478660020,
+      "category": "keyitem"
+    },
+    "Cymbals": {
+      "id": 478660021,
+      "category": "keyitem"
+    },
+    "Bone": {
+      "id": 478660022,
+      "category": "keyitem"
+    },
+    "Paddle": {
+      "id": 478660023,
+      "category": "keyitem"
+    },
+    "BridgeKey": {
+      "id": 478660024,
+      "category": "keyitem"
+    },
+    "StrangeKey": {
+      "id": 478660025,
+      "category": "keyitem"
+    },
+    "TallIdol": {
+      "id": 478660026,
+      "category": "keyitem"
+    },
+    "ShortIdol": {
+      "id": 478660027,
+      "category": "keyitem"
+    },
+    "ShyIdol": {
+      "id": 478660028,
+      "category": "keyitem"
+    },
+    "FlowerGem": {
+      "id": 478660029,
+      "category": "keyitem"
+    },
+    "Compass": {
+      "id": 478660030,
+      "category": "keyitem"
+    },
+    "Corn": {
+      "id": 478660031,
+      "category": "keyitem"
+    },
+    "Popcorn": {
+      "id": 478660032,
+      "category": "keyitem"
+    },
+    "Butter": {
+      "id": 478660033,
+      "category": "keyitem"
+    },
+    "SoulFragment1": {
+      "id": 478660034,
+      "category": "keyitem"
+    },
+    "SoulFragment2": {
+      "id": 478660035,
+      "category": "keyitem"
+    },
+    "SoulFragment3": {
+      "id": 478660036,
+      "category": "keyitem"
+    },
+    "MagicSword": {
+      "id": 478660037,
+      "category": "keyitem"
+    },
+    "PurifiedStone": {
+      "id": 478660038,
+      "category": "keyitem"
+    },
+    "ToyBoat": {
+      "id": 478660039,
+      "category": "keyitem"
+    },
+    "AbandonedKey": {
+      "id": 478660040,
+      "category": "keyitem"
+    },
+    "AtticKey": {
+      "id": 478660041,
+      "category": "keyitem"
+    },
+    "ChurchKey": {
+      "id": 478660042,
+      "category": "keyitem"
+    },
+    "SpecialSeed": {
+      "id": 478660043,
+      "category": "keyitem"
+    },
+    "KidTrumpet": {
+      "id": 478660044,
+      "category": "keyitem"
+    },
+    "KidCymbals": {
+      "id": 478660045,
+      "category": "keyitem"
+    },
+    "KidTriangle": {
+      "id": 478660046,
+      "category": "keyitem"
+    },
+    "Eggball": {
+      "id": 478660047,
+      "category": "keyitem"
+    },
+    "PrettyFlower": {
+      "id": 478660048,
+      "category": "keyitem"
+    },
+    "GoldFishAlive": {
+      "id": 478660049,
+      "category": "keyitem"
+    },
+    "GoldFishDead": {
+      "id": 478660050,
+      "category": "keyitem"
+    },
+    "Medal": {
+      "id": 478660051,
+      "category": "keyitem"
+    },
+    "Blanket": {
+      "id": 478660052,
+      "category": "keyitem"
+    },
+    "Sandwich": {
+      "id": 478660053,
+      "category": "keyitem"
+    },
+    "OldPlank": {
+      "id": 478660054,
+      "category": "keyitem"
+    },
+    "Move Speed Boost": {
+      "id": 478660201,
+      "category": "buff"
+    },
+    "Cutter Range Boost": {
+      "id": 478660202,
+      "category": "buff"
+    },
+    "Cutting Rate Boost": {
+      "id": 478660203,
+      "category": "buff"
+    },
+    "Speed Trap": {
+      "id": 478660301,
+      "category": "trap"
+    },
+    "Size Trap": {
+      "id": 478660302,
+      "category": "trap"
+    },
+    "Inverted Controls Trap": {
+      "id": 478660303,
+      "category": "trap"
+    },
+    "Regrow Grass Trap": {
+      "id": 478660304,
+      "category": "trap"
+    },
+    "Rewater Flowers Trap": {
+      "id": 478660305,
+      "category": "trap"
+    },
+    "Regrow Hedge Trap": {
+      "id": 478660306,
+      "category": "trap"
+    },
+    "Return Trash Trap": {
+      "id": 478660307,
+      "category": "trap"
+    },
+    "Regrow Molehills Trap": {
+      "id": 478660308,
+      "category": "trap"
+    },
+    "Gulden": {
+      "id": 478660401,
+      "category": "filler"
+    }
+  },
+  "locations": {
+    "Obtain GardenKey": {
+      "id": 478661001,
+      "category": "keyitem"
+    },
+    "Obtain Apple": {
+      "id": 478661002,
+      "category": "keyitem"
+    },
+    "Obtain Worm": {
+      "id": 478661003,
+      "category": "keyitem"
+    },
+    "Obtain Trowel": {
+      "id": 478661004,
+      "category": "keyitem"
+    },
+    "Obtain Shears": {
+      "id": 478661005,
+      "category": "keyitem"
+    },
+    "Obtain WateringCan": {
+      "id": 478661006,
+      "category": "keyitem"
+    },
+    "Obtain Plank": {
+      "id": 478661007,
+      "category": "keyitem"
+    },
+    "Obtain Coin": {
+      "id": 478661008,
+      "category": "keyitem"
+    },
+    "Obtain Hammer": {
+      "id": 478661009,
+      "category": "keyitem"
+    },
+    "Obtain SeveredHand": {
+      "id": 478661010,
+      "category": "keyitem"
+    },
+    "Obtain PizzaBox": {
+      "id": 478661011,
+      "category": "keyitem"
+    },
+    "Obtain OfficeKey": {
+      "id": 478661012,
+      "category": "keyitem"
+    },
+    "Obtain Lighter": {
+      "id": 478661013,
+      "category": "keyitem"
+    },
+    "Obtain Cd": {
+      "id": 478661014,
+      "category": "keyitem"
+    },
+    "Obtain GnomeIdol": {
+      "id": 478661015,
+      "category": "keyitem"
+    },
+    "Obtain OldKey": {
+      "id": 478661016,
+      "category": "keyitem"
+    },
+    "Obtain ToiletKey": {
+      "id": 478661017,
+      "category": "keyitem"
+    },
+    "Obtain ToiletPaper": {
+      "id": 478661018,
+      "category": "keyitem"
+    },
+    "Obtain Doorknob": {
+      "id": 478661019,
+      "category": "keyitem"
+    },
+    "Obtain Trumpet": {
+      "id": 478661020,
+      "category": "keyitem"
+    },
+    "Obtain Cymbals": {
+      "id": 478661021,
+      "category": "keyitem"
+    },
+    "Obtain Bone": {
+      "id": 478661022,
+      "category": "keyitem"
+    },
+    "Obtain Paddle": {
+      "id": 478661023,
+      "category": "keyitem"
+    },
+    "Obtain BridgeKey": {
+      "id": 478661024,
+      "category": "keyitem"
+    },
+    "Obtain StrangeKey": {
+      "id": 478661025,
+      "category": "keyitem"
+    },
+    "Obtain TallIdol": {
+      "id": 478661026,
+      "category": "keyitem"
+    },
+    "Obtain ShortIdol": {
+      "id": 478661027,
+      "category": "keyitem"
+    },
+    "Obtain ShyIdol": {
+      "id": 478661028,
+      "category": "keyitem"
+    },
+    "Obtain FlowerGem": {
+      "id": 478661029,
+      "category": "keyitem"
+    },
+    "Obtain Compass": {
+      "id": 478661030,
+      "category": "keyitem"
+    },
+    "Obtain Corn": {
+      "id": 478661031,
+      "category": "keyitem"
+    },
+    "Obtain Popcorn": {
+      "id": 478661032,
+      "category": "keyitem"
+    },
+    "Obtain Butter": {
+      "id": 478661033,
+      "category": "keyitem"
+    },
+    "Obtain SoulFragment1": {
+      "id": 478661034,
+      "category": "keyitem"
+    },
+    "Obtain SoulFragment2": {
+      "id": 478661035,
+      "category": "keyitem"
+    },
+    "Obtain SoulFragment3": {
+      "id": 478661036,
+      "category": "keyitem"
+    },
+    "Obtain MagicSword": {
+      "id": 478661037,
+      "category": "keyitem"
+    },
+    "Obtain PurifiedStone": {
+      "id": 478661038,
+      "category": "keyitem"
+    },
+    "Obtain ToyBoat": {
+      "id": 478661039,
+      "category": "keyitem"
+    },
+    "Obtain AbandonedKey": {
+      "id": 478661040,
+      "category": "keyitem"
+    },
+    "Obtain AtticKey": {
+      "id": 478661041,
+      "category": "keyitem"
+    },
+    "Obtain ChurchKey": {
+      "id": 478661042,
+      "category": "keyitem"
+    },
+    "Obtain SpecialSeed": {
+      "id": 478661043,
+      "category": "keyitem"
+    },
+    "Obtain KidTrumpet": {
+      "id": 478661044,
+      "category": "keyitem"
+    },
+    "Obtain KidCymbals": {
+      "id": 478661045,
+      "category": "keyitem"
+    },
+    "Obtain KidTriangle": {
+      "id": 478661046,
+      "category": "keyitem"
+    },
+    "Obtain Eggball": {
+      "id": 478661047,
+      "category": "keyitem"
+    },
+    "Obtain PrettyFlower": {
+      "id": 478661048,
+      "category": "keyitem"
+    },
+    "Obtain GoldFishAlive": {
+      "id": 478661049,
+      "category": "keyitem"
+    },
+    "Obtain GoldFishDead": {
+      "id": 478661050,
+      "category": "keyitem"
+    },
+    "Obtain Medal": {
+      "id": 478661051,
+      "category": "keyitem"
+    },
+    "Obtain Blanket": {
+      "id": 478661052,
+      "category": "keyitem"
+    },
+    "Obtain Sandwich": {
+      "id": 478661053,
+      "category": "keyitem"
+    },
+    "Obtain OldPlank": {
+      "id": 478661054,
+      "category": "keyitem"
+    },
+    "Ending: Mist": {
+      "id": 478661101,
+      "category": "ending"
+    },
+    "Ending: Bus": {
+      "id": 478661102,
+      "category": "ending"
+    },
+    "Ending: SacredFlowers": {
+      "id": 478661103,
+      "category": "ending"
+    },
+    "Ending: Drown": {
+      "id": 478661104,
+      "category": "ending"
+    },
+    "Ending: Darkness": {
+      "id": 478661105,
+      "category": "ending"
+    },
+    "Ending: LongHallway": {
+      "id": 478661106,
+      "category": "ending"
+    },
+    "Ending: HedgeMaze": {
+      "id": 478661107,
+      "category": "ending"
+    },
+    "Ending: WorldEnd": {
+      "id": 478661108,
+      "category": "ending"
+    },
+    "Ending: GoodEnd": {
+      "id": 478661109,
+      "category": "ending"
+    },
+    "Ending: Dog": {
+      "id": 478661110,
+      "category": "ending"
+    },
+    "Ending: Picnic": {
+      "id": 478661111,
+      "category": "ending"
+    },
+    "Polaroid: MagpieNest": {
+      "id": 478661201,
+      "category": "polaroid"
+    },
+    "Polaroid: BackGardenFence": {
+      "id": 478661202,
+      "category": "polaroid"
+    },
+    "Polaroid: BackGardenCarTrunk": {
+      "id": 478661203,
+      "category": "polaroid"
+    },
+    "Polaroid: BoatPaddle": {
+      "id": 478661204,
+      "category": "polaroid"
+    },
+    "Polaroid: GnomeForestDoor": {
+      "id": 478661205,
+      "category": "polaroid"
+    },
+    "Polaroid: GasStation": {
+      "id": 478661206,
+      "category": "polaroid"
+    },
+    "Polaroid: Van": {
+      "id": 478661207,
+      "category": "polaroid"
+    },
+    "Polaroid: DeadGardener": {
+      "id": 478661208,
+      "category": "polaroid"
+    },
+    "Polaroid: Tent": {
+      "id": 478661209,
+      "category": "polaroid"
+    },
+    "Polaroid: GardenGnomes": {
+      "id": 478661210,
+      "category": "polaroid"
+    },
+    "Polaroid: HooibaalTuin": {
+      "id": 478661211,
+      "category": "polaroid"
+    },
+    "Polaroid: GasStationComputer": {
+      "id": 478661212,
+      "category": "polaroid"
+    },
+    "Polaroid: AppleAndWorm": {
+      "id": 478661213,
+      "category": "polaroid"
+    },
+    "Polaroid: TallManWindow": {
+      "id": 478661214,
+      "category": "polaroid"
+    },
+    "Polaroid: HangjongPizzaBox": {
+      "id": 478661215,
+      "category": "polaroid"
+    },
+    "Polaroid: VoidSkeleton": {
+      "id": 478661216,
+      "category": "polaroid"
+    },
+    "Polaroid: OldLadyBackGarden": {
+      "id": 478661217,
+      "category": "polaroid"
+    },
+    "Polaroid: LighterMolehill": {
+      "id": 478661218,
+      "category": "polaroid"
+    },
+    "Polaroid: RedDoor": {
+      "id": 478661219,
+      "category": "polaroid"
+    },
+    "Polaroid: HighBridgeKey": {
+      "id": 478661220,
+      "category": "polaroid"
+    },
+    "Polaroid: Gnome": {
+      "id": 478661221,
+      "category": "polaroid"
+    },
+    "Polaroid: PlayerShed": {
+      "id": 478661222,
+      "category": "polaroid"
+    },
+    "Polaroid: ToiletStall": {
+      "id": 478661223,
+      "category": "polaroid"
+    },
+    "Polaroid: Ferry": {
+      "id": 478661224,
+      "category": "polaroid"
+    },
+    "Polaroid: Demon": {
+      "id": 478661225,
+      "category": "polaroid"
+    },
+    "Polaroid: Well": {
+      "id": 478661226,
+      "category": "polaroid"
+    },
+    "Polaroid: Bone": {
+      "id": 478661227,
+      "category": "polaroid"
+    },
+    "Polaroid: FlowerDoor": {
+      "id": 478661228,
+      "category": "polaroid"
+    },
+    "Polaroid: Compass": {
+      "id": 478661229,
+      "category": "polaroid"
+    },
+    "Polaroid: PurifiedStone": {
+      "id": 478661230,
+      "category": "polaroid"
+    },
+    "Polaroid: GnomeIdol": {
+      "id": 478661231,
+      "category": "polaroid"
+    },
+    "Polaroid: ChurchOutsideDoor": {
+      "id": 478661232,
+      "category": "polaroid"
+    },
+    "Polaroid: Crypt": {
+      "id": 478661233,
+      "category": "polaroid"
+    },
+    "Polaroid: ChurchKey": {
+      "id": 478661234,
+      "category": "polaroid"
+    },
+    "Polaroid: WateringCan": {
+      "id": 478661235,
+      "category": "polaroid"
+    },
+    "Calm Ghost #1 (Road)": {
+      "id": 478661301,
+      "category": "ghost",
+      "pos": {
+        "x": -114.1,
+        "z": -47.36
+      },
+      "path": "*** GHOSTS ***/ghost0_bridge"
+    },
+    "Calm Ghost #2 (Bunker)": {
+      "id": 478661302,
+      "category": "ghost",
+      "pos": {
+        "x": -90.3,
+        "z": 83.63
+      },
+      "path": "*** GHOSTS ***/ghost0_bunker"
+    },
+    "Calm Ghost #3 (Road)": {
+      "id": 478661303,
+      "category": "ghost",
+      "pos": {
+        "x": -29.14,
+        "z": -91.93
+      },
+      "path": "*** GHOSTS ***/ghost0_redCar0"
+    },
+    "Calm Ghost #4 (WindyPath)": {
+      "id": 478661304,
+      "category": "ghost",
+      "pos": {
+        "x": -14.83,
+        "z": 91.15
+      },
+      "path": "Main/Interactions/scooterCrash0/ghost0_scooterCrash0"
+    },
+    "Calm Ghost #5 (Void)": {
+      "id": 478661305,
+      "category": "ghost",
+      "pos": {
+        "x": 5.13,
+        "z": 994.96
+      },
+      "path": "*** GHOSTS ***/ghost0_void"
+    },
+    "Calm Ghost #6 (GnomeForest)": {
+      "id": 478661306,
+      "category": "ghost",
+      "pos": {
+        "x": 190.65,
+        "z": 1003.9
+      },
+      "path": "*** GHOSTS ***/ghost0_gnomeForest"
+    },
+    "Calm Ghost #7 (PillarSpace)": {
+      "id": 478661307,
+      "category": "ghost",
+      "pos": {
+        "x": 1202.07,
+        "z": 989.87
+      },
+      "path": "*** GHOSTS ***/ghost0_pillarspace"
+    },
+    "Calm Ghost #8 (PillarSpace)": {
+      "id": 478661308,
+      "category": "ghost",
+      "pos": {
+        "x": 1202.07,
+        "z": 989.87
+      },
+      "path": "*** GHOSTS ***/ghost0_backup"
+    },
+    "Gulden #1 (GasStationOffice)": {
+      "id": 478661401,
+      "category": "gulden",
+      "pos": {
+        "x": -110.18,
+        "z": -73.62
+      },
+      "path": "Main/Gulden/gulden0 (4)"
+    },
+    "Gulden #2 (Unknown)": {
+      "id": 478661402,
+      "category": "gulden",
+      "pos": {
+        "x": -80.93,
+        "z": -39.09
+      },
+      "path": "Main/Gulden/gulden0 (1)"
+    },
+    "Gulden #3 (Bunker)": {
+      "id": 478661403,
+      "category": "gulden",
+      "pos": {
+        "x": -77.6,
+        "z": 83.08
+      },
+      "path": "Main/Gulden/gulden0 (3)"
+    },
+    "Gulden #4 (StartGarden)": {
+      "id": 478661404,
+      "category": "gulden",
+      "pos": {
+        "x": -54.16,
+        "z": 9.64
+      },
+      "path": "Main/Gulden/gulden0"
+    },
+    "Gulden #5 (Road)": {
+      "id": 478661405,
+      "category": "gulden",
+      "pos": {
+        "x": -44.24,
+        "z": -71.12
+      },
+      "path": "Main/BusArriving0/busArrivingContainer/gulden0_arriveBus0"
+    },
+    "Gulden #6 (StartGarden)": {
+      "id": 478661406,
+      "category": "gulden",
+      "pos": {
+        "x": -18.49,
+        "z": 38.03
+      },
+      "path": "Main/Gulden/gulden0 (2)"
+    },
+    "Gulden #7 (Road)": {
+      "id": 478661407,
+      "category": "gulden",
+      "pos": {
+        "x": -15.65,
+        "z": -89.4
+      },
+      "path": "Main/Areas/Road/Container/Hide_RoadMemorial/Pylonnen (1)/pylon0_gulden_Flipped/gulden0_pylon"
+    },
+    "Gulden #8 (Unknown)": {
+      "id": 478661408,
+      "category": "gulden",
+      "pos": {
+        "x": -9.7,
+        "z": -78.84
+      },
+      "path": "Main/Gulden/GuldenPotContainer0/gulden0_pot"
+    },
+    "Gulden #9 (Church)": {
+      "id": 478661409,
+      "category": "gulden",
+      "pos": {
+        "x": -1.83,
+        "z": -11.27
+      },
+      "path": "Main/Gulden/MolehillGuldenContainer0/gulden0 (6)"
+    },
+    "Gulden #10 (StartGarden)": {
+      "id": 478661410,
+      "category": "gulden",
+      "pos": {
+        "x": 1.09,
+        "z": 28.4
+      },
+      "path": "Main/Areas/StartGardenArea/Container/Hide_HouseDetails/gardenGnome0/gardengnome_Destroyed/gulden0_gardenGnome"
+    },
+    "Gulden #11 (Park)": {
+      "id": 478661411,
+      "category": "gulden",
+      "pos": {
+        "x": 23.71,
+        "z": 82.57
+      },
+      "path": "Main/Gulden/gulden0 (5)"
+    },
+    "Gulden #12 (Park)": {
+      "id": 478661412,
+      "category": "gulden",
+      "pos": {
+        "x": 96.13,
+        "z": 49.75
+      },
+      "path": "Main/Areas/Park/Container/Hide_Park/BranchHoleContainer/BranchHoleSearched/gulden0 (6)"
+    },
+    "Gulden #13 (PillarSpace)": {
+      "id": 478661413,
+      "category": "gulden",
+      "pos": {
+        "x": 1188.27,
+        "z": 987.68
+      },
+      "path": "Main/Gulden/gulden0 (6)"
+    },
+    "Gulden #14 (Ferry)": {
+      "id": 478661414,
+      "category": "gulden",
+      "pos": {
+        "x": 3309,
+        "z": 1002.92
+      },
+      "path": "NonEuclidian/Ferry/Hide_Ferry/gulden_ferry0"
+    },
+    "Gulden #15 (Intratuin)": {
+      "id": 478661415,
+      "category": "gulden",
+      "pos": {
+        "x": 3509.17,
+        "z": 1006.74
+      },
+      "path": "Main/Gulden/gulden_intratuin0"
+    }
+  }
+}
