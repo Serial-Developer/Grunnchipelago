@@ -1,36 +1,44 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Archipelago.MultiClient.Net;
 using Archipelago.MultiClient.Net.Enums;
 using Archipelago.MultiClient.Net.Helpers;
 using Archipelago.MultiClient.Net.Models;
-using Archipelago.MultiClient.Net.Packets;
 using BepInEx.Logging;
 
 namespace Grunnchipelago.Client
 {
     /// <summary>
-    /// Owns the Archipelago session for a Grunn slot: connection, sending "Obtain X"
-    /// checks, and queueing received key items to be granted on the Unity main thread.
-    /// Milestone 1 scope: key items only.
+    /// Owns the Archipelago session for a Grunn slot: connection, slot data, sending
+    /// checks (key items, tools, endings, polaroids, ghosts, gulden), goal detection,
+    /// and re-injecting the received inventory each run.
     /// </summary>
     public class ApClient
     {
         public const string Game = "Grunn";
 
         private readonly ManualLogSource log;
-        private readonly ConcurrentQueue<KeyItem> pendingKeyItems = new ConcurrentQueue<KeyItem>();
+        private readonly ConcurrentQueue<ItemInfo> pending = new ConcurrentQueue<ItemInfo>();
+        private readonly HashSet<EndingType> endingsSeen = new HashSet<EndingType>();
 
         private ArchipelagoSession session;
         private volatile bool connecting;
         private float reconnectTimer;
 
-        // Guard so that server-granted items run the ORIGINAL ObtainKeyItem instead of
-        // being re-interpreted as an in-game pickup by our prefix.
+        private int goal = GameIds.GoalTrueEnding;
+        private int guldenReceivedTotal;
+
+        // Guards so that server-side grants run the ORIGINAL game methods instead of
+        // being re-interpreted as in-game pickups by our prefixes.
         public static bool GrantGuard { get; private set; }
+        public static bool GuldenPickupGuard { get; set; }
 
         public bool Connected { get; private set; }
+        public bool Coinsanity { get; private set; }
+        public bool PersistentShortcuts { get; private set; }
 
         public ApClient(ManualLogSource logger)
         {
@@ -45,7 +53,6 @@ namespace Grunnchipelago.Client
             connecting = true;
             log.LogInfo($"[Grunnchipelago] Connecting to {host}:{port} as '{slot}'...");
 
-            // TryConnectAndLogin is blocking - do it off the Unity thread.
             Task.Run(() =>
             {
                 try
@@ -58,10 +65,12 @@ namespace Grunnchipelago.Client
                         Game, slot, ItemsHandlingFlags.AllItems,
                         password: string.IsNullOrEmpty(password) ? null : password);
 
-                    if (result is LoginSuccessful)
+                    if (result is LoginSuccessful success)
                     {
+                        ReadSlotData(success.SlotData);
                         Connected = true;
-                        log.LogInfo("[Grunnchipelago] Connected to the multiworld.");
+                        log.LogInfo($"[Grunnchipelago] Connected. goal={goal}, coinsanity={Coinsanity}, " +
+                                    $"persistent_shortcuts={PersistentShortcuts}.");
                     }
                     else
                     {
@@ -80,13 +89,20 @@ namespace Grunnchipelago.Client
             });
         }
 
+        private void ReadSlotData(Dictionary<string, object> data)
+        {
+            if (data == null) return;
+            if (data.TryGetValue(GameIds.SlotGoal, out var g)) goal = Convert.ToInt32(g);
+            if (data.TryGetValue(GameIds.SlotCoinsanity, out var c)) Coinsanity = Convert.ToInt64(c) != 0;
+            if (data.TryGetValue(GameIds.SlotPersistentShortcuts, out var p)) PersistentShortcuts = Convert.ToInt64(p) != 0;
+        }
+
         private void OnSocketClosed(string reason)
         {
             if (Connected) log.LogWarning("[Grunnchipelago] Disconnected: " + reason);
             Connected = false;
         }
 
-        /// <summary>Simple reconnection: retry on a timer while enabled but disconnected.</summary>
         public void Tick(float deltaTime, string host, int port, string slot, string password)
         {
             if (Connected || connecting) { reconnectTimer = 0f; return; }
@@ -101,19 +117,73 @@ namespace Grunnchipelago.Client
 
         // ---------- Sending checks ----------
 
-        public void SendKeyItemCheck(KeyItem keyItem)
+        private void SendById(long id)
+        {
+            if (Connected && session != null && id > 0)
+                session.Locations.CompleteLocationChecks(id);
+        }
+
+        private void SendByName(string location)
         {
             if (!Connected || session == null) return;
-            string location = "Obtain " + keyItem;
             long id = session.Locations.GetLocationIdFromName(Game, location);
             if (id <= 0)
             {
-                // Unsourced (e.g. Cymbals) or excluded: nothing to send.
-                log.LogWarning($"[Grunnchipelago] No location id for '{location}' - not sent.");
+                log.LogWarning($"[Grunnchipelago] No location id for '{location}'.");
                 return;
             }
             log.LogInfo($"[Grunnchipelago] Check: {location}");
-            session.Locations.CompleteLocationChecks(id);
+            SendById(id);
+        }
+
+        /// <summary>Key items AND tools both map to "Obtain &lt;KeyItem&gt;".</summary>
+        public void SendKeyItemCheck(KeyItem keyItem) => SendByName("Obtain " + keyItem);
+
+        public void SendToolCheck(Item tool)
+        {
+            if (GameIds.ToolToKeyItem.TryGetValue(tool, out KeyItem keyItem))
+                SendKeyItemCheck(keyItem);
+        }
+
+        public void SendPolaroidCheck(PolaroidType type)
+        {
+            // Ending polaroids are awarded by the endings, never shuffled.
+            if (type.ToString().StartsWith("Ending", StringComparison.Ordinal)) return;
+            SendByName("Polaroid: " + type);
+        }
+
+        /// <summary>Ghost / gulden are sent by numeric id from a position-sorted index.</summary>
+        public void SendGhostCheck(int sortedIndex) => SendById(GameIds.GhostBaseId + sortedIndex);
+
+        public void SendGuldenCheck(int sortedIndex) => SendById(GameIds.GuldenBaseId + sortedIndex);
+
+        // ---------- Endings & goal ----------
+
+        public void OnEndingTriggered(EndingType ending)
+        {
+            if (!Connected) return;
+            if (ending != EndingType.DemoEnding)
+            {
+                SendByName("Ending: " + ending);
+                endingsSeen.Add(ending);
+            }
+            CheckGoal(ending);
+        }
+
+        private void CheckGoal(EndingType ending)
+        {
+            bool done =
+                (goal == GameIds.GoalGoodEnding && ending == EndingType.GoodEnd) ||
+                (goal == GameIds.GoalTrueEnding && ending == EndingType.GoodEnd
+                    && SaveManager.progressDataCheck.restoredOwnerSoul) ||
+                (goal == GameIds.GoalAllEndings && GameIds.AllEndings.IsSubsetOf(endingsSeen));
+
+            if (done)
+            {
+                log.LogInfo("[Grunnchipelago] Goal achieved!");
+                try { session.SetGoalAchieved(); }
+                catch (Exception e) { log.LogError("[Grunnchipelago] SetGoalAchieved failed: " + e.Message); }
+            }
         }
 
         // ---------- Receiving items ----------
@@ -123,42 +193,60 @@ namespace Grunnchipelago.Client
             while (helper.PeekItem() != null)
             {
                 ItemInfo item = helper.DequeueItem();
-                if (Enum.TryParse(item.ItemName, out KeyItem keyItem))
-                {
-                    pendingKeyItems.Enqueue(keyItem);
-                }
-                else
-                {
-                    // Buffs / traps / Gulden are handled in later milestones.
-                    log.LogInfo($"[Grunnchipelago] Received non-keyitem '{item.ItemName}' (deferred).");
-                }
+                if (item.ItemName == "Gulden") System.Threading.Interlocked.Increment(ref guldenReceivedTotal);
+                pending.Enqueue(item);
             }
         }
 
-        /// <summary>Grant queued key items. MUST be called from the Unity main thread.</summary>
+        /// <summary>Grant queued items in real time. MUST run on the Unity main thread.</summary>
         public void ApplyPendingItems()
         {
             if (GameManager.instance == null) return;
-            while (pendingKeyItems.TryDequeue(out KeyItem keyItem))
+            while (pending.TryDequeue(out ItemInfo item))
+                GrantItem(item, realtime: true);
+        }
+
+        private void GrantItem(ItemInfo item, bool realtime)
+        {
+            string name = item.ItemName;
+            if (Enum.TryParse(name, out KeyItem keyItem))
             {
                 try
                 {
                     GrantGuard = true;
-                    // Same pattern the game uses in GameManager.TradeEggball (line ~6035):
-                    // popup, then ObtainKeyItem (which no-ops if already obtained).
-                    GameManager.TriggerItemObtainPopup(keyItem);
+                    if (GameIds.KeyItemToTool.TryGetValue(keyItem, out Item tool))
+                        PlayerManager.instance?.AddTool(tool);   // tool item grants both
+                    if (realtime) GameManager.TriggerItemObtainPopup(keyItem);   // no popup spam on re-inject
                     GameManager.instance.ObtainKeyItem(keyItem, false);
-                    log.LogInfo($"[Grunnchipelago] Granted {keyItem}.");
                 }
-                catch (Exception e)
-                {
-                    log.LogError($"[Grunnchipelago] Failed to grant {keyItem}: {e.Message}");
-                }
-                finally
-                {
-                    GrantGuard = false;
-                }
+                catch (Exception e) { log.LogError($"[Grunnchipelago] grant {keyItem} failed: {e.Message}"); }
+                finally { GrantGuard = false; }
             }
+            else if (name == "Gulden")
+            {
+                // Money only matters under coinsanity. On a fresh run the total is
+                // restored by ReinjectInventory; here we only add the live delta.
+                if (realtime && Coinsanity) GameManager.AddGulden(1, false);
+            }
+            // Buffs / traps are applied by later milestones.
+        }
+
+        /// <summary>Re-grant the whole received inventory after a run reset (design section 5).</summary>
+        public void ReinjectInventory()
+        {
+            if (!Connected || session == null || GameManager.instance == null) return;
+            ItemInfo[] all;
+            try { all = session.Items.AllItemsReceived.ToArray(); }
+            catch (Exception) { return; }
+
+            foreach (ItemInfo item in all)
+                if (item.ItemName != "Gulden")
+                    GrantItem(item, realtime: false);
+
+            if (Coinsanity && guldenReceivedTotal > 0)
+                GameManager.AddGulden(guldenReceivedTotal, false);
+
+            log.LogInfo($"[Grunnchipelago] Re-injected inventory ({all.Length} items).");
         }
 
         public void Disconnect()
