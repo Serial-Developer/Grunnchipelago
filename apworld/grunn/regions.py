@@ -122,9 +122,11 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     # (achieved by playing; modelled free). FLAG: gnome-destruction state assumed free.
     link(c.JARDIN, c.PASSAGE_GNOMES)
     link(c.PARC, c.PASSAGE_GNOMES)
-    # regions_v3: Exterieur -> Zone apres le velo (BikeTravelToRummikub).
-    # FLAG: bike location/gating unconfirmed (regions_v3 "Reste a faire") -> free.
+    # dump: bike_interaction_toRummikub0 (OutsideVillage), preventTypes=[] -> libre confirme.
     link(c.EXTERIEUR, c.ZONE_VELO)
+    # dump: bike_interaction_toPath (NonEuclidian/Rummikub, RummikubSpace), preventTypes=[].
+    # FLAG: destination (WindyPath / cabane pecheur approach) a confirmer cote destination.
+    link(c.ZONE_VELO, c.CABANE_PECHEUR)
     # regions_v3: Embarcadere Ferry libre a pied ; traversee = DayIndexIs(2) (free) + ToyBoat.
     link(c.EXTERIEUR, c.FERRY, lambda s: s.has("ToyBoat", p))
     # regions_v3: fisherman cabin approach is free; ENTERING (interior) needs Bone for the
