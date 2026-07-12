@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Grunnchipelago.Client</AssemblyName>
+    <RootNamespace>Grunnchipelago.Client</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!-- Bring the Archipelago package + its runtime deps into the output folder. -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <GameDir>C:\Program Files (x86)\Steam\steamapps\common\Grunn\Grunn</GameDir>
+    <Managed>$(GameDir)\Grunn_Data\Managed</Managed>
+    <PluginsDir>$(GameDir)\BepInEx\plugins\Grunnchipelago</PluginsDir>
+  </PropertyGroup>
+
+  <!-- Game / BepInEx assemblies: reference only, never copied (provided at runtime). -->
+  <ItemGroup>
+    <Reference Include="BepInEx">
+      <HintPath>$(GameDir)\BepInEx\core\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(GameDir)\BepInEx\core\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(Managed)\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(Managed)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(Managed)\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(Managed)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Archipelago client. Newtonsoft.Json is provided by the game, so we exclude the
+       package's copy from the output (compile against it, run against the game's). -->
+  <ItemGroup>
+    <PackageReference Include="Archipelago.MultiClient.Net" Version="6.7.1" />
+  </ItemGroup>
+
+  <!-- Deploy plugin + AP runtime deps to BepInEx/plugins; skip game-provided assemblies. -->
+  <Target Name="DeployToPlugins" AfterTargets="Build">
+    <ItemGroup>
+      <DeployFiles Include="$(OutDir)*.dll"
+                   Exclude="$(OutDir)Newtonsoft.Json.dll;$(OutDir)UnityEngine*.dll;$(OutDir)Assembly-CSharp.dll;$(OutDir)BepInEx*.dll;$(OutDir)0Harmony.dll" />
+    </ItemGroup>
+    <MakeDir Directories="$(PluginsDir)" />
+    <Copy SourceFiles="@(DeployFiles)" DestinationFolder="$(PluginsDir)" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="[Grunnchipelago] Deployed @(DeployFiles->Count()) files to $(PluginsDir)" />
+  </Target>
+
+</Project>
