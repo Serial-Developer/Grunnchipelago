@@ -67,6 +67,7 @@ namespace Grunnchipelago.Client
         public bool DeathLinkEnabled { get; private set; }
         public bool PolaroidChecks { get; private set; } = true;
         public bool GhostChecks { get; private set; } = true;
+        public bool LockPlayerHut { get; private set; }
 
         /// <summary>True once the received-items list says we own the AP "Bone" item.
         /// Bone is NEVER injected into the inventory: a world pickup spawns near the
@@ -153,6 +154,7 @@ namespace Grunnchipelago.Client
             if (data.TryGetValue(GameIds.SlotDeathLink, out var d)) DeathLinkEnabled = Convert.ToInt64(d) != 0;
             if (data.TryGetValue(GameIds.SlotPolaroidChecks, out var pol)) PolaroidChecks = Convert.ToInt64(pol) != 0;
             if (data.TryGetValue(GameIds.SlotGhostChecks, out var gh)) GhostChecks = Convert.ToInt64(gh) != 0;
+            if (data.TryGetValue(GameIds.SlotLockPlayerHut, out var hut)) LockPlayerHut = Convert.ToInt64(hut) != 0;
         }
 
         /// <summary>Scout every location of this slot so pickups can announce their real
@@ -239,44 +241,55 @@ namespace Grunnchipelago.Client
 
         // ---------- Sending checks (deduplicated) ----------
 
-        /// <summary>Returns true if the check was actually sent (not deduplicated).</summary>
+        /// <summary>Returns true if the check was actually sent (not deduplicated).
+        /// Every interception logs a verdict under VerboseLogs (playtest C.1).</summary>
         private bool TrySend(long id, string label)
         {
             if (!Connected || session == null || id <= 0) return false;
             lock (sentLocations)
             {
-                if (!sentLocations.Add(id)) return false;   // already sent / already checked
+                if (!sentLocations.Add(id))
+                {
+                    Info($"[Grunnchipelago] Silencieux : {label} (deja envoye)");
+                    return false;
+                }
             }
-            Info($"[Grunnchipelago] Check: {label}");
+            Info($"[Grunnchipelago] Check envoye : {label}");
             session.Locations.CompleteLocationChecks(id);
             return true;
         }
 
-        private bool SendByName(string location)
+        private bool SendByName(string location, bool announceSelf = false)
         {
             if (!Connected || session == null) return false;
             long id = session.Locations.GetLocationIdFromName(Game, location);
             if (id <= 0)
             {
-                log.LogWarning($"[Grunnchipelago] No location id for '{location}'.");
+                Info($"[Grunnchipelago] Silencieux : pas une location ('{location}' absente du seed)");
                 return false;
             }
             bool sent = TrySend(id, location);
-            if (sent) AnnounceScoutedContent(id);
+            if (sent) AnnounceScoutedContent(id, announceSelf);
             return sent;
         }
 
         /// <summary>Popup fix (design section 10): the vanilla pickup popup shows the item
-        /// SEEN, not the item the location holds. When a check goes to another player,
-        /// announce it; our own items announce themselves on receipt.</summary>
-        private void AnnounceScoutedContent(long id)
+        /// SEEN, not the item the location holds. Another player's item is announced as
+        /// "Envoye"; our own items announce themselves on receipt - except when
+        /// announceSelf is set (ending checks, playtest D.1: show the reward).</summary>
+        private void AnnounceScoutedContent(long id, bool announceSelf)
         {
             ScoutedItemInfo info;
             lock (scouted)
             {
                 if (!scouted.TryGetValue(id, out info)) return;
             }
-            if (info == null || info.IsReceiverRelatedToActivePlayer) return;
+            if (info == null) return;
+            if (info.IsReceiverRelatedToActivePlayer)
+            {
+                if (announceSelf) QueuePopup($"Recompense : {info.ItemName}");
+                return;
+            }
             QueuePopup($"Envoye : {info.ItemName} -> {info.Player?.Name}");
         }
 
@@ -311,14 +324,19 @@ namespace Grunnchipelago.Client
                 }
             }
 
-            if (removed.Count == 0) return;
+            if (removed.Count == 0)
+            {
+                log.LogInfo("[Grunnchipelago] Resync : rien a restaurer (polaroids = seul etat GlobalData gatant des checks).");
+                return;
+            }
             SaveManager.Save(SaveManager.curSlotIndex);
             // Immediate world refresh: Polaroid.ResetState re-reads the collected list.
             if (GameManager.allPolaroids != null)
                 foreach (Polaroid polaroid in GameManager.allPolaroids)
                     if (polaroid != null) polaroid.ResetState();
-            Info($"[Grunnchipelago] Polaroid sync: {removed.Count} restored to the world " +
-                 $"({string.Join(", ", removed.Select(t => t.ToString()).ToArray())}).");
+            // Summary always logged (playtest C.3); detail under VerboseLogs.
+            log.LogInfo($"[Grunnchipelago] Resync : polaroids restaures en monde : {removed.Count}.");
+            Info($"[Grunnchipelago] Polaroids restaures : {string.Join(", ", removed.Select(t => t.ToString()).ToArray())}.");
         }
 
         /// <summary>Drained by Plugin.Update, outside pickup calls (whose vanilla popups
@@ -377,7 +395,11 @@ namespace Grunnchipelago.Client
 
         public void SendPolaroidCheck(PolaroidType type)
         {
-            if (!PolaroidChecks) return;   // option off -> polaroids stay vanilla
+            if (!PolaroidChecks)
+            {
+                Info($"[Grunnchipelago] Silencieux : polaroid {type} (option off)");
+                return;
+            }
             // Ending polaroids are awarded by the endings, never shuffled.
             if (type.ToString().StartsWith("Ending", StringComparison.Ordinal)) return;
             SendByName("Polaroid: " + type);
@@ -386,7 +408,11 @@ namespace Grunnchipelago.Client
         /// <summary>Ghost / gulden indices come from the frozen path tables in GameIds.</summary>
         public void SendGhostCheck(int index)
         {
-            if (!GhostChecks) return;      // option off -> ghosts stay vanilla
+            if (!GhostChecks)
+            {
+                Info($"[Grunnchipelago] Silencieux : fantome #{index + 1} (option off)");
+                return;
+            }
             TrySend(GameIds.GhostBaseId + index, $"Calm Ghost #{index + 1}");
         }
 
@@ -399,7 +425,9 @@ namespace Grunnchipelago.Client
             if (!Connected) return;
             if (ending != EndingType.DemoEnding)
             {
-                SendByName("Ending: " + ending);
+                // announceSelf (playtest D.1): show the ending check's reward even in solo;
+                // popups queue and display back in-game (after the ending cutscene).
+                SendByName("Ending: " + ending, announceSelf: true);
                 endingsSeen.Add(ending);
             }
             CheckGoal(ending);
