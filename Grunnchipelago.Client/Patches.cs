@@ -130,44 +130,20 @@ namespace Grunnchipelago.Client
         }
     }
 
-    // ---------- DeathLink (STRICT, design decision) ----------
+    // ---------- Helpers ----------
 
-    /// <summary>GameManager.SetNightmareState(NightmareState) - GameManager.cs:906. Called
-    /// every frame by HandleNightmare (GameManager.cs:1454), so we edge-detect Hide->Show:
-    /// a nightmare just appeared = a "death" -> send a DeathLink (unless this nightmare
-    /// was itself caused by a received DeathLink).</summary>
-    [HarmonyPatch(typeof(GameManager), nameof(GameManager.SetNightmareState))]
-    public static class SetNightmareStatePatch
+    /// <summary>Cosmetic nightmare jumpscare used when a DeathLink is received (the actual
+    /// "death" is the run reset done by Plugin.Update after this displays). Replicates the
+    /// display path of GameManager.ShowNightmareShot (GameManager.cs:933) without the 66 %
+    /// early-out; Hide() clears the private state so the overlay cannot stick outside sleep
+    /// (HandleNightmare, GameManager.cs:1454, only advances its timers while sleeping).</summary>
+    internal static class NightmareJumpscare
     {
-        private static GameManager.NightmareState last = GameManager.NightmareState.Hide;
-
-        private static void Postfix(GameManager.NightmareState _to)
+        public static bool Show()
         {
-            if (_to == last) return;
-            last = _to;
-            if (_to == GameManager.NightmareState.Show)
-                Plugin.Ap?.OnNightmareShown();
-        }
-    }
-
-    /// <summary>GameManager.ShowNightmareShot() - GameManager.cs:933. Vanilla shows a
-    /// nightmare shot with only 34 % probability while sleeping. When a received DeathLink
-    /// is pending, we replace the roll with a GUARANTEED nightmare (strict death link:
-    /// the death arrives with your next sleep).</summary>
-    [HarmonyPatch(typeof(GameManager), nameof(GameManager.ShowNightmareShot))]
-    public static class ShowNightmareShotPatch
-    {
-        private static bool Prefix(GameManager __instance)
-        {
-            ApClient ap = Plugin.Ap;
-            if (ap == null || !ap.Connected || !ap.HasPendingDeathLink) return true;
-            if (!ap.TryConsumeDeathLink()) return true;
-
-            // Replicate GameManager.ShowNightmareShot's display path (GameManager.cs:933)
-            // without the 66 % early-out.
             NightmareShots shots = GameManager.nightmareShots;
             if (shots == null || shots.shotObjects == null || shots.shotObjects.Length == 0)
-                return true;   // world not ready - fall back to vanilla roll
+                return false;   // world not ready - skip the cosmetic part
 
             shots.HideAll();
             int pick = Random.Range(0, shots.shotObjects.Length);
@@ -175,7 +151,7 @@ namespace Grunnchipelago.Client
                 shots.shotObjects[i].SetActive(i == pick);
 
             // ResetNightmareValues (GameManager.cs:926, private): showedNightmare = true
-            // + reset both nightmare timers, so HandleNightmare displays the overlay.
+            // + reset both nightmare timers, so HandleNightmare shows the overlay.
             AccessTools.Field(typeof(GameManager), "showedNightmare").SetValue(null, true);
             ((Timer)AccessTools.Field(typeof(GameManager), "nightmareWaitTimer").GetValue(null)).Reset();
             ((Timer)AccessTools.Field(typeof(GameManager), "nightmareShowTimer").GetValue(null)).Reset();
@@ -183,13 +159,15 @@ namespace Grunnchipelago.Client
             AudioManager.instance.PlaySoundGlobal(
                 BasicFunctions.PickRandomAudioClipFromArray(AudioManager.instance.showNightmareShot),
                 1.6f, 2.1f, 0.5f, 0.525f);
+            return true;
+        }
 
-            Plugin.Log?.LogInfo("[Grunnchipelago] DeathLink applied: forced nightmare.");
-            return false;
+        public static void Hide()
+        {
+            AccessTools.Field(typeof(GameManager), "showedNightmare").SetValue(null, false);
+            GameManager.nightmareShots?.HideAll();
         }
     }
-
-    // ---------- Helpers ----------
 
     /// <summary>Scene-path helpers matching the Dumper's GetPath, used to identify ghost
     /// and gulden objects against the frozen tables in GameIds.</summary>

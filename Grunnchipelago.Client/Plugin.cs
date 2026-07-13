@@ -48,6 +48,10 @@ namespace Grunnchipelago.Client
                 Ap.Connect(cfgHost.Value, cfgPort.Value, cfgSlot.Value, cfgPassword.Value);
         }
 
+        // DeathLink jumpscare/reset sequence: <0 = idle, otherwise elapsed seconds.
+        private float deathLinkTimer = -1f;
+        private const float DeathLinkJumpscareDuration = 2.5f;
+
         private void Update()
         {
             if (Ap == null) return;
@@ -57,8 +61,39 @@ namespace Grunnchipelago.Client
             bool inGame = GameManager.CurGameState == GameManager.GameState.Game
                           && !GameManager.BlackScreen && !GameManager.SwitchingState;
             if (inGame) Ap.ApplyPendingItems();
+            HandleDeathLink(inGame);
             // Simple reconnection loop.
             Ap.Tick(Time.deltaTime, cfgHost.Value, cfgPort.Value, cfgSlot.Value, cfgPassword.Value);
+        }
+
+        /// <summary>Received DeathLink = cosmetic nightmare jumpscare, then the run resets
+        /// (TriggerNewRun - GameManager.cs:3758 - which our patch follows with the AP
+        /// inventory re-injection). No ending is triggered, no check granted.</summary>
+        private void HandleDeathLink(bool inGame)
+        {
+            if (!Ap.DeathLinkEnabled) return;
+
+            if (deathLinkTimer < 0f)
+            {
+                // Several deaths received while away collapse into a single reset.
+                if (inGame && Ap.TakeAllPendingDeathLinks() > 0)
+                {
+                    NightmareJumpscare.Show();
+                    deathLinkTimer = 0f;
+                    Logger.LogInfo("[Grunnchipelago] DeathLink: nightmare jumpscare, run resets shortly.");
+                }
+                return;
+            }
+
+            deathLinkTimer += Time.deltaTime;
+            if (deathLinkTimer >= DeathLinkJumpscareDuration)
+            {
+                deathLinkTimer = -1f;
+                NightmareJumpscare.Hide();
+                GameManager.TriggerBlackScreen(120f);   // GameManager.cs:3415
+                GameManager.TriggerNewRun();            // GameManager.cs:3758
+                Logger.LogInfo("[Grunnchipelago] DeathLink applied: run reset.");
+            }
         }
 
         private void OnDestroy()

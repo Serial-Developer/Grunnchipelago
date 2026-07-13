@@ -40,7 +40,6 @@ namespace Grunnchipelago.Client
         private int goal = GameIds.GoalTrueEnding;
         private int guldenReceivedTotal;
         private int pendingDeathLinks;
-        private bool suppressNextNightmareSend;
 
         // Guards so that server-side grants run the ORIGINAL game methods instead of
         // being re-interpreted as in-game pickups by our prefixes.
@@ -210,6 +209,15 @@ namespace Grunnchipelago.Client
                 endingsSeen.Add(ending);
             }
             CheckGoal(ending);
+            // Death endings send a DeathLink (decision Jonath: every ending except
+            // Bus / Picnic / GoodEnd is a death). Received DeathLinks never trigger an
+            // ending (they reset the run), so this cannot loop.
+            if (DeathLinkEnabled && deathLinkService != null && GameIds.DeathLinkEndings.Contains(ending))
+            {
+                log.LogInfo($"[Grunnchipelago] Death ending ({ending}) - sending DeathLink.");
+                try { deathLinkService.SendDeathLink(new DeathLink(slotName, $"{slotName} met the {ending} ending")); }
+                catch (Exception e) { log.LogError("[Grunnchipelago] SendDeathLink failed: " + e.Message); }
+            }
         }
 
         private void CheckGoal(EndingType ending)
@@ -229,41 +237,21 @@ namespace Grunnchipelago.Client
         }
 
         // ---------- DeathLink (STRICT, design decision) ----------
+        // Send: handled in OnEndingTriggered (death endings only).
+        // Receive: the run is reset (no ending triggered, no check granted) after a
+        // cosmetic nightmare jumpscare - orchestrated by Plugin.Update.
 
         private void OnDeathLinkReceived(DeathLink deathLink)
         {
             Interlocked.Increment(ref pendingDeathLinks);
-            log.LogInfo($"[Grunnchipelago] DeathLink received from '{deathLink.Source}' - " +
-                        "a nightmare awaits your next sleep.");
+            log.LogInfo($"[Grunnchipelago] DeathLink received from '{deathLink.Source}' - the run will reset.");
         }
 
-        /// <summary>True if a received DeathLink is waiting to be applied at next sleep.</summary>
-        public bool HasPendingDeathLink => pendingDeathLinks > 0;
-
-        /// <summary>Consume one pending DeathLink (called when the forced nightmare fires).</summary>
-        public bool TryConsumeDeathLink()
+        /// <summary>Consume every pending received DeathLink at once (several deaths while
+        /// away collapse into a single run reset). Returns how many were pending.</summary>
+        public int TakeAllPendingDeathLinks()
         {
-            if (Interlocked.Decrement(ref pendingDeathLinks) >= 0)
-            {
-                suppressNextNightmareSend = true;   // don't echo this nightmare back
-                return true;
-            }
-            Interlocked.Increment(ref pendingDeathLinks);
-            return false;
-        }
-
-        /// <summary>Called on the Hide->Show nightmare edge (SetNightmareState postfix).</summary>
-        public void OnNightmareShown()
-        {
-            if (!DeathLinkEnabled || !Connected || deathLinkService == null) return;
-            if (suppressNextNightmareSend)
-            {
-                suppressNextNightmareSend = false;   // this nightmare came from a DeathLink
-                return;
-            }
-            log.LogInfo("[Grunnchipelago] Nightmare! Sending DeathLink.");
-            try { deathLinkService.SendDeathLink(new DeathLink(slotName, slotName + " had a nightmare")); }
-            catch (Exception e) { log.LogError("[Grunnchipelago] SendDeathLink failed: " + e.Message); }
+            return Interlocked.Exchange(ref pendingDeathLinks, 0);
         }
 
         // ---------- Receiving items ----------

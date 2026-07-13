@@ -78,6 +78,14 @@ namespace Grunnchipelago.Client
             EndingType.WorldEnd, EndingType.GoodEnd, EndingType.Dog, EndingType.Picnic,
         };
 
+        // Endings that count as DEATHS for DeathLink (decision Jonath 2026-07-13):
+        // every ending EXCEPT Bus, Picnic and GoodEnd (good/true ending).
+        public static readonly HashSet<EndingType> DeathLinkEndings = new HashSet<EndingType>
+        {
+            EndingType.Mist, EndingType.SacredFlowers, EndingType.Drown, EndingType.Darkness,
+            EndingType.LongHallway, EndingType.HedgeMaze, EndingType.WorldEnd, EndingType.Dog,
+        };
+
         // slot_data keys (fill_slot_data in worlds/grunn/__init__.py).
         public const string SlotGoal = "goal";                       // 0 good / 1 true / 2 all
         public const string SlotCoinsanity = "coinsanity";
