@@ -93,6 +93,15 @@ namespace Grunnchipelago.Client
                     Ap.NeedsPolaroidSync = false;
                     Ap.SyncPolaroidsWithServer();
                 }
+                // One-shot after login: recompute pickup visibility from CHECK state
+                // (the GrabbedItem event runs the patched per-pickup recomputation).
+                if (Ap.NeedsVisibilityRefresh && GameManager.allItemPickups != null
+                    && GameManager.allItemPickups.Count > 50)
+                {
+                    Ap.NeedsVisibilityRefresh = false;
+                    GameManager.GrabbedItem();
+                    Log.LogInfo("[Grunnchipelago] Pickup visibility recomputed from check state.");
+                }
             }
             HandleDeathLink(inGame);
             // Simple reconnection loop.

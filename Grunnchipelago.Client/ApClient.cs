@@ -76,6 +76,10 @@ namespace Grunnchipelago.Client
         /// <summary>Set after login: the local save must drop uncollected-check polaroids.</summary>
         public bool NeedsPolaroidSync { get; set; }
 
+        /// <summary>Set after login: pickup visibility must be recomputed from check state
+        /// (GrabbedItem event, once the world is loaded).</summary>
+        public bool NeedsVisibilityRefresh { get; set; }
+
         // Scouted contents of our own locations (id -> "item (player)" + is-it-ours).
         private readonly Dictionary<long, ScoutedItemInfo> scouted = new Dictionary<long, ScoutedItemInfo>();
 
@@ -118,6 +122,7 @@ namespace Grunnchipelago.Client
                         ScoutOwnLocations();
                         itemOrdinal = 0;   // the replay stream restarts on every connect
                         NeedsPolaroidSync = PolaroidChecks;
+                        NeedsVisibilityRefresh = true;
                         Connected = true;
                         log.LogInfo($"[Grunnchipelago] Connected. goal={goal}, coinsanity={Coinsanity}, " +
                                     $"persistent_shortcuts={PersistentShortcuts}, death_link={DeathLinkEnabled}.");
@@ -334,13 +339,40 @@ namespace Grunnchipelago.Client
                 SendKeyItemCheck(keyItem);
         }
 
+        // KeyItem -> "Obtain X" location id, cached: KeyItemCheckSent is polled every
+        // frame by the ContentHider visibility patch.
+        private readonly Dictionary<KeyItem, long> obtainLocationIds = new Dictionary<KeyItem, long>();
+
+        private long ObtainLocationId(KeyItem keyItem)
+        {
+            lock (obtainLocationIds)
+            {
+                if (!obtainLocationIds.TryGetValue(keyItem, out long id))
+                {
+                    id = session.Locations.GetLocationIdFromName(Game, "Obtain " + keyItem);
+                    obtainLocationIds[keyItem] = id;
+                }
+                return id;
+            }
+        }
+
         /// <summary>True if the "Obtain X" check for this key item is still unsent.</summary>
         public bool KeyItemCheckPending(KeyItem keyItem)
         {
             if (!Connected || session == null) return false;
-            long id = session.Locations.GetLocationIdFromName(Game, "Obtain " + keyItem);
+            long id = ObtainLocationId(keyItem);
             if (id <= 0) return false;
             lock (sentLocations) return !sentLocations.Contains(id);
+        }
+
+        /// <summary>True if the "Obtain X" check for this key item HAS been sent. Drives
+        /// pickup/shop visibility (randomizer semantics: check state, never possession).</summary>
+        public bool KeyItemCheckSent(KeyItem keyItem)
+        {
+            if (!Connected || session == null) return false;
+            long id = ObtainLocationId(keyItem);
+            if (id <= 0) return false;
+            lock (sentLocations) return sentLocations.Contains(id);
         }
 
         public void SendPolaroidCheck(PolaroidType type)

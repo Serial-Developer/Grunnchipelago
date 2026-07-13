@@ -1,0 +1,70 @@
+# Notes de playtest — à consolider dans le prompt CC global (en cours, 2026-07-13)
+
+## Résolu pendant le playtest (à intégrer)
+1. **Gulden #2** : abri face à la Station essence, posé sur un banc — région Extérieur,
+   accès LIBRE. Mettre à jour la règle (source : Jonath in-game).
+2. **« Pickups sans check »** : élucidé — re-ramassages de locations déjà envoyées
+   (Obtain Bone : Jalon 1 ; Obtain Plank : session Jalon 2). Dédup par design.
+   Cause de leur réapparition : l'octroi vanilla étant intercepté, le jeu n'enregistre
+   jamais ces objets comme obtenus -> les pickups respawnent, inertes, tant que l'item
+   AP correspondant n'est pas possédé.
+3. **Polaroids sur save de vétéran** : la resync fonctionne (checks Polaroid: Bone et
+   Polaroid: OldLadyBackGarden partis en jeu).
+
+## Demandes pour le prompt CC global
+
+0. **Dumper v0.3** : capturer `Door.unlockItemNeeded` (List<KeyItem>, scène) pour obtenir
+   la table complète clé -> porte (vérification des règles de clés + doc). En profiter
+   pour capturer aussi tout autre champ de gating manquant repéré depuis (ex.
+   ItemPickup.specialItemTypes déjà capturé, vérifier Interaction.keyItemUseRef éventuel).
+
+### PRIORITÉ 1 — BUG : locations tuées par la possession de l'item (découvert in-game)
+Symptôme observé : Medal et OfficeKey reçus du multiworld -> la marchande ne les vend
+plus -> checks boutique inaccessibles. Cause racine : l'octroi AP écrit dans
+keyItemsObtained, et le jeu masque tout pickup/article dont l'item est possédé
+(ItemPickup.CheckIfAlreadyObtainedThisItem + filtrage boutique + l'event GrabbedItem()
+ajouté par CC). Portée : TOUTE location dont l'item arrive avant son check est morte
+(sur la seed en cours : FlowerGem et ShyIdol reçus -> serre des gnomes et idole
+fantôme vraisemblablement masquées). Fill-dépendant, silencieux, peut bloquer une seed.
+FIX : la visibilité des pickups/articles doit dépendre de l'ÉTAT DU CHECK (cache des
+locations envoyées), jamais de la possession — patcher CheckIfAlreadyObtainedThisItem,
+le filtrage boutique et l'usage de GrabbedItem() pour consulter le cache quand connecté.
+Vérifier aussi que le prefix ObtainKeyItem envoie bien le check même si l'item est déjà
+possédé (le garde vanilla `if ObtainedKeyItem return` ne doit pas l'empêcher).
+Après fix : les emplacements masqués de la seed en cours doivent réapparaître
+(visibilité recalculée). Ajouter un test manuel : recevoir un item AVANT son check,
+vérifier que son emplacement reste ramassable et envoie le check.
+
+1. **Observabilité des ramassages silencieux** (VerboseLogs) : logguer chaque
+   interception avec verdict — `Check envoyé : X` / `Silencieux : X (déjà envoyé)` /
+   `Silencieux : gulden vanilla (coinsanity off)` / `Silencieux : pas une location (raison)`.
+2. **Log de session persistant** : BepInEx écrase LogOutput.log à chaque lancement ->
+   log horodaté propre au mod, en append (ex. grunnchipelago_session.log), rotation simple.
+3. **Résumé de resync à la connexion** : « Polaroids restaurés en monde : N » (+ tout
+   autre resync GlobalData), pour visibilité.
+4. **Audit specialItemTypes** : vérifier qu'aucun octroi ne contourne ObtainKeyItem
+   (chemin HandleSpecialItem éventuel).
+5. **Polaroid: Demon** : déplacer la location en région Hell (octroi introuvable
+   statiquement ; règle plus stricte = pas de faux positif). FLAG playtest conservé.
+6. **`_demo`** : suffixe de nommage, PAS du contenu démo (hideInDemo:False,
+   startState:Show, aucun hider ; strangeKey0_demo = la clé de la pie). Garder les
+   sources OR + commentaire de justification.
+7. **Gulden #8** : Extérieur + `Hammer` (pot à casser) — règle à mettre à jour.
+8. **Cabane -> Couloir final** : confirmé libre (aucun item, attendre dimanche soir).
+
+## Considérations de design à discuter (Jonath + Claude)
+1. **Consommables (Plank/OldPlank, Bone, etc.)** : la logique traite has_plank en
+   booléen, mais les planches se CONSOMMENT (pont + gap = 2 usages potentiels dans une
+   même run, max 2 items planche dans le pool). Cas limite : seed où l'Extérieur n'est
+   atteignable QUE par le pont ET TallIdol requis -> conflit d'usage dans la run.
+   À examiner : règle de logique « consumable-aware » ou garantie que la haie
+   (can_cut_grass) reste une route alternative dans la logique.
+2. **UX des pickups inertes** (location déjà checkée, item non possédé) : respawnent
+   et ne donnent rien — les rendre visuellement distincts ou les masquer (lié aux
+   features modèles #1/#2 du backlog).
+
+## Observations de session (2026-07-13, en cours)
+- Reconnexion : replay 13 items sans popup, buffs recomptés (speed x2, range x1, rate x1)
+- death_link=True actif sur la seed de playtest
+- Gulden #14 (Ferry) ramassé et loggé (coinsanity off -> vanilla, correct)
+- 0 exception sur toutes les sessions observées

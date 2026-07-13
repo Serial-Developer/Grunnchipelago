@@ -14,7 +14,7 @@ namespace Grunnchipelago
     /// exporte le tout en JSON a la racine du jeu.
     /// Declenchement : automatique ~8s apres le chargement du monde, ou F8.
     /// </summary>
-    [BepInPlugin("grunnchipelago.dumper", "Grunnchipelago World Dumper", "0.2.0")]
+    [BepInPlugin("grunnchipelago.dumper", "Grunnchipelago World Dumper", "0.3.0")]
     public class DumperPlugin : BaseUnityPlugin
     {
         private bool dumped;
@@ -74,7 +74,7 @@ namespace Grunnchipelago
             {
                 ["meta"] = new Dictionary<string, object>
                 {
-                    ["dumper"] = "grunnchipelago.dumper 0.2.0",
+                    ["dumper"] = "grunnchipelago.dumper 0.3.0",
                     ["date"] = DateTime.Now.ToString("s"),
                     ["scene"] = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name
                 },
@@ -294,7 +294,8 @@ namespace Grunnchipelago
                     ["locked"] = d.locked,
                     ["barred"] = d.barred,
                     ["type"] = d.type.ToString(),
-                    ["startState"] = d.startState.ToString()
+                    ["startState"] = d.startState.ToString(),
+                    ["unlockItemNeeded"] = EnumNames(d.unlockItemNeeded)
                 });
             }
             return list;

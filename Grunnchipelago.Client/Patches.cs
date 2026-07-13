@@ -7,7 +7,9 @@ namespace Grunnchipelago.Client
     // Each patch cites the decompiled method it depends on. When not connected, every
     // prefix returns true (100 % vanilla) and every postfix is a no-op.
 
-    /// <summary>GameManager.ObtainKeyItem(KeyItem, bool) - GameManager.cs:3322 (key items).</summary>
+    /// <summary>GameManager.ObtainKeyItem(KeyItem, bool) - GameManager.cs:3322 (key items).
+    /// NOTE: this prefix runs BEFORE the vanilla early-out (`if ObtainedKeyItem return`,
+    /// GameManager.cs:3324), so the check is sent even when the item is already owned.</summary>
     [HarmonyPatch(typeof(GameManager), nameof(GameManager.ObtainKeyItem))]
     public static class ObtainKeyItemPatch
     {
@@ -19,6 +21,100 @@ namespace Grunnchipelago.Client
             if (ItemPickupTriggerPatch.SpecialPickupActive) return true;   // bone gift: vanilla grant, no check
             ap.SendKeyItemCheck(_keyItem);
             return false;
+        }
+    }
+
+    // ---------- Pickup/shop visibility = CHECK STATE, never possession ----------
+    // Playtest round 1 bug: an item received from the multiworld marked its key item as
+    // owned, and the game hides every pickup/shop article whose item is owned
+    // (ItemPickup.ResetState / CheckIfAlreadyObtainedThisItem / KeyItemObtained hiders)
+    // -> the location's check became unreachable (Medal/OfficeKey at the merchant).
+    // Randomizer semantics: a location stays visible until ITS CHECK is sent.
+
+    /// <summary>Shared visibility recomputation for key-item pickups.</summary>
+    internal static class PickupVisibility
+    {
+        private static readonly AccessTools.FieldRef<ItemPickup, ItemPickupState> StartStateRef =
+            AccessTools.FieldRefAccess<ItemPickup, ItemPickupState>("startState");
+
+        private static System.Reflection.MethodInfo setState;
+
+        public static bool AppliesTo(ItemPickup pickup)
+        {
+            if (pickup == null || pickup.isGulden || pickup.isRepeatablePickup) return false;
+            if (pickup.gameObject.name.StartsWith("grunnchipelago", System.StringComparison.Ordinal))
+                return false;   // the bone gift follows vanilla possession rules
+            return pickup.keyItemObtain != null && pickup.keyItemObtain.Count > 0;
+        }
+
+        public static void Recompute(ItemPickup pickup, ApClient ap)
+        {
+            ItemPickupState state = StartStateRef(pickup);
+            if (pickup.hideInDemo && SaveManager.demo) state = ItemPickupState.Hide;
+            if (ap.KeyItemCheckSent(pickup.keyItemObtain[0])) state = ItemPickupState.Hide;
+            if (setState == null) setState = AccessTools.Method(typeof(ItemPickup), "SetState");
+            setState.Invoke(pickup, new object[] { state });
+        }
+    }
+
+    /// <summary>ItemPickup.CheckIfAlreadyObtainedThisItem (private, ItemPickup.cs:120) -
+    /// runs on every GrabbedItem event and hides owned-item pickups. Replaced by the
+    /// check-state recomputation while connected.</summary>
+    [HarmonyPatch(typeof(ItemPickup), "CheckIfAlreadyObtainedThisItem")]
+    public static class CheckIfAlreadyObtainedPatch
+    {
+        private static bool Prefix(ItemPickup __instance)
+        {
+            ApClient ap = Plugin.Ap;
+            if (ap == null || !ap.Connected) return true;
+            if (!PickupVisibility.AppliesTo(__instance)) return true;
+            PickupVisibility.Recompute(__instance, ap);
+            return false;
+        }
+    }
+
+    /// <summary>ItemPickup.ResetState (ItemPickup.cs:74) - the world-reset visibility
+    /// decision ("owned -> Hide"). Overridden after the vanilla run while connected.</summary>
+    [HarmonyPatch(typeof(ItemPickup), nameof(ItemPickup.ResetState))]
+    public static class ItemPickupResetStatePatch
+    {
+        private static void Postfix(ItemPickup __instance)
+        {
+            ApClient ap = Plugin.Ap;
+            if (ap == null || !ap.Connected) return;
+            if (!PickupVisibility.AppliesTo(__instance)) return;
+            PickupVisibility.Recompute(__instance, ap);
+        }
+    }
+
+    /// <summary>ContentHider.CheckCondition (private, ContentHider.cs:416). Hiders whose
+    /// target object holds an ItemPickup (shop articles like officeKey0_shop, world
+    /// spawns like hammer0_car) hide it on KeyItemObtained: switch those to check-state.
+    /// World-mechanic hiders (maze paths on Compass/TallIdol, portals...) target no
+    /// pickup and keep vanilla possession semantics.</summary>
+    [HarmonyPatch(typeof(ContentHider), "CheckCondition")]
+    public static class ContentHiderConditionPatch
+    {
+        // instanceID -> does objectRef contain an ItemPickup (cached: polled every frame)
+        private static readonly Dictionary<int, bool> hidesPickup = new Dictionary<int, bool>();
+
+        private static void Postfix(ContentHider __instance, HideCondition _c, ref bool __result)
+        {
+            if (_c != HideCondition.KeyItemObtained && _c != HideCondition.KeyItemNotObtained) return;
+            ApClient ap = Plugin.Ap;
+            if (ap == null || !ap.Connected) return;
+
+            int key = __instance.GetInstanceID();
+            if (!hidesPickup.TryGetValue(key, out bool isPickupHider))
+            {
+                isPickupHider = __instance.objectRef != null
+                    && __instance.objectRef.GetComponentInChildren<ItemPickup>(true) != null;
+                hidesPickup[key] = isPickupHider;
+            }
+            if (!isPickupHider) return;
+
+            bool sent = ap.KeyItemCheckSent(__instance.keyItemRef);
+            __result = _c == HideCondition.KeyItemObtained ? sent : !sent;
         }
     }
 
