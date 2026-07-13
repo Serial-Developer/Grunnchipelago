@@ -97,6 +97,8 @@ namespace Grunnchipelago.Client
             Effects.Tick(Ap.Connected);
             // Title marker + stats panel (playtest H).
             ModUi.Tick(Ap, cfgStatsShowAllLines.Value);
+            // Pickup model swap from the scout (features #1/#2, one-shot per session).
+            ModelSwap.Tick(Ap);
             if (Ap.Connected)
             {
                 // Popups queued from patch context; drained only in-game so ending-check

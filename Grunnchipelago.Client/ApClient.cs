@@ -84,6 +84,25 @@ namespace Grunnchipelago.Client
         // Scouted contents of our own locations (id -> "item (player)" + is-it-ours).
         private readonly Dictionary<long, ScoutedItemInfo> scouted = new Dictionary<long, ScoutedItemInfo>();
 
+        /// <summary>True once the connection scout completed (model swap waits for it).</summary>
+        public bool ScoutReady { get; private set; }
+
+        /// <summary>Seed string of the room, for deterministic per-location randomness.</summary>
+        public string SeedString { get; private set; } = "";
+
+        public bool TryGetScout(long locationId, out ScoutedItemInfo info)
+        {
+            lock (scouted) return scouted.TryGetValue(locationId, out info);
+        }
+
+        /// <summary>"Obtain X" location id for a key item (0 if absent from the seed).</summary>
+        public long ObtainLocationIdFor(KeyItem keyItem)
+        {
+            if (!Connected || session == null) return 0;
+            long id = ObtainLocationId(keyItem);
+            return id > 0 ? id : 0;
+        }
+
         // Popups queued from patch context (vanilla-popup suppression is active there);
         // drained by Plugin.Update outside any pickup call.
         private readonly ConcurrentQueue<string> pendingPopups = new ConcurrentQueue<string>();
@@ -163,6 +182,7 @@ namespace Grunnchipelago.Client
         {
             try
             {
+                SeedString = session.RoomState.Seed ?? "";
                 long[] ids = session.Locations.AllLocations.ToArray();
                 var task = session.Locations.ScoutLocationsAsync(ids);
                 task.ContinueWith(t =>
@@ -171,6 +191,7 @@ namespace Grunnchipelago.Client
                     lock (scouted)
                         foreach (var kv in t.Result)
                             scouted[kv.Key] = kv.Value;
+                    ScoutReady = true;
                 });
             }
             catch (Exception e)

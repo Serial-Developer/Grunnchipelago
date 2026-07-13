@@ -149,6 +149,14 @@ progression selon les règles finales.
 
 ## 10. Features Jonath — triage (2026-07-13)
 
+> Statuts (CC, 2026-07-14) : #3 Bone spawn ✅ livré (d6c897f) ; #4 popup ✅ livré
+> (d6c897f) ; #5 sync polaroids ✅ livré (d6c897f) ; #1 modèles concrets ✅ livré
+> (mécanique complète, bibliothèque depuis les visualsObject de scène +
+> approximations GoldFishAlive→Dead, AtticKey→OldKey ; non couvert : KidTriangle
+> → modèle AP) ; #2 modèles AP ✅ mécanique livrée (classification + traps déguisés
+> déterministes + items d'autres joueurs), direction artistique PROVISOIRE
+> (polaroid teinté rouge/bleu/gris) — Jonath tranche la DA finale.
+
 ### Pré-playtest (bloquants)
 - **Sync des polaroids (feature #5)** : Grunn n'a qu'un seul fichier de sauvegarde ; sur
   une save terminée, `GlobalData.polaroidsCollected` contient déjà tout -> les 35 checks
