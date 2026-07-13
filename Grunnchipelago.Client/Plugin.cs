@@ -80,6 +80,20 @@ namespace Grunnchipelago.Client
             if (inGame) Ap.ApplyPendingItems();
             // Buff multipliers + timed-trap expiry (restores vanilla when disconnected).
             Effects.Tick(Ap.Connected);
+            if (Ap.Connected)
+            {
+                // Popups queued from patch context (vanilla-popup suppression scope).
+                Ap.FlushPendingPopups();
+                // Bone gift pickup near the start (design section 10, feature #3).
+                BoneGift.EnsureSpawned(Ap);
+                // One-shot after login: restore uncollected-check polaroids to the world.
+                if (Ap.NeedsPolaroidSync && GameManager.allPolaroids != null
+                    && GameManager.allPolaroids.Count > 0)
+                {
+                    Ap.NeedsPolaroidSync = false;
+                    Ap.SyncPolaroidsWithServer();
+                }
+            }
             HandleDeathLink(inGame);
             // Simple reconnection loop.
             Ap.Tick(Time.deltaTime, cfgHost.Value, cfgPort.Value, cfgSlot.Value, cfgPassword.Value);

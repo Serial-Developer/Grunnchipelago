@@ -65,6 +65,23 @@ namespace Grunnchipelago.Client
         public bool Coinsanity { get; private set; }
         public bool PersistentShortcuts { get; private set; }
         public bool DeathLinkEnabled { get; private set; }
+        public bool PolaroidChecks { get; private set; } = true;
+        public bool GhostChecks { get; private set; } = true;
+
+        /// <summary>True once the received-items list says we own the AP "Bone" item.
+        /// Bone is NEVER injected into the inventory: a world pickup spawns near the
+        /// start instead, so the Dog ending stays reachable (design section 10).</summary>
+        public bool BoneOwnedFromAp { get; private set; }
+
+        /// <summary>Set after login: the local save must drop uncollected-check polaroids.</summary>
+        public bool NeedsPolaroidSync { get; set; }
+
+        // Scouted contents of our own locations (id -> "item (player)" + is-it-ours).
+        private readonly Dictionary<long, ScoutedItemInfo> scouted = new Dictionary<long, ScoutedItemInfo>();
+
+        // Popups queued from patch context (vanilla-popup suppression is active there);
+        // drained by Plugin.Update outside any pickup call.
+        private readonly ConcurrentQueue<string> pendingPopups = new ConcurrentQueue<string>();
 
         public ApClient(ManualLogSource logger)
         {
@@ -98,7 +115,9 @@ namespace Grunnchipelago.Client
                         SeedSentLocations();
                         SetupDeathLink();
                         LoadSeenItemCount();
+                        ScoutOwnLocations();
                         itemOrdinal = 0;   // the replay stream restarts on every connect
+                        NeedsPolaroidSync = PolaroidChecks;
                         Connected = true;
                         log.LogInfo($"[Grunnchipelago] Connected. goal={goal}, coinsanity={Coinsanity}, " +
                                     $"persistent_shortcuts={PersistentShortcuts}, death_link={DeathLinkEnabled}.");
@@ -127,6 +146,30 @@ namespace Grunnchipelago.Client
             if (data.TryGetValue(GameIds.SlotCoinsanity, out var c)) Coinsanity = Convert.ToInt64(c) != 0;
             if (data.TryGetValue(GameIds.SlotPersistentShortcuts, out var p)) PersistentShortcuts = Convert.ToInt64(p) != 0;
             if (data.TryGetValue(GameIds.SlotDeathLink, out var d)) DeathLinkEnabled = Convert.ToInt64(d) != 0;
+            if (data.TryGetValue(GameIds.SlotPolaroidChecks, out var pol)) PolaroidChecks = Convert.ToInt64(pol) != 0;
+            if (data.TryGetValue(GameIds.SlotGhostChecks, out var gh)) GhostChecks = Convert.ToInt64(gh) != 0;
+        }
+
+        /// <summary>Scout every location of this slot so pickups can announce their real
+        /// content ("Envoye : X -> joueur"). One request, cached for the session.</summary>
+        private void ScoutOwnLocations()
+        {
+            try
+            {
+                long[] ids = session.Locations.AllLocations.ToArray();
+                var task = session.Locations.ScoutLocationsAsync(ids);
+                task.ContinueWith(t =>
+                {
+                    if (t.Status != TaskStatus.RanToCompletion || t.Result == null) return;
+                    lock (scouted)
+                        foreach (var kv in t.Result)
+                            scouted[kv.Key] = kv.Value;
+                });
+            }
+            catch (Exception e)
+            {
+                log.LogWarning("[Grunnchipelago] Location scout failed: " + e.Message);
+            }
         }
 
         private void SeedSentLocations()
@@ -191,27 +234,95 @@ namespace Grunnchipelago.Client
 
         // ---------- Sending checks (deduplicated) ----------
 
-        private void TrySend(long id, string label)
+        /// <summary>Returns true if the check was actually sent (not deduplicated).</summary>
+        private bool TrySend(long id, string label)
         {
-            if (!Connected || session == null || id <= 0) return;
+            if (!Connected || session == null || id <= 0) return false;
             lock (sentLocations)
             {
-                if (!sentLocations.Add(id)) return;   // already sent / already checked
+                if (!sentLocations.Add(id)) return false;   // already sent / already checked
             }
             Info($"[Grunnchipelago] Check: {label}");
             session.Locations.CompleteLocationChecks(id);
+            return true;
         }
 
-        private void SendByName(string location)
+        private bool SendByName(string location)
         {
-            if (!Connected || session == null) return;
+            if (!Connected || session == null) return false;
             long id = session.Locations.GetLocationIdFromName(Game, location);
             if (id <= 0)
             {
                 log.LogWarning($"[Grunnchipelago] No location id for '{location}'.");
-                return;
+                return false;
             }
-            TrySend(id, location);
+            bool sent = TrySend(id, location);
+            if (sent) AnnounceScoutedContent(id);
+            return sent;
+        }
+
+        /// <summary>Popup fix (design section 10): the vanilla pickup popup shows the item
+        /// SEEN, not the item the location holds. When a check goes to another player,
+        /// announce it; our own items announce themselves on receipt.</summary>
+        private void AnnounceScoutedContent(long id)
+        {
+            ScoutedItemInfo info;
+            lock (scouted)
+            {
+                if (!scouted.TryGetValue(id, out info)) return;
+            }
+            if (info == null || info.IsReceiverRelatedToActivePlayer) return;
+            QueuePopup($"Envoye : {info.ItemName} -> {info.Player?.Name}");
+        }
+
+        public void QueuePopup(string text) => pendingPopups.Enqueue(text);
+
+        /// <summary>design section 10, feature #5 - Grunn has a single save file: on a
+        /// finished save, GlobalData.polaroidsCollected already holds everything, killing
+        /// the 35 polaroid checks. Drop every polaroid whose AP check is NOT sent yet so
+        /// the world object reappears (Polaroid.ResetState reads CheckPolaroidCollected).
+        ///
+        /// GlobalData audit (2026-07-13): polaroids are the ONLY GlobalData-gated checks.
+        /// Ghosts (ghostCalmPosition) and gulden (coinGrabPosition) live in per-run
+        /// ProgressData, endings are re-triggerable events, key items / tools are per-run.
+        /// polaroidsSolved is ProgressData too - left untouched.</summary>
+        public void SyncPolaroidsWithServer()
+        {
+            var collected = SaveManager.globalDataCheck?.polaroidsCollected;
+            if (collected == null || session == null) return;
+
+            var removed = new List<PolaroidType>();
+            foreach (PolaroidType type in collected.ToArray())
+            {
+                if (type.ToString().StartsWith("Ending", StringComparison.Ordinal)) continue;
+                long id = session.Locations.GetLocationIdFromName(Game, "Polaroid: " + type);
+                if (id <= 0) continue;
+                bool alreadyChecked;
+                lock (sentLocations) alreadyChecked = sentLocations.Contains(id);
+                if (!alreadyChecked)
+                {
+                    collected.Remove(type);
+                    removed.Add(type);
+                }
+            }
+
+            if (removed.Count == 0) return;
+            SaveManager.Save(SaveManager.curSlotIndex);
+            // Immediate world refresh: Polaroid.ResetState re-reads the collected list.
+            if (GameManager.allPolaroids != null)
+                foreach (Polaroid polaroid in GameManager.allPolaroids)
+                    if (polaroid != null) polaroid.ResetState();
+            Info($"[Grunnchipelago] Polaroid sync: {removed.Count} restored to the world " +
+                 $"({string.Join(", ", removed.Select(t => t.ToString()).ToArray())}).");
+        }
+
+        /// <summary>Drained by Plugin.Update, outside pickup calls (whose vanilla popups
+        /// are suppressed). Main thread only.</summary>
+        public void FlushPendingPopups()
+        {
+            if (UIManager.instance == null) return;
+            while (pendingPopups.TryDequeue(out string text))
+                UIManager.instance.AddPopup(text);
         }
 
         /// <summary>Key items AND tools both map to "Obtain &lt;KeyItem&gt;".</summary>
@@ -223,17 +334,31 @@ namespace Grunnchipelago.Client
                 SendKeyItemCheck(keyItem);
         }
 
+        /// <summary>True if the "Obtain X" check for this key item is still unsent.</summary>
+        public bool KeyItemCheckPending(KeyItem keyItem)
+        {
+            if (!Connected || session == null) return false;
+            long id = session.Locations.GetLocationIdFromName(Game, "Obtain " + keyItem);
+            if (id <= 0) return false;
+            lock (sentLocations) return !sentLocations.Contains(id);
+        }
+
         public void SendPolaroidCheck(PolaroidType type)
         {
+            if (!PolaroidChecks) return;   // option off -> polaroids stay vanilla
             // Ending polaroids are awarded by the endings, never shuffled.
             if (type.ToString().StartsWith("Ending", StringComparison.Ordinal)) return;
             SendByName("Polaroid: " + type);
         }
 
         /// <summary>Ghost / gulden indices come from the frozen path tables in GameIds.</summary>
-        public void SendGhostCheck(int index) => TrySend(GameIds.GhostBaseId + index, $"Calm Ghost #{index + 1}");
+        public void SendGhostCheck(int index)
+        {
+            if (!GhostChecks) return;      // option off -> ghosts stay vanilla
+            TrySend(GameIds.GhostBaseId + index, $"Calm Ghost #{index + 1}");
+        }
 
-        public void SendGuldenCheck(int index) => TrySend(GameIds.GuldenBaseId + index, $"Gulden #{index + 1}");
+        public void SendGuldenCheck(int index) => TrySend(GameIds.GuldenBaseId + index, GameIds.GuldenLocationNames[index]);
 
         // ---------- Endings & goal ----------
 
@@ -330,6 +455,16 @@ namespace Grunnchipelago.Client
             string name = item.ItemName;
             if (Enum.TryParse(name, out KeyItem keyItem))
             {
+                // Bone is special (design section 10): never injected into the inventory.
+                // A world pickup spawns near the start instead (BoneGift), so the player
+                // only takes it when needed and the Dog ending stays reachable.
+                if (keyItem == KeyItem.Bone)
+                {
+                    BoneOwnedFromAp = true;
+                    if (realtime && !historical) QueuePopup("Un os attend pres du bus...");
+                    Info("[Grunnchipelago] Bone received - world pickup will spawn near the start.");
+                    return;
+                }
                 try
                 {
                     GrantGuard = true;
@@ -378,6 +513,7 @@ namespace Grunnchipelago.Client
                         case GameIds.BuffMoveSpeed: move++; break;
                         case GameIds.BuffCutterRange: range++; break;
                         case GameIds.BuffCuttingRate: rate++; break;
+                        case "Bone": BoneOwnedFromAp = true; break;
                     }
                 }
             }

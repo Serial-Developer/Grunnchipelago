@@ -16,6 +16,7 @@ namespace Grunnchipelago.Client
             ApClient ap = Plugin.Ap;
             if (ap == null || !ap.Connected) return true;
             if (ApClient.GrantGuard) return true;
+            if (ItemPickupTriggerPatch.SpecialPickupActive) return true;   // bone gift: vanilla grant, no check
             ap.SendKeyItemCheck(_keyItem);
             return false;
         }
@@ -94,23 +95,103 @@ namespace Grunnchipelago.Client
         }
     }
 
-    // ---------- Coinsanity ----------
+    // ---------- Pickups (gulden, bone gift, owned-item bypass, popup fix) ----------
 
-    /// <summary>ItemPickup.Trigger(bool) - ItemPickup.cs:143. Under coinsanity, a placed
-    /// gulden becomes a check (frozen path table); the money add is suppressed via
-    /// AddGuldenPatch.</summary>
+    /// <summary>ItemPickup.Trigger(bool) - ItemPickup.cs:143. Handles, in order:
+    /// - the special "bone gift" pickup (spawned by BoneGift): full vanilla grant, no check;
+    /// - placed gulden: verbose diagnostic popup, and under coinsanity a check with the
+    ///   money add suppressed (AddGuldenPatch);
+    /// - key items ALREADY owned via AP: vanilla refuses them ("ItemDontNeed",
+    ///   ItemPickup.cs:149-153) which would strand the location's check forever - we send
+    ///   the check and hide the pickup instead;
+    /// - normal intercepted pickups: suppress the misleading vanilla "obtained X" popup
+    ///   (the location's real content is announced by the scout, design section 10).</summary>
     [HarmonyPatch(typeof(ItemPickup), nameof(ItemPickup.Trigger))]
-    public static class ItemPickupGuldenPatch
+    public static class ItemPickupTriggerPatch
     {
+        /// <summary>True while the bone-gift pickup runs its vanilla Trigger.</summary>
+        public static bool SpecialPickupActive;
+
+        /// <summary>True while an intercepted pickup runs (read by AddPopupPatch).</summary>
+        public static bool SuppressVanillaPopup;
+
         private static bool Prefix(ItemPickup __instance, bool _throughLoadOperation)
         {
             ApClient ap = Plugin.Ap;
-            if (ap == null || !ap.Connected || !ap.Coinsanity) return true;
-            if (_throughLoadOperation || !__instance.isGulden) return true;
-            int index = ScenePaths.GuldenIndex(__instance);
-            if (index >= 0) ap.SendGuldenCheck(index);
-            ApClient.GuldenPickupGuard = true;   // suppress the money AddGulden is about to do
-            return true;                          // let the pickup consume itself as usual
+            if (ap == null || !ap.Connected || _throughLoadOperation) return true;
+
+            if (__instance.gameObject.name.StartsWith("grunnchipelago", System.StringComparison.Ordinal))
+            {
+                SpecialPickupActive = true;   // reset by Postfix
+                return true;
+            }
+
+            if (__instance.isGulden)
+            {
+                int index = ScenePaths.GuldenIndex(__instance);
+                if (index >= 0)
+                {
+                    if (ApClient.Verbose)
+                    {
+                        // FLAG diagnostic [J 2026-07-13]: identify unknown gulden spots in-game.
+                        Plugin.Log?.LogInfo($"[Grunnchipelago] Gulden pickup: {GameIds.GuldenLocationNames[index]}");
+                        ap.QueuePopup(GameIds.GuldenLocationNames[index]);
+                    }
+                    if (ap.Coinsanity)
+                    {
+                        ap.SendGuldenCheck(index);
+                        ApClient.GuldenPickupGuard = true;   // suppress the money gain
+                    }
+                }
+                return true;
+            }
+
+            var items = __instance.keyItemObtain;
+            if (items != null && items.Count > 0 && !__instance.isRepeatablePickup)
+            {
+                KeyItem first = items[0];
+                if (SaveManager.ObtainedKeyItem(first))
+                {
+                    if (ap.KeyItemCheckPending(first))
+                    {
+                        ap.SendKeyItemCheck(first);
+                        GameManager.GrabbedItem();   // hides this owned-item pickup
+                        return false;                 // skip the misleading vanilla refusal
+                    }
+                    return true;   // check already sent: the vanilla refusal is accurate
+                }
+                SuppressVanillaPopup = true;   // reset by Postfix
+            }
+            return true;
+        }
+
+        private static void Postfix()
+        {
+            SpecialPickupActive = false;
+            SuppressVanillaPopup = false;
+        }
+    }
+
+    /// <summary>UIManager.AddPopup(string) - UIManager.cs:4832. Drops the vanilla
+    /// "obtained &lt;seen item&gt;" popup while an intercepted pickup runs; the real
+    /// content is announced via the scout queue instead.</summary>
+    [HarmonyPatch(typeof(UIManager), nameof(UIManager.AddPopup))]
+    public static class AddPopupPatch
+    {
+        private static bool Prefix() => !ItemPickupTriggerPatch.SuppressVanillaPopup;
+    }
+
+    /// <summary>GameManager.TriggerItemObtainPopup(KeyItem) - GameManager.cs:6023. NPC
+    /// gives (TradeEggball, magpie...) announce the SEEN item too; suppress when the grant
+    /// is intercepted. Our own grants run under GrantGuard and keep their popup.</summary>
+    [HarmonyPatch(typeof(GameManager), nameof(GameManager.TriggerItemObtainPopup))]
+    public static class TriggerItemObtainPopupPatch
+    {
+        private static bool Prefix()
+        {
+            ApClient ap = Plugin.Ap;
+            if (ap == null || !ap.Connected) return true;
+            return ApClient.GrantGuard || ItemPickupTriggerPatch.SpecialPickupActive;
         }
     }
 
@@ -269,6 +350,54 @@ namespace Grunnchipelago.Client
             if (GameIds.GuldenIndexByPath.TryGetValue(path, out int index)) return index;
             Plugin.Log?.LogWarning($"[Grunnchipelago] Unknown gulden path '{path}' - check not sent.");
             return -1;
+        }
+    }
+
+    /// <summary>design section 10, feature #3 - the AP "Bone" item is never injected into
+    /// the inventory. Instead a world pickup (clone of a skeleton-bone ItemPickup) spawns
+    /// near the start (next to the Bridge Key spot, outside the bus). Taking it grants the
+    /// vanilla Bone WITHOUT sending a check (ItemPickupTriggerPatch.SpecialPickupActive),
+    /// so the player only picks it up when needed and the Dog ending stays reachable.
+    /// Across runs the clone follows vanilla rules: ResetWorld -> ResetState shows it
+    /// again whenever Bone is not currently held.</summary>
+    internal static class BoneGift
+    {
+        private static GameObject instance;
+
+        public static void EnsureSpawned(ApClient ap)
+        {
+            if (instance != null || !ap.BoneOwnedFromAp) return;
+            if (GameManager.instance == null || GameManager.allItemPickups == null
+                || GameManager.allItemPickups.Count < 50) return;   // world not loaded yet
+
+            ItemPickup template = null;
+            Vector3 anchor = new Vector3(-33.4f, 10.15f, -64f);   // bridgeKey0 pos (dump)
+            foreach (ItemPickup pickup in GameManager.allItemPickups)
+            {
+                if (pickup == null) continue;
+                if (template == null && !pickup.isGulden && !pickup.isTool
+                    && pickup.keyItemObtain != null && pickup.keyItemObtain.Count > 0
+                    && pickup.keyItemObtain[0] == KeyItem.Bone)
+                    template = pickup;
+                if (pickup.gameObject.name == "bridgeKey0")
+                    anchor = pickup.transform.position;
+            }
+            if (template == null)
+            {
+                Plugin.Log?.LogWarning("[Grunnchipelago] BoneGift: no Bone pickup template found.");
+                return;
+            }
+
+            Vector3 position = anchor + new Vector3(1.5f, 0f, 1.5f);
+            instance = Object.Instantiate(template.gameObject, position, Quaternion.identity);
+            instance.name = "grunnchipelago_boneGift";
+            ItemPickup clone = instance.GetComponent<ItemPickup>();
+            clone.startState = ItemPickupState.Show;   // skeleton bones start hidden
+            instance.SetActive(true);
+            // The clone initialises itself (UpdateNormal -> Init): registers in
+            // allItemPickups, subscribes to GrabbedItemAction, then ResetState -> Show
+            // (Bone not currently held) or Hide (held this run).
+            Plugin.Log?.LogInfo($"[Grunnchipelago] BoneGift spawned at {position}.");
         }
     }
 

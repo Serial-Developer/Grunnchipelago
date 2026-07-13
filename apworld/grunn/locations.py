@@ -52,7 +52,10 @@ POLAROID_REGION: dict[str, str] = {
     "Polaroid: ChurchOutsideDoor": c.EGLISE,
     "Polaroid: FlowerDoor": c.EGLISE,          # ChurchBigHall
     "Polaroid: ChurchKey": c.EGLISE,           # ChurchHallway
-    "Polaroid: Demon": c.EGLISE,               # FLAG: no scene object in dump; End Demon -> Church
+    # Only polaroid with no scene object in the dump (granted by an unfound code path).
+    # Placed in Hell = strictest region, no accessibility false positive [J 2026-07-13].
+    # FLAG playtest: confirm where it is actually awarded.
+    "Polaroid: Demon": c.HELL,
     "Polaroid: GnomeForestDoor": c.EXTERIEUR,  # Road
     "Polaroid: Van": c.EXTERIEUR,
     "Polaroid: HighBridgeKey": c.EXTERIEUR,
@@ -93,7 +96,7 @@ GULDEN_REGION: dict[str, str] = {
     "Gulden #5 (Road)": c.MENU,   # bus-arrival gulden, at spawn (sphere 1, before BridgeKey)
     "Gulden #6 (StartGarden)": c.JARDIN,
     "Gulden #7 (Road)": c.EXTERIEUR,
-    "Gulden #8 (Unknown)": c.EXTERIEUR,   # FLAG: pos in road/village area
+    "Gulden #8 (Unknown)": c.EXTERIEUR,   # pot to smash on the road; needs Hammer (rule in rules.py) [J 2026-07-13]
     "Gulden #9 (Church)": c.EGLISE,
     "Gulden #10 (StartGarden)": c.JARDIN,
     "Gulden #11 (Park)": c.PARC,

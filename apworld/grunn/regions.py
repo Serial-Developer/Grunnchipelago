@@ -89,7 +89,8 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     link(c.JARDIN, c.TOILET, lambda s: s.has("ToiletKey", p))
     # regions_v3: Toilettes -> Tente : donner ToiletPaper (before day 1 noon; time free)
     link(c.TOILET, c.TENTE, lambda s: s.has("ToiletPaper", p))
-    # regions_v3: Cabane joueur -> Couloir final : IsFinalDay + soir (time is free)
+    # regions_v3: Cabane joueur -> Couloir final : IsFinalDay + soir. Confirme libre,
+    # aucun item, juste attendre le dimanche soir [J 2026-07-13].
     link(c.JARDIN, c.COULOIR_FINAL)
     # dump: LongHallway <-> SmallChapelOutside <-> MagicPond (free)
     link(c.COULOIR_FINAL, c.MAGIC_POND)

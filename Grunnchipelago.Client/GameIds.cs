@@ -104,6 +104,19 @@ namespace Grunnchipelago.Client
         public const string SlotCoinsanity = "coinsanity";
         public const string SlotPersistentShortcuts = "persistent_shortcuts";
         public const string SlotDeathLink = "death_link";
+        public const string SlotPolaroidChecks = "polaroid_checks";
+        public const string SlotGhostChecks = "ghost_checks";
+
+        // Full gulden location names (ids.json), indexed like GuldenIndexByPath. Used for
+        // check labels and the verbose pickup diagnostic popup.
+        public static readonly string[] GuldenLocationNames =
+        {
+            "Gulden #1 (GasStationOffice)", "Gulden #2 (Unknown)", "Gulden #3 (Bunker)",
+            "Gulden #4 (StartGarden)", "Gulden #5 (Road)", "Gulden #6 (StartGarden)",
+            "Gulden #7 (Road)", "Gulden #8 (Unknown)", "Gulden #9 (Church)",
+            "Gulden #10 (StartGarden)", "Gulden #11 (Park)", "Gulden #12 (Park)",
+            "Gulden #13 (PillarSpace)", "Gulden #14 (Ferry)", "Gulden #15 (Intratuin)",
+        };
 
         public const int GoalGoodEnding = 0;
         public const int GoalTrueEnding = 1;

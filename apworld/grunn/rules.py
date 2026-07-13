@@ -97,11 +97,15 @@ OBTAIN_RULES: dict[str, Rule] = {
     "Apple": lambda s, w: _reach(s, w, c.APPLE_SPACE),
     # dump: StartGarden (worm0) OR WindyPath
     "Worm": lambda s, w: _reach(s, w, c.JARDIN) or _reach(s, w, c.CABANE_PECHEUR),
-    # dump: Bunker (trowel0) OR Toilet (trowel0_demo)
+    # dump: Bunker (trowel0) OR Toilet (trowel0_demo). The "_demo" suffix is naming only,
+    # NOT demo-gated content: the real demo mechanism is hideInDemo + SaveManager.demo
+    # (ContentHider.cs:214) and these pickups have hideInDemo:False / startState:Show
+    # / no hider [J 2026-07-13].
     "Trowel": lambda s, w: _reach(s, w, c.BUNKER) or _reach(s, w, c.TOILET),
     # dump: PlayerSchuur (scissors)
     "Shears": lambda s, w: _reach(s, w, c.CABANE_JOUEUR),
-    # dump: Park OR RoundHallway (demo)
+    # dump: Park OR RoundHallway (wateringCan0_demo - naming only, not demo-gated,
+    # see Trowel note) [J 2026-07-13]
     "WateringCan": lambda s, w: _reach(s, w, c.PARC) or _reach(s, w, c.PASSAGE_GNOMES),
     # dump: Road (item_plank0)
     "Plank": lambda s, w: _reach(s, w, c.EXTERIEUR),
@@ -143,7 +147,9 @@ OBTAIN_RULES: dict[str, Rule] = {
     "Paddle": lambda s, w: _reach(s, w, c.JARDIN),
     # regions_v3: THE first key, pickup bridgeKey0 on the road at spawn (before Jardin).
     "BridgeKey": lambda s, w: True,
-    # dump: BigHouseOffice (free) OR StartGarden magpie (needs Worm)
+    # dump: BigHouseOffice (free) OR StartGarden magpie (needs Worm). The magpie pickup
+    # is strangeKey0_demo, child of magpieDeadByWorm0 = the canonical magpie key drop
+    # ("_demo" is naming only, see Trowel note) [J 2026-07-13].
     "StrangeKey": lambda s, w: _reach(s, w, c.MANOIR) or (_reach(s, w, c.JARDIN) and s.has("Worm", w.player)),
     # regions_v3 I.4: cross the maze gap + Compass (-> maze heart) + hit the TallMan
     # (MagicSword|Hammer). MagicSword itself needs Hell, so Hammer is the real route.
@@ -261,6 +267,14 @@ def set_all_rules(world: "GrunnWorld") -> None:
     # Ending checks.
     for ending, rule in ENDING_RULES.items():
         set_rule(world.get_location(f"Ending: {ending}"), lambda s, r=rule: r(s, world))
+
+    # Gulden #8 is inside a pot on the road that must be smashed with the Hammer
+    # [J 2026-07-13]. (Gulden locations only exist under coinsanity.)
+    if world.options.coinsanity:
+        set_rule(
+            world.get_location("Gulden #8 (Unknown)"),
+            lambda s: s.has("Hammer", player),
+        )
 
     # Completion condition per goal (design/apworld_design.md section 2).
     goal = world.options.goal.value

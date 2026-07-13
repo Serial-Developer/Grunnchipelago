@@ -146,3 +146,28 @@ progression selon les règles finales.
 3. Prompt Claude Code : scaffold apworld (regions.py généré depuis regions_v3 + zone_logic)
 4. Test bout en bout solo, puis calibrage buffs/traps
 5. Post de présentation Discord AP (#future-game-design)
+
+## 10. Features Jonath — triage (2026-07-13)
+
+### Pré-playtest (bloquants)
+- **Sync des polaroids (feature #5)** : Grunn n'a qu'un seul fichier de sauvegarde ; sur
+  une save terminée, `GlobalData.polaroidsCollected` contient déjà tout -> les 35 checks
+  polaroids sont morts. Fix : à la connexion, retirer de la liste collectée (et solved si
+  nécessaire) tout polaroid dont le check AP n'est pas encore envoyé, pour que l'objet
+  réapparaisse en monde. + AUDIT général : tout autre check gaté par un état GlobalData
+  déjà acquis (fantômes ? gulden ?) doit être resynchronisé de la même façon.
+- **Bone près du spawn (feature #3)** : l'item Bone reçu n'est PAS injecté en inventaire ;
+  le mod fait apparaître un pickup monde à côté du point de départ (hors du bus). Le
+  joueur le prend seulement au besoin -> préserve la fin Dog (all_endings). Ce pickup
+  spécial ne renvoie pas de check.
+- **Texte du popup de ramassage (feature #4, partie légère)** : le popup vanilla affiche
+  l'objet VU, pas l'objet reçu (ex. pagaie ramassée, triangle obtenu, message « pagaie »).
+  Fix : supprimer le popup vanilla au ramassage intercepté et afficher le vrai contenu
+  (item reçu, ou « Envoyé : X -> joueur » en multi).
+
+### Backlog post-v1 (immersion)
+- **Modèles physiques fidèles (feature #1)** : afficher à l'emplacement du pickup le
+  modèle 3D de l'item réellement contenu (pour les items Grunn locaux).
+- **Modèles « Archipelago » (feature #2)** : en multiworld, modèles distincts par
+  classification (filler / useful / progression), et traps déguisés aléatoirement en
+  useful ou progression — pattern classique des grands randomizers.
