@@ -132,11 +132,28 @@ namespace Grunnchipelago.Client
 
     // ---------- Helpers ----------
 
+    /// <summary>GameManager.HandleNightmare (private, GameManager.cs:1454) zeroes the
+    /// nightmare blend factor whenever CanShowNightmare() is false (enteredStartHouse
+    /// resets each run), which hid our DeathLink jumpscare image. While the jumpscare is
+    /// active we force the factor to the vanilla Show value (0.2, GameManager.cs:1469)
+    /// right after the vanilla write: the NightmareCamera renders the shot into
+    /// _NightmareMap and the PostFX stack blends it (NightmareCamera.cs:56,
+    /// PostFXStack.cs:476). We deliberately do NOT touch enteredStartHouse - it gates
+    /// world content (hedge-maze portals).</summary>
+    [HarmonyPatch(typeof(GameManager), "HandleNightmare")]
+    public static class HandleNightmarePatch
+    {
+        private static void Postfix()
+        {
+            if (Plugin.JumpscareActive)
+                GameManager.nightmareFactorCur = 0.2f;
+        }
+    }
+
     /// <summary>Cosmetic nightmare jumpscare used when a DeathLink is received (the actual
-    /// "death" is the run reset done by Plugin.Update after this displays). Replicates the
-    /// display path of GameManager.ShowNightmareShot (GameManager.cs:933) without the 66 %
-    /// early-out; Hide() clears the private state so the overlay cannot stick outside sleep
-    /// (HandleNightmare, GameManager.cs:1454, only advances its timers while sleeping).</summary>
+    /// "death" is the run reset done by Plugin.Update after this displays). Shows one of
+    /// the vanilla nightmare shots (GameManager.cs:933 display path) in front of the
+    /// NightmareCamera; the blend factor is forced by HandleNightmarePatch while active.</summary>
     internal static class NightmareJumpscare
     {
         public static bool Show()
@@ -150,12 +167,6 @@ namespace Grunnchipelago.Client
             for (int i = 0; i < shots.shotObjects.Length; i++)
                 shots.shotObjects[i].SetActive(i == pick);
 
-            // ResetNightmareValues (GameManager.cs:926, private): showedNightmare = true
-            // + reset both nightmare timers, so HandleNightmare shows the overlay.
-            AccessTools.Field(typeof(GameManager), "showedNightmare").SetValue(null, true);
-            ((Timer)AccessTools.Field(typeof(GameManager), "nightmareWaitTimer").GetValue(null)).Reset();
-            ((Timer)AccessTools.Field(typeof(GameManager), "nightmareShowTimer").GetValue(null)).Reset();
-
             AudioManager.instance.PlaySoundGlobal(
                 BasicFunctions.PickRandomAudioClipFromArray(AudioManager.instance.showNightmareShot),
                 1.6f, 2.1f, 0.5f, 0.525f);
@@ -164,7 +175,6 @@ namespace Grunnchipelago.Client
 
         public static void Hide()
         {
-            AccessTools.Field(typeof(GameManager), "showedNightmare").SetValue(null, false);
             GameManager.nightmareShots?.HideAll();
         }
     }

@@ -52,6 +52,10 @@ namespace Grunnchipelago.Client
         private float deathLinkTimer = -1f;
         private const float DeathLinkJumpscareDuration = 2.5f;
 
+        /// <summary>True while the DeathLink jumpscare displays; read by HandleNightmarePatch
+        /// to force the nightmare blend factor.</summary>
+        public static bool JumpscareActive { get; private set; }
+
         private void Update()
         {
             if (Ap == null) return;
@@ -79,6 +83,7 @@ namespace Grunnchipelago.Client
                 if (inGame && Ap.TakeAllPendingDeathLinks() > 0)
                 {
                     NightmareJumpscare.Show();
+                    JumpscareActive = true;
                     deathLinkTimer = 0f;
                     Logger.LogInfo("[Grunnchipelago] DeathLink: nightmare jumpscare, run resets shortly.");
                 }
@@ -89,6 +94,7 @@ namespace Grunnchipelago.Client
             if (deathLinkTimer >= DeathLinkJumpscareDuration)
             {
                 deathLinkTimer = -1f;
+                JumpscareActive = false;
                 NightmareJumpscare.Hide();
                 GameManager.TriggerBlackScreen(120f);   // GameManager.cs:3415
                 GameManager.TriggerNewRun();            // GameManager.cs:3758
