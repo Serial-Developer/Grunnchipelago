@@ -48,11 +48,13 @@ namespace Grunnchipelago.Client
                 Ap.Connect(cfgHost.Value, cfgPort.Value, cfgSlot.Value, cfgPassword.Value);
         }
 
-        // DeathLink jumpscare/reset sequence: <0 = idle, otherwise elapsed seconds.
+        // DeathLink sequence: <0 = idle, otherwise elapsed seconds.
         private float deathLinkTimer = -1f;
-        private const float DeathLinkJumpscareDuration = 2.5f;
+        private bool screamerShown;
+        private const float FadeToBlackDuration = 1.0f;   // black + frozen player (a ajuster)
+        private const float ScreamerDuration = 2.0f;      // nightmare shot on black (a ajuster)
 
-        /// <summary>True while the DeathLink jumpscare displays; read by HandleNightmarePatch
+        /// <summary>True while the DeathLink screamer displays; read by HandleNightmarePatch
         /// to force the nightmare blend factor.</summary>
         public static bool JumpscareActive { get; private set; }
 
@@ -70,9 +72,13 @@ namespace Grunnchipelago.Client
             Ap.Tick(Time.deltaTime, cfgHost.Value, cfgPort.Value, cfgSlot.Value, cfgPassword.Value);
         }
 
-        /// <summary>Received DeathLink = cosmetic nightmare jumpscare, then the run resets
-        /// (TriggerNewRun - GameManager.cs:3758 - which our patch follows with the AP
-        /// inventory re-injection). No ending is triggered, no check granted.</summary>
+        /// <summary>Received DeathLink sequence (design Jonath 2026-07-13):
+        /// 1. the screen cuts to black and the player freezes (movement is blocked while
+        ///    BlackScreen is up, PlayerControllerNew.cs:687) for FadeToBlackDuration;
+        /// 2. a GUARANTEED random nightmare shot + sound displays over the black
+        ///    (the nightmare PostFX composes above the black screen, PostFXStack.cs:476);
+        /// 3. the run resets (TriggerNewRun - our patch re-injects the AP inventory).
+        /// No ending is triggered, no check granted.</summary>
         private void HandleDeathLink(bool inGame)
         {
             if (!Ap.DeathLinkEnabled) return;
@@ -82,21 +88,31 @@ namespace Grunnchipelago.Client
                 // Several deaths received while away collapse into a single reset.
                 if (inGame && Ap.TakeAllPendingDeathLinks() > 0)
                 {
-                    NightmareJumpscare.Show();
-                    JumpscareActive = true;
+                    // Covers the whole sequence (durations are in 60ths of a second).
+                    GameManager.TriggerBlackScreen((FadeToBlackDuration + ScreamerDuration + 1f) * 60f);
                     deathLinkTimer = 0f;
-                    Logger.LogInfo("[Grunnchipelago] DeathLink: nightmare jumpscare, run resets shortly.");
+                    screamerShown = false;
+                    Logger.LogInfo("[Grunnchipelago] DeathLink: fade to black...");
                 }
                 return;
             }
 
             deathLinkTimer += Time.deltaTime;
-            if (deathLinkTimer >= DeathLinkJumpscareDuration)
+
+            if (!screamerShown && deathLinkTimer >= FadeToBlackDuration)
+            {
+                screamerShown = true;
+                NightmareJumpscare.Show();   // guaranteed shot + sound
+                JumpscareActive = true;      // forces the nightmare blend factor
+                Logger.LogInfo("[Grunnchipelago] DeathLink: nightmare screamer.");
+            }
+
+            if (deathLinkTimer >= FadeToBlackDuration + ScreamerDuration)
             {
                 deathLinkTimer = -1f;
                 JumpscareActive = false;
                 NightmareJumpscare.Hide();
-                GameManager.TriggerBlackScreen(120f);   // GameManager.cs:3415
+                GameManager.TriggerBlackScreen(120f);   // reset transition (GameManager.cs:3415)
                 GameManager.TriggerNewRun();            // GameManager.cs:3758
                 Logger.LogInfo("[Grunnchipelago] DeathLink applied: run reset.");
             }

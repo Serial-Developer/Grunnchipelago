@@ -271,8 +271,16 @@ namespace Grunnchipelago.Client
         public void ApplyPendingItems()
         {
             if (GameManager.instance == null) return;
+            bool granted = false;
             while (pending.TryDequeue(out ItemInfo item))
+            {
                 GrantItem(item, realtime: true);
+                granted = true;
+            }
+            // Hide the world models of now-owned items: every ItemPickup listens to this
+            // vanilla event and hides itself if its key item is obtained (GameManager.cs:3317,
+            // ItemPickup.CheckIfAlreadyObtainedThisItem).
+            if (granted) GameManager.GrabbedItem();
         }
 
         private void GrantItem(ItemInfo item, bool realtime)
@@ -319,6 +327,10 @@ namespace Grunnchipelago.Client
 
             if (Coinsanity && guldenReceivedTotal > 0)
                 GameManager.AddGulden(guldenReceivedTotal, false);
+
+            // The world was reset BEFORE this re-injection, so the pickups of now-owned
+            // items are visible again - hide them (vanilla event, GameManager.cs:3317).
+            GameManager.GrabbedItem();
 
             log.LogInfo($"[Grunnchipelago] Re-injected inventory ({all.Length} items).");
         }
