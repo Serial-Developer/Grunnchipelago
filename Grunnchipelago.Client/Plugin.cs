@@ -1,5 +1,8 @@
+using System;
+using System.IO;
 using BepInEx;
 using BepInEx.Configuration;
+using BepInEx.Logging;
 using HarmonyLib;
 using UnityEngine;
 
@@ -24,6 +27,7 @@ namespace Grunnchipelago.Client
         private ConfigEntry<string> cfgSlot;
         private ConfigEntry<string> cfgPassword;
         private ConfigEntry<bool> cfgVerboseLogs;
+        private ConfigEntry<bool> cfgSkipEndingDialogues;
         private ConfigEntry<string> cfgSeenItems;
 
         private void Awake()
@@ -37,8 +41,15 @@ namespace Grunnchipelago.Client
             cfgPassword = Config.Bind("Connection", "Password", "", "Server password (optional).");
             cfgVerboseLogs = Config.Bind("Logging", "VerboseLogs", true,
                 "Log every check/grant/trap (dev). When false, only connection, errors and goal.");
+            cfgSkipEndingDialogues = Config.Bind("QoL", "SkipEndingDialogues", false,
+                "Ending NPC dialogues (Owner / saved Owner) display instantly and advance " +
+                "without the anti-skip delay - hammer Interact to blow through them.");
             cfgSeenItems = Config.Bind("Progress", "SeenItems", "",
                 "Internal: '<seed>:<slot>:<count>' of already-applied items. Do not edit.");
+
+            // Persistent, timestamped mod log (BepInEx overwrites LogOutput.log each boot).
+            BepInEx.Logging.Logger.Listeners.Add(new SessionFileLog(
+                Path.Combine(Paths.PluginPath, "Grunnchipelago", "grunnchipelago_session.log")));
 
             if (!cfgEnabled.Value)
             {
@@ -82,8 +93,11 @@ namespace Grunnchipelago.Client
             Effects.Tick(Ap.Connected);
             if (Ap.Connected)
             {
-                // Popups queued from patch context (vanilla-popup suppression scope).
-                Ap.FlushPendingPopups();
+                // Popups queued from patch context; drained only in-game so ending-check
+                // rewards land at the new run, after the cutscene (playtest D.1).
+                if (inGame) Ap.FlushPendingPopups();
+                HandleSkipEndingDialogues();
+                HutLock.Tick(Ap);
                 // Bone gift pickup near the start (design section 10, feature #3).
                 BoneGift.EnsureSpawned(Ap);
                 // One-shot after login: restore uncollected-check polaroids to the world.
@@ -106,6 +120,24 @@ namespace Grunnchipelago.Client
             HandleDeathLink(inGame);
             // Simple reconnection loop.
             Ap.Tick(Time.deltaTime, cfgHost.Value, cfgPort.Value, cfgSlot.Value, cfgPassword.Value);
+        }
+
+        /// <summary>playtest D.2 - ending NPC dialogues (Owner / OwnerSaved prompt chains,
+        /// Owner.cs HandleTalking) gate each line behind full text scroll + an anti-skip
+        /// timer. While one of them talks, force the text complete and the skip timer
+        /// finished so Interact advances instantly. Scoped to the ending NPCs only.</summary>
+        private void HandleSkipEndingDialogues()
+        {
+            if (!cfgSkipEndingDialogues.Value || UIManager.instance == null) return;
+            bool endingNpcTalking =
+                (GameManager.owner != null && GameManager.owner.curState != Owner.State.Off)
+                || (GameManager.ownerSaved != null && GameManager.ownerSaved.curState != OwnerSaved.State.Off);
+            if (!endingNpcTalking) return;
+
+            UIManager ui = UIManager.instance;
+            if (ui.promptCharIndex < ui.promptCharMax) ui.promptCharIndex = ui.promptCharMax;
+            ui.skipPromptTimer.counter = ui.skipPromptTimer.duration;
+            ui.skipPromptTimer.finished = true;
         }
 
         /// <summary>Received DeathLink sequence (design Jonath 2026-07-13):
@@ -158,5 +190,45 @@ namespace Grunnchipelago.Client
         {
             Ap?.Disconnect();
         }
+    }
+
+    /// <summary>playtest C.2 - persistent mod log: BepInEx rewrites LogOutput.log on every
+    /// boot, so [Grunnchipelago] lines are also appended, timestamped, to
+    /// plugins/Grunnchipelago/grunnchipelago_session.log (simple 2 MB rotation to .old).</summary>
+    internal sealed class SessionFileLog : ILogListener
+    {
+        private const long MaxBytes = 2_000_000;
+        private readonly StreamWriter writer;
+
+        public SessionFileLog(string path)
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                if (File.Exists(path) && new FileInfo(path).Length > MaxBytes)
+                {
+                    string old = path + ".old";
+                    if (File.Exists(old)) File.Delete(old);
+                    File.Move(path, old);
+                }
+                writer = new StreamWriter(path, append: true) { AutoFlush = true };
+                writer.WriteLine($"===== session {DateTime.Now:yyyy-MM-dd HH:mm:ss} =====");
+            }
+            catch (Exception)
+            {
+                writer = null;   // logging must never break the game
+            }
+        }
+
+        public void LogEvent(object sender, LogEventArgs eventArgs)
+        {
+            if (writer == null) return;
+            string text = eventArgs.Data?.ToString();
+            if (text == null || !text.Contains("[Grunnchipelago]")) return;
+            try { writer.WriteLine($"[{DateTime.Now:HH:mm:ss}] [{eventArgs.Level}] {text}"); }
+            catch (Exception) { }
+        }
+
+        public void Dispose() => writer?.Dispose();
     }
 }
