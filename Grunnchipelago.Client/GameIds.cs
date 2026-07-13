@@ -86,6 +86,19 @@ namespace Grunnchipelago.Client
             EndingType.LongHallway, EndingType.HedgeMaze, EndingType.WorldEnd, EndingType.Dog,
         };
 
+        // Buff / trap item names (ids.json).
+        public const string BuffMoveSpeed = "Move Speed Boost";
+        public const string BuffCutterRange = "Cutter Range Boost";
+        public const string BuffCuttingRate = "Cutting Rate Boost";
+        public const string TrapSpeed = "Speed Trap";
+        public const string TrapSize = "Size Trap";
+        public const string TrapInvertedControls = "Inverted Controls Trap";
+        public const string TrapRegrowGrass = "Regrow Grass Trap";
+        public const string TrapRewaterFlowers = "Rewater Flowers Trap";
+        public const string TrapRegrowHedge = "Regrow Hedge Trap";
+        public const string TrapReturnTrash = "Return Trash Trap";
+        public const string TrapRegrowMolehills = "Regrow Molehills Trap";
+
         // slot_data keys (fill_slot_data in worlds/grunn/__init__.py).
         public const string SlotGoal = "goal";                       // 0 good / 1 true / 2 all
         public const string SlotCoinsanity = "coinsanity";

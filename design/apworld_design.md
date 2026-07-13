@@ -123,7 +123,7 @@ progression selon les règles finales.
 | `coinsanity` | toggle | off | 15 gulden posés en checks + logique monétaire |
 | `persistent_shortcuts` | toggle | off | restaure les raccourcis entre les runs |
 | `trap_percentage` etc. | range | à calibrer | proportion buffs/traps/fillers |
-| `death_link` | toggle | off (convention AP) | STRICT : toute mort envoie un DeathLink, tout DeathLink reçu tue — aucun filtrage (décision Jonath) |
+| `death_link` | toggle | off (convention AP) | V2 (décision Jonath, 2026-07) : les morts SONT les fins — envoi sur les 8 fins-morts (Mist, SacredFlowers, Drown, Darkness, LongHallway, HedgeMaze, WorldEnd, Dog), jamais Bus/Picnic/GoodEnd ; réception = reset de run SANS fin déclenchée ni check (anti-farm all_endings, anti-boucle) |
 
 ## 8. Hooks techniques (référence mod client)
 
@@ -132,12 +132,12 @@ progression selon les règles finales.
 | `GameManager.ObtainKeyItem(KeyItem, bool)` | Prefix | check à l'obtention + interception de l'octroi vanilla |
 | `PlayerManager.AddTool(Item)` | Prefix | idem pour les 6 outils (chemin séparé) |
 | `GameManager.TriggerEnding(EndingType)` | Postfix | checks de fins + détection du goal |
-| `Ghost.Touch()` | Postfix | checks fantômes (ID par position triée) |
+| `Ghost.Touch()` | Postfix | checks fantômes (ID par chemin de scène gelé depuis ids.json — V2, immune au déplacement) |
 | `SaveManager.AddPolaroidCollected` | Postfix | checks polaroids (filtre Ending*) |
 | `GameManager.TriggerNewRun()` | Postfix | réinjection inventaire AP + persistent_shortcuts |
 | `GameManager.AddGulden(int)` / pickups isGulden | Prefix | coinsanity |
 | `TriggerItemObtainPopup(KeyItem)` | appel direct | affichage des items reçus du multiworld |
-| `GameManager.SetNightmareState(NightmareState)` | Postfix | DeathLink : déclenchement du cauchemar = mort (états exacts à affiner au dev) ; réception DeathLink = déclencher le cauchemar |
+| DeathLink V2 (via `TriggerEnding`) | Postfix | envoi sur les 8 fins-morts ; réception = reset de run sans fin ni check ; séquence de réception custom : noir 1 s + screamer 2 s (`nightmareFactorCur` forcé à 0.2 pendant le screamer) |
 
 ## 9. Étapes suivantes
 

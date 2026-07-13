@@ -40,6 +40,10 @@
       <HintPath>$(Managed)\UnityEngine.AudioModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>$(Managed)\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>$(Managed)\Assembly-CSharp.dll</HintPath>
       <Private>false</Private>

@@ -130,6 +130,67 @@ namespace Grunnchipelago.Client
         }
     }
 
+    // ---------- Buffs & traps ----------
+
+    /// <summary>ItemObject.CreateGrassCutter(float _scaleFactor, int _grassCutterIndex) -
+    /// ItemObject.cs:135 (private). The FLOAT is the cutter radius (prefab spawn scale);
+    /// the INT is a prefab variant index, not a rate. Cutter Range Boost scales the radius.</summary>
+    [HarmonyPatch(typeof(ItemObject), "CreateGrassCutter")]
+    public static class CreateGrassCutterPatch
+    {
+        private static void Prefix(ref float _scaleFactor)
+        {
+            ApClient ap = Plugin.Ap;
+            if (ap == null || !ap.Connected) return;
+            _scaleFactor *= Effects.CutterScaleMultiplier;
+        }
+    }
+
+    /// <summary>PlayerArm.PerformAnimation (private) - PlayerArm.cs:533 advances
+    /// animationCounter by cachedDeltaTime. Cutting Rate Boost accelerates the swing
+    /// animation by adding extra time per frame (faster swings = faster cutting).</summary>
+    [HarmonyPatch(typeof(PlayerArm), "PerformAnimation")]
+    public static class PerformAnimationPatch
+    {
+        private static readonly AccessTools.FieldRef<PlayerArm, float> CounterRef =
+            AccessTools.FieldRefAccess<PlayerArm, float>("animationCounter");
+
+        private static void Postfix(PlayerArm __instance)
+        {
+            ApClient ap = Plugin.Ap;
+            if (ap == null || !ap.Connected) return;
+            float extra = Effects.SwingSpeedMultiplier - 1f;
+            if (extra > 0f && GameManager.instance != null)
+                CounterRef(__instance) += GameManager.instance.cachedDeltaTime * extra;
+        }
+    }
+
+    /// <summary>MouseLookNew.UpdateNormal - MouseLookNew.cs:236 reads InputManager.lookDirection
+    /// into the public hInputR/vInputR. Inverted Controls Trap negates them (one-frame lag,
+    /// imperceptible, applies to both player and camera looks).</summary>
+    [HarmonyPatch(typeof(MouseLookNew), nameof(MouseLookNew.UpdateNormal))]
+    public static class MouseLookInvertPatch
+    {
+        private static void Postfix(MouseLookNew __instance)
+        {
+            if (!Effects.InvertedControlsActive) return;
+            __instance.hInputR = -__instance.hInputR;
+            __instance.vInputR = -__instance.vInputR;
+        }
+    }
+
+    /// <summary>InputManager.OnMove(CallbackContext) - InputManager.cs:370 writes the static
+    /// moveDirection. Inverted Controls Trap flips movement too.</summary>
+    [HarmonyPatch(typeof(InputManager), nameof(InputManager.OnMove))]
+    public static class MoveInvertPatch
+    {
+        private static void Postfix()
+        {
+            if (!Effects.InvertedControlsActive) return;
+            InputManager.moveDirection = -InputManager.moveDirection;
+        }
+    }
+
     // ---------- Helpers ----------
 
     /// <summary>GameManager.HandleNightmare (private, GameManager.cs:1454) zeroes the

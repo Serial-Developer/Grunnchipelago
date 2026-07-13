@@ -38,8 +38,23 @@ namespace Grunnchipelago.Client
         private string slotName = "";
 
         private int goal = GameIds.GoalTrueEnding;
-        private int guldenReceivedTotal;
         private int pendingDeathLinks;
+
+        // Items already processed in past sessions (persisted by Plugin per seed+slot).
+        // The server replays EVERY item on each connect; anything at or below this ordinal
+        // is "historical": granted silently, never re-firing traps / popups / money.
+        private int seenItemCount;
+        private int itemOrdinal;
+        public Func<string> LoadSeenState;      // returns "<seed>:<count>" or ""
+        public Action<string> SaveSeenState;    // persists "<seed>:<count>"
+
+        /// <summary>Verbose dev logging (config). Errors/connection/goal always log.</summary>
+        public static bool Verbose = true;
+
+        private void Info(string message)
+        {
+            if (Verbose) log.LogInfo(message);
+        }
 
         // Guards so that server-side grants run the ORIGINAL game methods instead of
         // being re-interpreted as in-game pickups by our prefixes.
@@ -82,6 +97,8 @@ namespace Grunnchipelago.Client
                         ReadSlotData(success.SlotData);
                         SeedSentLocations();
                         SetupDeathLink();
+                        LoadSeenItemCount();
+                        itemOrdinal = 0;   // the replay stream restarts on every connect
                         Connected = true;
                         log.LogInfo($"[Grunnchipelago] Connected. goal={goal}, coinsanity={Coinsanity}, " +
                                     $"persistent_shortcuts={PersistentShortcuts}, death_link={DeathLinkEnabled}.");
@@ -134,6 +151,26 @@ namespace Grunnchipelago.Client
             deathLinkService.OnDeathLinkReceived += OnDeathLinkReceived;
         }
 
+        private void LoadSeenItemCount()
+        {
+            seenItemCount = 0;
+            try
+            {
+                string stored = LoadSeenState?.Invoke() ?? "";
+                string key = session.RoomState.Seed + ":" + slotName;
+                int sep = stored.LastIndexOf(':');
+                if (sep > 0 && stored.Substring(0, sep) == key)
+                    seenItemCount = int.Parse(stored.Substring(sep + 1));
+            }
+            catch (Exception) { seenItemCount = 0; }
+        }
+
+        private void PersistSeenItemCount()
+        {
+            try { SaveSeenState?.Invoke(session.RoomState.Seed + ":" + slotName + ":" + seenItemCount); }
+            catch (Exception) { }
+        }
+
         private void OnSocketClosed(string reason)
         {
             if (Connected) log.LogWarning("[Grunnchipelago] Disconnected: " + reason);
@@ -161,7 +198,7 @@ namespace Grunnchipelago.Client
             {
                 if (!sentLocations.Add(id)) return;   // already sent / already checked
             }
-            log.LogInfo($"[Grunnchipelago] Check: {label}");
+            Info($"[Grunnchipelago] Check: {label}");
             session.Locations.CompleteLocationChecks(id);
         }
 
@@ -214,7 +251,7 @@ namespace Grunnchipelago.Client
             // ending (they reset the run), so this cannot loop.
             if (DeathLinkEnabled && deathLinkService != null && GameIds.DeathLinkEndings.Contains(ending))
             {
-                log.LogInfo($"[Grunnchipelago] Death ending ({ending}) - sending DeathLink.");
+                Info($"[Grunnchipelago] Death ending ({ending}) - sending DeathLink.");
                 try { deathLinkService.SendDeathLink(new DeathLink(slotName, $"{slotName} met the {ending} ending")); }
                 catch (Exception e) { log.LogError("[Grunnchipelago] SendDeathLink failed: " + e.Message); }
             }
@@ -244,7 +281,7 @@ namespace Grunnchipelago.Client
         private void OnDeathLinkReceived(DeathLink deathLink)
         {
             Interlocked.Increment(ref pendingDeathLinks);
-            log.LogInfo($"[Grunnchipelago] DeathLink received from '{deathLink.Source}' - the run will reset.");
+            Info($"[Grunnchipelago] DeathLink received from '{deathLink.Source}' - the run will reset.");
         }
 
         /// <summary>Consume every pending received DeathLink at once (several deaths while
@@ -259,31 +296,36 @@ namespace Grunnchipelago.Client
         private void OnItemReceived(ReceivedItemsHelper helper)
         {
             while (helper.PeekItem() != null)
-            {
-                ItemInfo item = helper.DequeueItem();
-                if (item.ItemName == "Gulden") Interlocked.Increment(ref guldenReceivedTotal);
-                pending.Enqueue(item);
-            }
+                pending.Enqueue(helper.DequeueItem());
         }
 
         /// <summary>Grant queued items. Called from the Unity main thread, only while
-        /// actually in-game (menu / black screen / transitions keep items queued).</summary>
+        /// actually in-game (menu / black screen / transitions keep items queued).
+        /// The server replays every item on each connect: items at or below the persisted
+        /// seen-count are "historical" (silent grant, no trap / popup / money).</summary>
         public void ApplyPendingItems()
         {
             if (GameManager.instance == null) return;
             bool granted = false;
             while (pending.TryDequeue(out ItemInfo item))
             {
-                GrantItem(item, realtime: true);
+                itemOrdinal++;
+                bool historical = itemOrdinal <= seenItemCount;
+                GrantItem(item, realtime: true, historical: historical);
+                if (!historical) seenItemCount = itemOrdinal;
                 granted = true;
             }
-            // Hide the world models of now-owned items: every ItemPickup listens to this
-            // vanilla event and hides itself if its key item is obtained (GameManager.cs:3317,
-            // ItemPickup.CheckIfAlreadyObtainedThisItem).
-            if (granted) GameManager.GrabbedItem();
+            if (granted)
+            {
+                // Hide the world models of now-owned items: every ItemPickup listens to
+                // this vanilla event (GameManager.cs:3317, CheckIfAlreadyObtainedThisItem).
+                GameManager.GrabbedItem();
+                RecomputeBuffs();
+                PersistSeenItemCount();
+            }
         }
 
-        private void GrantItem(ItemInfo item, bool realtime)
+        private void GrantItem(ItemInfo item, bool realtime, bool historical)
         {
             string name = item.ItemName;
             if (Enum.TryParse(name, out KeyItem keyItem))
@@ -293,24 +335,60 @@ namespace Grunnchipelago.Client
                     GrantGuard = true;
                     if (GameIds.KeyItemToTool.TryGetValue(keyItem, out Item tool))
                         PlayerManager.instance?.AddTool(tool);   // tool item grants both
-                    if (realtime) GameManager.TriggerItemObtainPopup(keyItem);   // no popup spam on re-inject
+                    if (realtime && !historical) GameManager.TriggerItemObtainPopup(keyItem);
                     GameManager.instance.ObtainKeyItem(keyItem, false);
-                    log.LogInfo($"[Grunnchipelago] Granted {keyItem}" + (realtime ? "." : " (reinject)."));
+                    Info($"[Grunnchipelago] Granted {keyItem}" + (realtime ? "." : " (reinject)."));
                 }
                 catch (Exception e) { log.LogError($"[Grunnchipelago] grant {keyItem} failed: {e.Message}"); }
                 finally { GrantGuard = false; }
             }
             else if (name == "Gulden")
             {
-                // Money only matters under coinsanity. On a fresh run the total is
-                // restored by ReinjectInventory; here we only add the live delta.
-                if (realtime && Coinsanity)
+                // Money only matters under coinsanity. Historical gulden are already in the
+                // save; run resets are restored wholesale by ReinjectInventory.
+                if (realtime && !historical && Coinsanity)
                 {
                     GameManager.AddGulden(1, false);
-                    log.LogInfo("[Grunnchipelago] Granted 1 Gulden.");
+                    Info("[Grunnchipelago] Granted 1 Gulden.");
                 }
             }
-            // Buffs / traps land in a later milestone.
+            else if (realtime && !historical)
+            {
+                // Traps fire once, on fresh receipt only (buff counts are recomputed
+                // separately from the full list, so nothing to do for buffs here).
+                if (name.EndsWith("Trap", StringComparison.Ordinal))
+                {
+                    Effects.ApplyTrap(name);
+                    Info($"[Grunnchipelago] Trap applied: {name}.");
+                }
+            }
+        }
+
+        /// <summary>Buff tiers are stateless: recount them from the authoritative full
+        /// received list (idempotent across reconnects and run resets).</summary>
+        private void RecomputeBuffs()
+        {
+            int move = 0, range = 0, rate = 0;
+            try
+            {
+                foreach (ItemInfo item in session.Items.AllItemsReceived)
+                {
+                    switch (item.ItemName)
+                    {
+                        case GameIds.BuffMoveSpeed: move++; break;
+                        case GameIds.BuffCutterRange: range++; break;
+                        case GameIds.BuffCuttingRate: rate++; break;
+                    }
+                }
+            }
+            catch (Exception) { return; }
+            if (move != Effects.MoveSpeedBoosts || range != Effects.CutterRangeBoosts || rate != Effects.CuttingRateBoosts)
+            {
+                Effects.MoveSpeedBoosts = move;
+                Effects.CutterRangeBoosts = range;
+                Effects.CuttingRateBoosts = rate;
+                Info($"[Grunnchipelago] Buffs: speed x{move}, range x{range}, rate x{rate}.");
+            }
         }
 
         /// <summary>Re-grant the whole received inventory after a run reset (design section 5).</summary>
@@ -321,18 +399,24 @@ namespace Grunnchipelago.Client
             try { all = session.Items.AllItemsReceived.ToArray(); }
             catch (Exception) { return; }
 
+            int gulden = 0;
             foreach (ItemInfo item in all)
-                if (item.ItemName != "Gulden")
-                    GrantItem(item, realtime: false);
+            {
+                if (item.ItemName == "Gulden") gulden++;
+                else if (Enum.TryParse<KeyItem>(item.ItemName, out _))
+                    GrantItem(item, realtime: false, historical: true);
+                // traps never re-fire on re-injection; buffs are recomputed below
+            }
 
-            if (Coinsanity && guldenReceivedTotal > 0)
-                GameManager.AddGulden(guldenReceivedTotal, false);
+            if (Coinsanity && gulden > 0)
+                GameManager.AddGulden(gulden, false);
 
             // The world was reset BEFORE this re-injection, so the pickups of now-owned
             // items are visible again - hide them (vanilla event, GameManager.cs:3317).
             GameManager.GrabbedItem();
+            RecomputeBuffs();
 
-            log.LogInfo($"[Grunnchipelago] Re-injected inventory ({all.Length} items).");
+            Info($"[Grunnchipelago] Re-injected inventory ({all.Length} items).");
         }
 
         public void Disconnect()

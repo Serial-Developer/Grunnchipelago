@@ -23,6 +23,8 @@ namespace Grunnchipelago.Client
         private ConfigEntry<int> cfgPort;
         private ConfigEntry<string> cfgSlot;
         private ConfigEntry<string> cfgPassword;
+        private ConfigEntry<bool> cfgVerboseLogs;
+        private ConfigEntry<string> cfgSeenItems;
 
         private void Awake()
         {
@@ -33,6 +35,10 @@ namespace Grunnchipelago.Client
             cfgPort = Config.Bind("Connection", "Port", 38281, "Archipelago server port.");
             cfgSlot = Config.Bind("Connection", "Slot", "", "Your slot (player) name.");
             cfgPassword = Config.Bind("Connection", "Password", "", "Server password (optional).");
+            cfgVerboseLogs = Config.Bind("Logging", "VerboseLogs", true,
+                "Log every check/grant/trap (dev). When false, only connection, errors and goal.");
+            cfgSeenItems = Config.Bind("Progress", "SeenItems", "",
+                "Internal: '<seed>:<slot>:<count>' of already-applied items. Do not edit.");
 
             if (!cfgEnabled.Value)
             {
@@ -40,7 +46,12 @@ namespace Grunnchipelago.Client
                 return;
             }
 
-            Ap = new ApClient(Logger);
+            ApClient.Verbose = cfgVerboseLogs.Value;
+            Ap = new ApClient(Logger)
+            {
+                LoadSeenState = () => cfgSeenItems.Value,
+                SaveSeenState = value => cfgSeenItems.Value = value,
+            };
             new Harmony("grunnchipelago.client").PatchAll();
             Logger.LogInfo("[Grunnchipelago] Client loaded. Connecting when a slot is set.");
 
@@ -67,6 +78,8 @@ namespace Grunnchipelago.Client
             bool inGame = GameManager.CurGameState == GameManager.GameState.Game
                           && !GameManager.BlackScreen && !GameManager.SwitchingState;
             if (inGame) Ap.ApplyPendingItems();
+            // Buff multipliers + timed-trap expiry (restores vanilla when disconnected).
+            Effects.Tick(Ap.Connected);
             HandleDeathLink(inGame);
             // Simple reconnection loop.
             Ap.Tick(Time.deltaTime, cfgHost.Value, cfgPort.Value, cfgSlot.Value, cfgPassword.Value);
