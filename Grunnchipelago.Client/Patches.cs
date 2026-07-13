@@ -188,6 +188,7 @@ namespace Grunnchipelago.Client
             if (ap == null || !ap.Connected) return;
             if (ap.PersistentShortcuts) ShortcutCache.Restore();   // after the reset
             ap.ReinjectInventory();
+            HutLock.OnNewRun();   // lock_player_hut: re-arm like vanilla locks
         }
     }
 
@@ -494,6 +495,46 @@ namespace Grunnchipelago.Client
             // allItemPickups, subscribes to GrabbedItemAction, then ResetState -> Show
             // (Bone not currently held) or Hide (held this run).
             Plugin.Log?.LogInfo($"[Grunnchipelago] BoneGift spawned at {position}.");
+        }
+    }
+
+    /// <summary>playtest E - lock_player_hut (experimental option): the door of the
+    /// player hut is locked and requires AbandonedKey (orphan key per the v0.3 door
+    /// table: it unlocks nothing in vanilla). Applied on world load and re-applied after
+    /// each run reset; a legitimate in-run unlock (key used) is NOT re-locked because we
+    /// only re-arm when the door lost our key requirement (world reset rebuilds doors).</summary>
+    internal static class HutLock
+    {
+        /// <summary>Called every frame while connected; cheap (field checks only). Arms the
+        /// lock once per world (detected by the missing key requirement); a legitimate
+        /// in-run unlock (key used, locked=false but requirement still ours) is left open.</summary>
+        public static void Tick(ApClient ap)
+        {
+            if (!ap.LockPlayerHut) return;
+            Door door = GameManager.playerSchuurDoor;   // GameManager.cs:390
+            if (door == null) return;
+
+            bool hasOurKey = door.unlockItemNeeded != null
+                && door.unlockItemNeeded.Count > 0
+                && door.unlockItemNeeded[0] == KeyItem.AbandonedKey;
+            if (hasOurKey) return;
+
+            door.locked = true;
+            door.unlockItemNeeded = new List<KeyItem> { KeyItem.AbandonedKey };
+            Plugin.Log?.LogInfo("[Grunnchipelago] Player hut locked (AbandonedKey required).");
+        }
+
+        /// <summary>Re-arm after each run reset (vanilla locks re-lock every run).</summary>
+        public static void OnNewRun()
+        {
+            ApClient ap = Plugin.Ap;
+            if (ap == null || !ap.LockPlayerHut) return;
+            Door door = GameManager.playerSchuurDoor;
+            if (door == null) return;
+            door.locked = true;
+            if (door.unlockItemNeeded == null || door.unlockItemNeeded.Count == 0
+                || door.unlockItemNeeded[0] != KeyItem.AbandonedKey)
+                door.unlockItemNeeded = new List<KeyItem> { KeyItem.AbandonedKey };
         }
     }
 

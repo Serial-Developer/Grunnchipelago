@@ -87,16 +87,22 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     link(c.MANOIR, c.GLASS_HOUSE, lambda s: s.has("Cd", p))
 
     # --- Shed, toilets, end of week ---------------------------------------------
-    # dump: player shed is physically inside the start garden (Hide_PlayerSchuur)
-    link(c.JARDIN, c.CABANE_JOUEUR)
+    # dump: player shed is physically inside the start garden (Hide_PlayerSchuur).
+    # lock_player_hut (experimental, playtest E): the mod locks the hut door behind
+    # AbandonedKey (orphan key in the v0.3 door table - no vanilla door uses it).
+    if world.options.lock_player_hut:
+        link(c.JARDIN, c.CABANE_JOUEUR, lambda s: s.has("AbandonedKey", p))
+    else:
+        link(c.JARDIN, c.CABANE_JOUEUR)
     # regions_v3: Toilettes : ToiletKey (in the shed).
     # dump v0.3 door table: ToiletKey unlocks portal_StartGardenToToilet0/toiletBuilding_door0.
     link(c.JARDIN, c.TOILET, lambda s: s.has("ToiletKey", p))
     # regions_v3: Toilettes -> Tente : donner ToiletPaper (before day 1 noon; time free)
     link(c.TOILET, c.TENTE, lambda s: s.has("ToiletPaper", p))
     # regions_v3: Cabane joueur -> Couloir final : IsFinalDay + soir. Confirme libre,
-    # aucun item, juste attendre le dimanche soir [J 2026-07-13].
-    link(c.JARDIN, c.COULOIR_FINAL)
+    # aucun item, juste attendre le dimanche soir [J 2026-07-13]. The edge starts at the
+    # hut (faithful to regions_v3) so lock_player_hut gates the Sunday hallway too.
+    link(c.CABANE_JOUEUR, c.COULOIR_FINAL)
     # dump: LongHallway <-> SmallChapelOutside <-> MagicPond (free)
     link(c.COULOIR_FINAL, c.MAGIC_POND)
 

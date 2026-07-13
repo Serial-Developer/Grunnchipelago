@@ -85,6 +85,10 @@ def classification_for(world: "GrunnWorld", name: str) -> ItemClassification:
             else ItemClassification.filler
         )
     # key items
+    if name == "AbandonedKey" and world.options.lock_player_hut:
+        # lock_player_hut (experimental): the mod locks the player hut behind this
+        # otherwise-orphan key (v0.3 door table: unused by any vanilla door).
+        return ItemClassification.progression
     if name in PROGRESSION_ITEMS:
         return ItemClassification.progression
     return ItemClassification.useful

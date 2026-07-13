@@ -100,3 +100,23 @@ uniquement la correction de règle (section B.6) et signale-le, pas d'option.
 - Relance les 31+ tests + génération all_endings après chaque section.
 - Mets à jour design/playtest_notes.md (coche ce qui est traité).
 - Commits atomiques par section. AUCUN push/PR distant sans confirmation de Jonath.
+
+## H. UI in-game (ajouts Jonath, 2026-07-13 soir)
+
+1. **Marqueur Archipelago au menu principal** : sous le titre du jeu, afficher un gros
+   « ARCHIPELAGO » en ROUGE, avec la MÊME police que le titre (récupère l'asset de
+   police du titre — TMP ou UI Text selon ce que le jeu utilise — et clone l'élément).
+   Visible uniquement quand le mod est Enabled. Sert d'indicateur immédiat « cette
+   partie tourne en mode Archipelago ».
+2. **Panneau de stats (menus Tab et Pause)** : dans le coin supérieur DROIT, une liste
+   des stats modifiées par les buffs/traps. Base = 100 % ; afficher la valeur courante
+   calculée depuis les multiplicateurs réels du mod :
+   - Vitesse : 100 % + 15 %/palier de Move Speed Boost (ex. 2 paliers = 130 %) ;
+     pendant un Speed Trap : valeur x0,5 (ex. 130 % -> 65 %)
+   - Portée sécateur : 100 % + 25 %/palier
+   - Cadence de découpe : 100 % + 25 %/palier
+   - Taille : 100 % ; pendant un Size Trap : 45 %
+   - Contrôles : « Normaux » / « INVERSÉS »
+   Pour chaque trap actif, afficher la durée restante en temps de JEU (ex. « 0h34 »).
+   Affiché uniquement si connecté. N'affiche que les lignes différentes de la base OU
+   toutes les lignes — au choix de Jonath, prévois un booléen de config.

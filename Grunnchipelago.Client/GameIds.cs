@@ -106,6 +106,7 @@ namespace Grunnchipelago.Client
         public const string SlotDeathLink = "death_link";
         public const string SlotPolaroidChecks = "polaroid_checks";
         public const string SlotGhostChecks = "ghost_checks";
+        public const string SlotLockPlayerHut = "lock_player_hut";
 
         // Full gulden location names (ids.json), indexed like GuldenIndexByPath. Used for
         // check labels and the verbose pickup diagnostic popup.

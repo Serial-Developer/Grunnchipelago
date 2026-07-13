@@ -78,5 +78,6 @@ class GrunnWorld(World):
             "ghost_checks",
             "coinsanity",
             "persistent_shortcuts",
+            "lock_player_hut",
             "death_link",
         )

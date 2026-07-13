@@ -119,6 +119,17 @@ class BuffCount(Range):
     default = 3
 
 
+class LockPlayerHut(Toggle):
+    """
+    EXPERIMENTAL. The player hut door is locked and requires the Abandoned Key (an
+    orphan key in vanilla: the v0.3 door table shows it unlocks nothing - it most
+    likely opened this very hut originally). Gates the Shears and Toilet Key vanilla
+    spots and the Sunday-evening hallway behind the key.
+    """
+
+    display_name = "Lock Player Hut"
+
+
 class DeathLink(Toggle):
     """
     Death link. Every death ending you meet (any ending except Bus, Picnic and the
@@ -139,6 +150,7 @@ class GrunnOptions(PerGameCommonOptions):
     ghost_checks: GhostChecks
     coinsanity: Coinsanity
     persistent_shortcuts: PersistentShortcuts
+    lock_player_hut: LockPlayerHut
     trap_percentage: TrapPercentage
     buff_count: BuffCount
     death_link: DeathLink
@@ -151,6 +163,6 @@ grunn_option_groups = [
     ),
     OptionGroup(
         "Extras & Tuning",
-        [PersistentShortcuts, TrapPercentage, BuffCount, DeathLink],
+        [PersistentShortcuts, LockPlayerHut, TrapPercentage, BuffCount, DeathLink],
     ),
 ]

@@ -88,6 +88,29 @@ class TestHellChain(GrunnTestBase):
         self.assertFalse(self.multiworld.can_beat_game(self.multiworld.state))
 
 
+class TestLockPlayerHut(GrunnTestBase):
+    """Experimental lock_player_hut: AbandonedKey gates the hut (Shears/ToiletKey spots
+    and the Sunday hallway)."""
+
+    options = {"goal": "true_ending", "lock_player_hut": True, "exclude_bridge_key": False}
+
+    def test_hut_locations_require_abandoned_key(self) -> None:
+        self.collect_all_but("AbandonedKey")
+        for name in ("Obtain Shears", "Obtain ToiletKey", "Ending: LongHallway"):
+            location = self.world.get_location(name)
+            self.assertFalse(
+                location.can_reach(self.multiworld.state),
+                f"{name} must require AbandonedKey under lock_player_hut",
+            )
+
+    def test_abandoned_key_is_progression(self) -> None:
+        from BaseClasses import ItemClassification
+        from ..items import classification_for
+        self.assertEqual(
+            classification_for(self.world, "AbandonedKey"), ItemClassification.progression
+        )
+
+
 class TestMinimalPools(GrunnTestBase):
     options = {
         "goal": "good_ending",
