@@ -34,6 +34,7 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     # --- Start & main axis ------------------------------------------------------
     # regions_v3: Spawn (Route, bus) -> Jardin : BridgeKey (the bus blocks every other
     # exit). BridgeKey is picked up at spawn, so its own location sits in Menu.
+    # dump v0.3 door table: BridgeKey unlocks Hide_Road/highBridgeDoor0 (the high bridge).
     link(c.MENU, c.JARDIN, lambda s: s.has("BridgeKey", p))
     # regions_v3: Jardin -> Cour derriere maison (libre)
     link(c.JARDIN, c.COUR)
@@ -43,7 +44,8 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     link(c.COUR, c.EXTERIEUR, lambda s: r.can_cut_grass(s, world))
     # regions_v3: Cour -> Buanderie (libre)
     link(c.COUR, c.BUANDERIE)
-    # regions_v3 (2026-07-12 key correction): Jardin -> Eglise (portail) : GardenKey
+    # regions_v3 (2026-07-12 key correction): Jardin -> Eglise (portail) : GardenKey.
+    # dump v0.3 door table: GardenKey unlocks gardenGate0.
     link(c.JARDIN, c.EGLISE, lambda s: s.has("GardenKey", p))
     # regions_v3: Exterieur -> Eglise (libre, portail cote Exterieur)
     link(c.EXTERIEUR, c.EGLISE)
@@ -63,6 +65,7 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     # --- Endgame: Hell (crypt sequence) -----------------------------------------
     # regions_v3 "zone Hell" (V): from the church, open the interior door with ChurchKey,
     # place the FlowerGem, and deposit the 4 idols. (After-midnight window is free.)
+    # dump v0.3 door table: ChurchKey unlocks portal_ChurchHallwayToChurchBigHall0 door.
     link(
         c.EGLISE,
         c.HELL,
@@ -72,7 +75,8 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     # --- House & disc chain -----------------------------------------------------
     # regions_v3: Exterieur -> Station essence (libre au debut ; Hammer apres fermeture)
     link(c.EXTERIEUR, c.GAS_STATION)
-    # regions_v3: Station -> Bureau station : OfficeKey
+    # regions_v3: Station -> Bureau station : OfficeKey.
+    # dump v0.3 door table: OfficeKey unlocks Hide_gasStation/smallDoor1 (1).
     link(c.GAS_STATION, c.GAS_OFFICE, lambda s: s.has("OfficeKey", p))
     # regions_v3: Bureau station (+ Cd + PC) -> Zone de la pomme OU Void
     link(c.GAS_OFFICE, c.APPLE_SPACE, lambda s: s.has("Cd", p))
@@ -85,7 +89,8 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     # --- Shed, toilets, end of week ---------------------------------------------
     # dump: player shed is physically inside the start garden (Hide_PlayerSchuur)
     link(c.JARDIN, c.CABANE_JOUEUR)
-    # regions_v3: Toilettes : ToiletKey (in the shed)
+    # regions_v3: Toilettes : ToiletKey (in the shed).
+    # dump v0.3 door table: ToiletKey unlocks portal_StartGardenToToilet0/toiletBuilding_door0.
     link(c.JARDIN, c.TOILET, lambda s: s.has("ToiletKey", p))
     # regions_v3: Toilettes -> Tente : donner ToiletPaper (before day 1 noon; time free)
     link(c.TOILET, c.TENTE, lambda s: s.has("ToiletPaper", p))

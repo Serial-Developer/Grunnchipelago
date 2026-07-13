@@ -174,7 +174,8 @@ OBTAIN_RULES: dict[str, Rule] = {
     # regions_v3 Hell: the bottle/jar-shelf fragment (BottleRoom) needs Hammer.
     "SoulFragment2": lambda s, w: _reach(s, w, c.HELL) and s.has("Hammer", w.player),
     "SoulFragment3": lambda s, w: _reach(s, w, c.HELL),
-    # regions_v3 Hell: attic cardboard box; the attic door needs AtticKey (Door.cs:684).
+    # regions_v3 Hell: attic cardboard box; the attic door needs AtticKey (Door.cs:684;
+    # dump v0.3 door table: AtticKey unlocks bigHouseAtticDoor0).
     "MagicSword": lambda s, w: _reach(s, w, c.HELL) and s.has("AtticKey", w.player),
     # dump: RummikubSpace; needs Lighter (code: LitRummikubHooibaal)
     "PurifiedStone": lambda s, w: _reach(s, w, c.ZONE_VELO) and s.has("Lighter", w.player),

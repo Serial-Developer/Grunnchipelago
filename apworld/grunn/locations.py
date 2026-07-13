@@ -90,7 +90,7 @@ GHOST_REGION: dict[str, str] = {
 
 GULDEN_REGION: dict[str, str] = {
     "Gulden #1 (GasStationOffice)": c.GAS_OFFICE,
-    "Gulden #2 (Unknown)": c.EXTERIEUR,   # FLAG: pos in road/village area
+    "Gulden #2 (Unknown)": c.EXTERIEUR,   # bench in the shelter facing the gas station, free [J in-game 2026-07-13]
     "Gulden #3 (Bunker)": c.BUNKER,
     "Gulden #4 (StartGarden)": c.JARDIN,
     "Gulden #5 (Road)": c.MENU,   # bus-arrival gulden, at spawn (sphere 1, before BridgeKey)
