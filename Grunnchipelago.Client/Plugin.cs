@@ -28,6 +28,7 @@ namespace Grunnchipelago.Client
         private ConfigEntry<string> cfgPassword;
         private ConfigEntry<bool> cfgVerboseLogs;
         private ConfigEntry<bool> cfgSkipEndingDialogues;
+        private ConfigEntry<bool> cfgStatsShowAllLines;
         private ConfigEntry<string> cfgSeenItems;
 
         private void Awake()
@@ -44,6 +45,9 @@ namespace Grunnchipelago.Client
             cfgSkipEndingDialogues = Config.Bind("QoL", "SkipEndingDialogues", false,
                 "Ending NPC dialogues (Owner / saved Owner) display instantly and advance " +
                 "without the anti-skip delay - hammer Interact to blow through them.");
+            cfgStatsShowAllLines = Config.Bind("QoL", "StatsShowAllLines", false,
+                "Stats panel (Tab/Pause): show every stat line. When false, only the " +
+                "stats that differ from their 100 % base are listed.");
             cfgSeenItems = Config.Bind("Progress", "SeenItems", "",
                 "Internal: '<seed>:<slot>:<count>' of already-applied items. Do not edit.");
 
@@ -91,6 +95,8 @@ namespace Grunnchipelago.Client
             if (inGame) Ap.ApplyPendingItems();
             // Buff multipliers + timed-trap expiry (restores vanilla when disconnected).
             Effects.Tick(Ap.Connected);
+            // Title marker + stats panel (playtest H).
+            ModUi.Tick(Ap, cfgStatsShowAllLines.Value);
             if (Ap.Connected)
             {
                 // Popups queued from patch context; drained only in-game so ending-check

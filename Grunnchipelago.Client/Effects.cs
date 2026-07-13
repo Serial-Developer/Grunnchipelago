@@ -146,6 +146,49 @@ namespace Grunnchipelago.Client
             speedTrap.active = sizeTrap.active = invertedTrap.active = false;
         }
 
+        // --- Stats report (playtest H.2) --------------------------------------------------
+
+        /// <summary>Multiline report of the modified stats, base = 100 %. Active traps show
+        /// their remaining IN-GAME time ("0h34"). With showAllLines false, only the lines
+        /// that differ from base are listed.</summary>
+        public static string BuildStatsText(bool showAllLines)
+        {
+            var sb = new System.Text.StringBuilder();
+
+            float speed = (1f + MoveSpeedBoosts * MoveSpeedPerTier)
+                          * (SpeedTrapActive ? TrapSpeedMultiplier : 1f) * 100f;
+            if (showAllLines || !Mathf.Approximately(speed, 100f))
+                sb.AppendLine($"Vitesse : {speed:0} %{TrapSuffix(speedTrap)}");
+
+            float range = CutterScaleMultiplier * 100f;
+            if (showAllLines || !Mathf.Approximately(range, 100f))
+                sb.AppendLine($"Portee secateur : {range:0} %");
+
+            float rate = SwingSpeedMultiplier * 100f;
+            if (showAllLines || !Mathf.Approximately(rate, 100f))
+                sb.AppendLine($"Cadence : {rate:0} %");
+
+            float size = SizeTrapActive ? TrapSizeMultiplier * 100f : 100f;
+            if (showAllLines || SizeTrapActive)
+                sb.AppendLine($"Taille : {size:0} %{TrapSuffix(sizeTrap)}");
+
+            if (showAllLines || InvertedControlsActive)
+                sb.AppendLine(InvertedControlsActive
+                    ? $"Controles : INVERSES{TrapSuffix(invertedTrap)}"
+                    : "Controles : Normaux");
+
+            return sb.ToString();
+        }
+
+        private static string TrapSuffix(TimedTrap trap)
+        {
+            if (!trap.active) return "";
+            int now = TimeController.currentHour * 60 + TimeController.currentMinute;
+            int end = (trap.startHour + 1) * 60;
+            int left = Mathf.Max(0, end - now);
+            return $" ({left / 60}h{left % 60:00})";
+        }
+
         // --- Regrow traps ----------------------------------------------------------------
         // design/apworld_design.md section 4: reset ONE element of ONE zone - clear the
         // matching entries of the global position list + zero the per-area counter
