@@ -121,8 +121,10 @@ class BuffCount(Range):
 
 class DeathLink(Toggle):
     """
-    STRICT death link (design decision, no filtering): any death you suffer sends a
-    DeathLink, and any received DeathLink triggers your nightmare (death).
+    Death link. Every death ending you meet (any ending except Bus, Picnic and the
+    good/true ending) sends a DeathLink to the multiworld. Receiving a DeathLink shows
+    a nightmare jumpscare and resets your current run (week) - no ending is triggered
+    and no check is granted.
     """
 
     display_name = "Death Link"
