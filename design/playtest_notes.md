@@ -1,5 +1,24 @@
 # Notes de playtest — à consolider dans le prompt CC global (en cours, 2026-07-13)
 
+## ✅ Statut consolidation (CC, 2026-07-14) — tout traité
+- [x] A/PRIORITÉ 1 — visibilité pickups/boutique = état du check (commit 9211112) :
+  CheckIfAlreadyObtainedThisItem + ResetState + hiders KeyItem[Not]Obtained ciblant un
+  ItemPickup ; recalcul global à la connexion ; bone gift exempté.
+- [x] B.1 Gulden #2 (abri station, libre) + B.6 table clé→porte v0.3 croisée : AUCUN
+  écart, références en commentaire ; OldKey/AbandonedKey orphelines (fb7e9a4).
+- [x] C.1 verdicts de ramassage / C.3 résumé resync (03ff9e1) ; C.2 log de session
+  persistant + rotation (dbbdcaa) ; C.4 audit specialItemTypes : sons uniquement,
+  aucun octroi hors ObtainKeyItem/AddTool — rien à patcher.
+- [x] D.1 récompense des fins annoncée (scout, popup à la reprise) ; D.2 option config
+  SkipEndingDialogues (Owner/OwnerSaved, texte instantané + skip immédiat) ; D.3 popup
+  ramassage livré au tour précédent (dbbdcaa).
+- [x] E lock_player_hut implémentée (AbandonedKey orpheline confirmée) : mod + apworld
+  + slot_data + 2 tests (5b09230). 36 tests OK, génération all_endings+hut OK.
+- [x] 5/6/7/8 (Polaroid Demon→Hell, _demo, Gulden #8 Hammer, Couloir final libre) :
+  livrés au tour précédent (d6c897f).
+- F (design, avis rendu, pas d'implémentation) : voir réponse CC — consommables = pas
+  de softlock possible (réinjection par run), pickups inertes = résolus de facto par A.
+
 ## Résolu pendant le playtest (à intégrer)
 1. **Gulden #2** : abri face à la Station essence, posé sur un banc — région Extérieur,
    accès LIBRE. Mettre à jour la règle (source : Jonath in-game).
