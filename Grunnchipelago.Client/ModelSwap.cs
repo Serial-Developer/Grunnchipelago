@@ -143,28 +143,56 @@ namespace Grunnchipelago.Client
         }
 
         /// <summary>Hide the original renderers and parent the replacement model under
-        /// visualsObject, so the vanilla SetActive flow keeps driving visibility.</summary>
+        /// visualsObject, so the vanilla SetActive flow keeps driving visibility.
+        ///
+        /// CRITICAL (playtest round 2 freeze): the clone is instantiated under an
+        /// INACTIVE holder so Awake NEVER runs. Cloning active then Destroy()ing the
+        /// scripts let BaseMonoBehaviour.Awake register the clone in UpdateManager,
+        /// whose update loop has no null check (UpdateManager.cs:88) - the destroyed
+        /// Polaroid component then threw every frame (2153 NullReferenceException in
+        /// Player.log), killing the loop and freezing all inputs. DestroyImmediate on
+        /// never-awakened components is safe and leaves no trace.</summary>
         private static void SwapVisual(ItemPickup pickup, GameObject modelSource, Color? tint)
         {
             foreach (Renderer renderer in pickup.visualsObject.GetComponentsInChildren<Renderer>(true))
                 renderer.enabled = false;
 
-            GameObject clone = UnityEngine.Object.Instantiate(modelSource, pickup.visualsObject.transform);
-            clone.name = "grunnchipelago_model";
+            var holder = new GameObject("grunnchipelago_model");
+            holder.SetActive(false);   // BEFORE receiving children: no Awake ever fires
+            holder.transform.SetParent(pickup.visualsObject.transform, false);
+            holder.transform.localPosition = Vector3.zero;
+            holder.transform.localRotation = Quaternion.identity;
+
+            GameObject clone = UnityEngine.Object.Instantiate(modelSource, holder.transform);
+            clone.name = "model";
             clone.transform.localPosition = Vector3.zero;
             clone.transform.localRotation = Quaternion.identity;
 
-            // Visual-only clone: strip behaviours and colliders, re-enable renderers.
-            foreach (MonoBehaviour behaviour in clone.GetComponentsInChildren<MonoBehaviour>(true))
-                UnityEngine.Object.Destroy(behaviour);
-            foreach (Collider collider in clone.GetComponentsInChildren<Collider>(true))
-                UnityEngine.Object.Destroy(collider);
+            StripNonVisuals(clone);
             foreach (Renderer renderer in clone.GetComponentsInChildren<Renderer>(true))
             {
                 renderer.enabled = true;
                 if (tint.HasValue) renderer.material.color = tint.Value;
             }
             clone.SetActive(true);
+            holder.SetActive(true);   // only renderers/meshes remain: nothing to awake
+        }
+
+        /// <summary>Remove every script and collider from a never-activated clone.
+        /// Two passes + try/catch cover [RequireComponent] dependency chains.</summary>
+        private static void StripNonVisuals(GameObject root)
+        {
+            for (int pass = 0; pass < 2; pass++)
+                foreach (MonoBehaviour behaviour in root.GetComponentsInChildren<MonoBehaviour>(true))
+                {
+                    if (behaviour == null) continue;
+                    try { UnityEngine.Object.DestroyImmediate(behaviour); } catch (Exception) { }
+                }
+            foreach (Collider collider in root.GetComponentsInChildren<Collider>(true))
+            {
+                if (collider == null) continue;
+                try { UnityEngine.Object.DestroyImmediate(collider); } catch (Exception) { }
+            }
         }
     }
 }
