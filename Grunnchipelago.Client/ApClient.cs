@@ -81,6 +81,13 @@ namespace Grunnchipelago.Client
         /// (GrabbedItem event, once the world is loaded).</summary>
         public bool NeedsVisibilityRefresh { get; set; }
 
+        /// <summary>Set by the TriggerNewRun patch: the full inventory re-injection is
+        /// DEFERRED to the next safe state instead of running during the run-reset /
+        /// scripted bus intro (playtest round 2 freeze bug).</summary>
+        public bool NeedsReinject { get; set; }
+
+        private bool deferLogged;
+
         // Scouted contents of our own locations (id -> "item (player)" + is-it-ours).
         private readonly Dictionary<long, ScoutedItemInfo> scouted = new Dictionary<long, ScoutedItemInfo>();
 
@@ -505,10 +512,71 @@ namespace Grunnchipelago.Client
                 pending.Enqueue(helper.DequeueItem());
         }
 
-        /// <summary>Grant queued items. Called from the Unity main thread, only while
-        /// actually in-game (menu / black screen / transitions keep items queued).
-        /// The server replays every item on each connect: items at or below the persisted
-        /// seen-count are "historical" (silent grant, no trap / popup / money).</summary>
+        /// <summary>The game's own definition of a safe, playable state (the condition it
+        /// uses for its world-event triggers, GameManager.cs:1822) PLUS playerGotUp: the
+        /// player has stood up from the bus, i.e. the scripted new-run intro is over.
+        /// Granting items - especially tools via AddTool - during that intro froze every
+        /// input (playtest round 2), so ALL grants wait for this.</summary>
+        public static bool PlayerInSafeState()
+        {
+            return GameManager.CurGameState == GameManager.GameState.Game
+                && !GameManager.BlackScreen
+                && !GameManager.SwitchingState
+                && !GameManager.TriggeredNewDay
+                && !GameManager.PlayerReading
+                && !GameManager.FreezePlayer
+                && GameManager.curPlayerState == PlayerState.Default
+                && SaveManager.progressDataCheck != null
+                && SaveManager.progressDataCheck.playerGotUp;
+        }
+
+        /// <summary>Per-frame grant pump (main thread). Replay items AND the post-run
+        /// re-injection accumulate while the player is not in a safe state, and are
+        /// applied in one batch once the player is up and controllable. Instrumented:
+        /// the player/prompt state is logged when work gets deferred and when it lands.</summary>
+        public void TickGrants()
+        {
+            if (GameManager.instance == null) return;
+            bool workPending = NeedsReinject || !pending.IsEmpty;
+            if (!workPending) { deferLogged = false; return; }
+
+            if (!PlayerInSafeState())
+            {
+                if (!deferLogged)
+                {
+                    deferLogged = true;
+                    Info("[Grunnchipelago] Octrois differes - etat non sur: " + DescribePlayerState());
+                }
+                return;
+            }
+            if (deferLogged)
+            {
+                deferLogged = false;
+                Info("[Grunnchipelago] Etat sur atteint - application des octrois: " + DescribePlayerState());
+            }
+            if (NeedsReinject)
+            {
+                NeedsReinject = false;
+                ReinjectInventory();
+            }
+            ApplyPendingItems();
+        }
+
+        private static string DescribePlayerState()
+        {
+            try
+            {
+                return $"gameState={GameManager.CurGameState}, playerState={GameManager.curPlayerState}, " +
+                       $"gotUp={SaveManager.progressDataCheck?.playerGotUp}, freeze={GameManager.FreezePlayer}, " +
+                       $"newDay={GameManager.TriggeredNewDay}, prompt={GameManager.TriggeredPrompt()}, " +
+                       $"blackScreen={GameManager.BlackScreen}";
+            }
+            catch (Exception) { return "(indisponible)"; }
+        }
+
+        /// <summary>Grant queued items. Called by TickGrants once the player is in a safe
+        /// state. The server replays every item on each connect: items at or below the
+        /// persisted seen-count are "historical" (silent grant, no trap / popup / money).</summary>
         public void ApplyPendingItems()
         {
             if (GameManager.instance == null) return;

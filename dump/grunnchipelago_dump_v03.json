@@ -1,7 +1,7 @@
 {
   "meta": {
-    "dumper": "grunnchipelago.dumper 0.2.0",
-    "date": "2026-07-12T17:30:33",
+    "dumper": "grunnchipelago.dumper 0.3.0",
+    "date": "2026-07-14T02:56:58",
     "scene": "Setup"
   },
   "ambienceAreaPolygons": [
@@ -3072,7 +3072,7 @@
       "refs": {
         "door": {
           "path": "Main/Interactions/gardenGate0/door0",
-          "locked": false,
+          "locked": true,
           "barred": false,
           "type": "Gate"
         }
@@ -3553,7 +3553,7 @@
     {
       "path": "NonEuclidian/LongHallway/doors/door_end/door0",
       "pos": {
-        "x": 2008.98,
+        "x": 2008.46,
         "y": 11.44,
         "z": 600.89
       },
@@ -4646,7 +4646,7 @@
       "refs": {
         "door": {
           "path": "Main/Interactions/churchGateBarred0/door0",
-          "locked": false,
+          "locked": true,
           "barred": true,
           "type": "Gate"
         }
@@ -7812,7 +7812,7 @@
       "refs": {
         "door": {
           "path": "Main/Areas/Road/Container/Hide_Road/highBridgeDoor0/door0",
-          "locked": false,
+          "locked": true,
           "barred": false,
           "type": "Default"
         }
@@ -17782,9 +17782,9 @@
     {
       "path": "NonEuclidian/PillarSpace/Hide_PillarSpace/SnailContainer/SnailObject/MedalAwarded_ContentHider0",
       "pos": {
-        "x": 1189.82,
-        "y": 10.05,
-        "z": 988.29
+        "x": 1189.27,
+        "y": 10.0,
+        "z": 989.31
       },
       "areas": [
         "PillarSpace"
@@ -20611,10 +20611,13 @@
       "areas": [
         "MACRO:StartGarden"
       ],
-      "locked": false,
+      "locked": true,
       "barred": false,
       "type": "Gate",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": [
+        "GardenKey"
+      ]
     },
     {
       "path": "Main/Areas/Road/Container/GasStation/GasStationExtraHiderContainer/container/Hide_gasStation/smallDoor1 (1)/door0",
@@ -20629,7 +20632,10 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": [
+        "OfficeKey"
+      ]
     },
     {
       "path": "NonEuclidian/BigHouse_Overloop/Hide_BigHouseOverloop/bigHouseAtticDoor0/door0",
@@ -20644,7 +20650,10 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": [
+        "AtticKey"
+      ]
     },
     {
       "path": "NonEuclidian/ToiletBuilding/Hide_ToiletBuilding/Doors/toiletStallDoor0/door0",
@@ -20659,7 +20668,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "*** PORTALS ***/portal_ChurchToPillarSpace0/missingDoorknobDoor0/churchToPillarSpaceDoor0",
@@ -20674,12 +20684,13 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "NonEuclidian/LongHallway/doors/door_end/door0",
       "pos": {
-        "x": 2008.98,
+        "x": 2008.46,
         "y": 11.44,
         "z": 600.89
       },
@@ -20689,7 +20700,10 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": [
+        "StrangeKey"
+      ]
     },
     {
       "path": "Main/Areas/Road/Container/GasStation/GasStationExtraHiderContainer/GasStationDoors/gasStationDoorClosed0/door0",
@@ -20704,7 +20718,8 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "NonEuclidian/LongHallway/doors/door_start/door0",
@@ -20719,7 +20734,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "Main/Areas/StartGardenArea/Container/Hide_Bijkeuken/bijkeuken0/bijkeuken_regularDoor0/door0",
@@ -20734,7 +20750,8 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "Main/Areas/StartGardenArea/Container/Hide_StartGarden_mid0/ToiletBuildingOutside_GoodEnding/toiletBuilding_goodEnding_door0/door0",
@@ -20749,7 +20766,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "NonEuclidian/ToiletBuilding/Hide_ToiletBuilding/Doors/toiletStallDoor0 (1)/door0",
@@ -20764,7 +20782,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "*** PORTALS ***/portal_AtticRoomToLongHallway0/smallDoor1 (3)/door0",
@@ -20779,7 +20798,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "NonEuclidian/BigHouse_Hallway/Hide_BigHouseHallway/entranceDoor0_inside/bigHouseFrontEntranceDoor0/bigHouseFrontDoorMain0",
@@ -20794,7 +20814,8 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "*** PORTALS ***/portal_StartGardenToToilet0/toiletBuilding_door0/door0",
@@ -20809,7 +20830,10 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": [
+        "ToiletKey"
+      ]
     },
     {
       "path": "*** PORTALS ***/portal_WindyPathToVeerbootHuis/veerbootHuisDoor0/door0",
@@ -20824,7 +20848,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "Main/Areas/Road/Container/GasStation/GasStationExtraHiderContainer/GasStationDoors/gasStationDoorOpen0/door0",
@@ -20839,7 +20864,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Open"
+      "startState": "Open",
+      "unlockItemNeeded": []
     },
     {
       "path": "Main/Areas/StartGardenArea/Container/Hide_HouseDetails/bigHouseDoors/frontEntrance0/entranceDoor0/bigHouseFrontEntranceDoor0 (1)/bigHouseFrontDoorOther0",
@@ -20854,7 +20880,8 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "Main/Interactions/churchGateBarred0/door0",
@@ -20864,10 +20891,11 @@
         "z": -71.63
       },
       "areas": [],
-      "locked": false,
+      "locked": true,
       "barred": true,
       "type": "Gate",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "*** PORTALS ***/portal_ParkToRoundHallway0/gnomeDoor0/door0",
@@ -20882,7 +20910,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Open"
+      "startState": "Open",
+      "unlockItemNeeded": []
     },
     {
       "path": "*** PORTALS ***/portal_BigHouseOfficeToVoid0/bigHouseOfficeDoor0/bigHouseOfficeDoor0/door0",
@@ -20898,7 +20927,8 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "Main/Interactions/doorContainer0/door0",
@@ -20913,7 +20943,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "Main/Interactions/smallDoor0/door0",
@@ -20928,7 +20959,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "*** PORTALS ***/portal_ChurchBigHallwayToChurchHallway0/churchHallwayDoor0/door0",
@@ -20943,7 +20975,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "Main/Areas/ChurchArea/Container/church0/ChurchDetailsContainer/churchSideDoor0/door0",
@@ -20958,7 +20991,8 @@
       "locked": false,
       "barred": false,
       "type": "Heavy",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "Main/Areas/StartGardenArea/Container/bijkeuken_door0/door0",
@@ -20973,7 +21007,8 @@
       "locked": false,
       "barred": false,
       "type": "Heavy",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "*** PORTALS ***/portal_OutsideRedChapelMagicPond/smallDoor1 (3)/door0",
@@ -20988,7 +21023,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "*** PORTALS ***/portal_PillarSpaceToChurch0/door0/door0",
@@ -21003,7 +21039,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "*** PORTALS ***/portal_BehindHouseToHooiSchuur0/gardenDoor0/gnomeDoor0 (1)/door0",
@@ -21016,7 +21053,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Open"
+      "startState": "Open",
+      "unlockItemNeeded": []
     },
     {
       "path": "*** PORTALS ***/portal_RoadMemorialToPillarSpace0/door0/roadToPillarSpaceDoor0",
@@ -21029,7 +21067,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "*** PORTALS ***/portal_StartGardenToRoundHallway0/gnomeDoor0/door0",
@@ -21044,7 +21083,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Open"
+      "startState": "Open",
+      "unlockItemNeeded": []
     },
     {
       "path": "NonEuclidian/BigHouse_Kitchen/Hide_BigHouseKitchen/bigHouseKeukenContent/fridge_new/fridge_door0",
@@ -21059,7 +21099,8 @@
       "locked": false,
       "barred": false,
       "type": "Fridge",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "Main/Areas/Road/Container/GasStation/GasStationExtraHiderContainer/container/Hide_gasStation/GasStationInteriorContainer/GasStationCounter/gasStationCounterDoor0",
@@ -21074,7 +21115,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "NonEuclidian/AtticRoom/Hide_AtticRoom/AtticRoom/exitDoor0/atticRoomExitDoor0",
@@ -21089,7 +21131,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "Main/Areas/Road/Container/Hide_Road/highBridgeDoor0/door0",
@@ -21099,10 +21142,13 @@
         "z": -46.39
       },
       "areas": [],
-      "locked": false,
+      "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": [
+        "BridgeKey"
+      ]
     },
     {
       "path": "*** PORTALS ***/portal_PillarSpaceToRoadMemorial0/door0/door0",
@@ -21117,7 +21163,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "*** PORTALS ***/portal_RoundHallwayToPark0/gnomeDoor0 (1)/door0 (1)",
@@ -21132,7 +21179,8 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Open"
+      "startState": "Open",
+      "unlockItemNeeded": []
     },
     {
       "path": "NonEuclidian/BigHouse_Hallway/Hide_BigHouseHallway/entranceDoor0_inside/bigHouseFrontEntranceDoor0 (1)/bigHouseFrontDoorOther0",
@@ -21147,7 +21195,8 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "NonEuclidian/AtticRoom/Hide_AtticRoom/AtticRoom/jazzDoor0/door0",
@@ -21162,7 +21211,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "NonEuclidian/ToiletBuilding/Hide_ToiletBuilding/Doors/toiletStallDoor0 (2)/door0",
@@ -21177,7 +21227,8 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "*** PORTALS ***/portal_ChurchHallwayToChurchBigHall0/churchHallwayDoor0/door0",
@@ -21193,7 +21244,10 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": [
+        "ChurchKey"
+      ]
     },
     {
       "path": "Main/Areas/Park/Container/smallHouse0 (1)/smallDoor1/door0",
@@ -21208,7 +21262,8 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "Main/Interactions/churchGate0/door0",
@@ -21221,7 +21276,8 @@
       "locked": true,
       "barred": false,
       "type": "Gate",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "Main/Areas/Park/Container/smallHouse0/smallDoor1/door0",
@@ -21236,7 +21292,8 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "Main/Areas/StartGardenArea/Container/Hide_HouseDetails/intratuinDoor0/door0",
@@ -21251,7 +21308,8 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "Main/Areas/StartGardenArea/Container/Hide_HouseDetails/bigHouseDoors/frontEntrance0/entranceDoor0/bigHouseFrontEntranceDoor0/bigHouseFrontDoorMain0",
@@ -21266,7 +21324,8 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "Main/Areas/StartGardenArea/Container/Hide_HouseDetails/smallDoor0/door0",
@@ -21281,7 +21340,8 @@
       "locked": true,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     },
     {
       "path": "Main/Areas/StartGardenArea/Container/Hide_HouseDetails/groningenSchuur0/schuurDoor0/door0",
@@ -21297,7 +21357,8 @@
       "locked": false,
       "barred": false,
       "type": "Default",
-      "startState": "Closed"
+      "startState": "Closed",
+      "unlockItemNeeded": []
     }
   ],
   "ghosts": [

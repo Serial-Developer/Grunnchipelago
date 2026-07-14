@@ -187,8 +187,11 @@ namespace Grunnchipelago.Client
             ApClient ap = Plugin.Ap;
             if (ap == null || !ap.Connected) return;
             if (ap.PersistentShortcuts) ShortcutCache.Restore();   // after the reset
-            ap.ReinjectInventory();
-            HutLock.OnNewRun();   // lock_player_hut: re-arm like vanilla locks
+            // Re-injection is DEFERRED to the next safe state (player up, controllable):
+            // granting ~40 items - tools especially - during the scripted bus intro froze
+            // every input (playtest round 2). ApClient.TickGrants applies it later.
+            ap.NeedsReinject = true;
+            HutLock.OnNewRun();   // lock_player_hut: re-arm like vanilla locks (field writes only)
         }
     }
 

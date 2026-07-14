@@ -87,12 +87,11 @@ namespace Grunnchipelago.Client
         private void Update()
         {
             if (Ap == null) return;
-            // Grant received items on the main thread, but ONLY while actually in-game -
-            // items received in the menu / during a black screen / while switching state
-            // stay queued until we're back (GameManager.cs:848-854 state accessors).
-            bool inGame = GameManager.CurGameState == GameManager.GameState.Game
-                          && !GameManager.BlackScreen && !GameManager.SwitchingState;
-            if (inGame) Ap.ApplyPendingItems();
+            // Grant pump: replay items AND the post-run re-injection are deferred until
+            // the player is in a SAFE state (up, controllable, no cutscene/intro/prompt) -
+            // granting during the scripted bus intro froze all inputs (playtest round 2).
+            bool safe = ApClient.PlayerInSafeState();
+            Ap.TickGrants();
             // Buff multipliers + timed-trap expiry (restores vanilla when disconnected).
             Effects.Tick(Ap.Connected);
             // Title marker + stats panel (playtest H).
@@ -101,9 +100,9 @@ namespace Grunnchipelago.Client
             ModelSwap.Tick(Ap);
             if (Ap.Connected)
             {
-                // Popups queued from patch context; drained only in-game so ending-check
-                // rewards land at the new run, after the cutscene (playtest D.1).
-                if (inGame) Ap.FlushPendingPopups();
+                // Popups queued from patch context; drained only in a safe state so
+                // ending-check rewards land at the new run, after cutscene AND bus intro.
+                if (safe) Ap.FlushPendingPopups();
                 HandleSkipEndingDialogues();
                 HutLock.Tick(Ap);
                 // Bone gift pickup near the start (design section 10, feature #3).
@@ -125,7 +124,7 @@ namespace Grunnchipelago.Client
                     Log.LogInfo("[Grunnchipelago] Pickup visibility recomputed from check state.");
                 }
             }
-            HandleDeathLink(inGame);
+            HandleDeathLink(safe);
             // Simple reconnection loop.
             Ap.Tick(Time.deltaTime, cfgHost.Value, cfgPort.Value, cfgSlot.Value, cfgPassword.Value);
         }
@@ -155,14 +154,15 @@ namespace Grunnchipelago.Client
         ///    (the nightmare PostFX composes above the black screen, PostFXStack.cs:476);
         /// 3. the run resets (TriggerNewRun - our patch re-injects the AP inventory).
         /// No ending is triggered, no check granted.</summary>
-        private void HandleDeathLink(bool inGame)
+        private void HandleDeathLink(bool safe)
         {
             if (!Ap.DeathLinkEnabled) return;
 
             if (deathLinkTimer < 0f)
             {
-                // Several deaths received while away collapse into a single reset.
-                if (inGame && Ap.TakeAllPendingDeathLinks() > 0)
+                // Several deaths received while away collapse into a single reset; the
+                // sequence only starts in a safe state (never during the bus intro).
+                if (safe && Ap.TakeAllPendingDeathLinks() > 0)
                 {
                     // Covers the whole sequence (durations are in 60ths of a second).
                     GameManager.TriggerBlackScreen((FadeToBlackDuration + ScreamerDuration + 1f) * 60f);
