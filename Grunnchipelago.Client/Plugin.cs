@@ -84,6 +84,10 @@ namespace Grunnchipelago.Client
         /// to force the nightmare blend factor.</summary>
         public static bool JumpscareActive { get; private set; }
 
+        /// <summary>True while an ending NPC dialogue runs (drives the "ESC : skip" hint;
+        /// the skip itself is EscSkipsEndingDialoguePatch).</summary>
+        public static bool EndingDialogueActive { get; private set; }
+
         private void Update()
         {
             if (Ap == null) return;
@@ -94,8 +98,14 @@ namespace Grunnchipelago.Client
             Ap.TickGrants();
             // Buff multipliers + timed-trap expiry (restores vanilla when disconnected).
             Effects.Tick(Ap.Connected);
+            // "ESC : skip" hint state (skip logic lives in EscSkipsEndingDialoguePatch).
+            EndingDialogueActive =
+                (GameManager.owner != null && GameManager.owner.curState == Owner.State.Talk)
+                || (GameManager.ownerSaved != null && GameManager.ownerSaved.curState == OwnerSaved.State.Talk);
             // Title marker + stats panel (playtest H).
             ModUi.Tick(Ap, cfgStatsShowAllLines.Value);
+            // Dev helper (VerboseLogs): trigger traps by key for testing.
+            if (ApClient.Verbose && Ap.Connected && safe) HandleDebugTrapKeys();
             // Pickup model swap from the scout (features #1/#2, one-shot per session).
             ModelSwap.Tick(Ap);
             if (Ap.Connected)
@@ -127,6 +137,31 @@ namespace Grunnchipelago.Client
             HandleDeathLink(safe);
             // Simple reconnection loop.
             Ap.Tick(Time.deltaTime, cfgHost.Value, cfgPort.Value, cfgSlot.Value, cfgPassword.Value);
+        }
+
+        /// <summary>Dev helper (active under VerboseLogs, in a safe state): trigger traps
+        /// by key to test them without a seed containing them. F8 is taken by the dumper.
+        /// F6 = Speed, F7 = Size, F9 = Inverted Controls, F10 = random Regrow trap.</summary>
+        private void HandleDebugTrapKeys()
+        {
+            if (Input.GetKeyDown(KeyCode.F6)) DebugTrap(GameIds.TrapSpeed);
+            if (Input.GetKeyDown(KeyCode.F7)) DebugTrap(GameIds.TrapSize);
+            if (Input.GetKeyDown(KeyCode.F9)) DebugTrap(GameIds.TrapInvertedControls);
+            if (Input.GetKeyDown(KeyCode.F10))
+            {
+                string[] regrows =
+                {
+                    GameIds.TrapRegrowGrass, GameIds.TrapRewaterFlowers, GameIds.TrapRegrowHedge,
+                    GameIds.TrapReturnTrash, GameIds.TrapRegrowMolehills,
+                };
+                DebugTrap(regrows[UnityEngine.Random.Range(0, regrows.Length)]);
+            }
+        }
+
+        private void DebugTrap(string name)
+        {
+            Logger.LogInfo($"[Grunnchipelago] DEBUG trap key: {name}");
+            Effects.ApplyTrap(name);
         }
 
         /// <summary>playtest D.2 - ending NPC dialogues (Owner / OwnerSaved prompt chains,

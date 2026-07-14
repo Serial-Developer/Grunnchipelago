@@ -15,6 +15,7 @@ namespace Grunnchipelago.Client
     {
         private static TextMeshProUGUI titleMarker;
         private static TextMeshProUGUI statsPanel;
+        private static TextMeshProUGUI escHint;
 
         /// <summary>Clone a UI text element WITHOUT ever letting its game scripts run:
         /// the clone is created under an inactive RectTransform holder (no Awake - see
@@ -43,8 +44,18 @@ namespace Grunnchipelago.Client
             }
             TextMeshProUGUI text = clone.GetComponent<TextMeshProUGUI>();
             if (text == null) { Object.Destroy(holder); return null; }
+            // "ARCHIPELAGO" is longer than the donor text: without these, TMP wraps or
+            // truncates inside the donor-sized rect and nothing shows at all.
+            text.enableWordWrapping = false;
+            text.overflowMode = TextOverflowModes.Overflow;
+            text.enableAutoSizing = false;
+            // Render above siblings (e.g. the pause-menu backdrop on the same canvas).
+            holder.transform.SetAsLastSibling();
             clone.SetActive(true);
             holder.SetActive(true);
+            Plugin.Log?.LogInfo($"[Grunnchipelago] UI clone '{name}': parent={source.transform.parent?.name}, " +
+                                $"anchors={text.rectTransform.anchorMin}-{text.rectTransform.anchorMax}, " +
+                                $"pos={text.rectTransform.anchoredPosition}, size={text.rectTransform.sizeDelta}");
             return text;
         }
 
@@ -54,6 +65,30 @@ namespace Grunnchipelago.Client
             if (ui == null) return;
             TickTitleMarker(ui);
             TickStatsPanel(ui, ap, statsShowAllLines);
+            TickEscHint(ui);
+        }
+
+        /// <summary>"ESC : skip" hint while an ending NPC dialogue is running (the actual
+        /// skip is the ToGameState patch: Escape ends the dialogue instead of pausing).</summary>
+        private static void TickEscHint(UIManager ui)
+        {
+            if (ui.newDayText == null) return;
+            if (escHint == null)
+            {
+                escHint = CloneTextElement(ui.newDayText, "grunnchipelago_escHint");
+                if (escHint == null) return;
+                RectTransform rect = escHint.rectTransform;
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
+                rect.pivot = new Vector2(0.5f, 0f);
+                rect.anchoredPosition = new Vector2(0f, 40f);
+                rect.sizeDelta = new Vector2(800f, 80f);
+                escHint.fontSize = ui.newDayText.fontSize * 0.3f;
+                escHint.alignment = TextAlignmentOptions.Bottom;
+                escHint.color = new Color(1f, 1f, 1f, 0.85f);
+                escHint.SetText("ESC : skip");
+            }
+            bool show = Plugin.EndingDialogueActive;
+            if (escHint.enabled != show) escHint.enabled = show;
         }
 
         // ---------- H.1 title marker ----------
@@ -98,12 +133,10 @@ namespace Grunnchipelago.Client
                 Plugin.Log?.LogInfo("[Grunnchipelago] Stats panel created.");
             }
 
-            // Tab (Inventory/Polaroids) and Pause (Default) menus only, while connected.
+            // Pause menu only (Tab removed on Jonath's request, round 2), while connected.
             bool show = ap.Connected
                 && GameManager.CurGameState == GameManager.GameState.Paused
-                && (UIManager.curPausedState == PausedState.Default
-                    || UIManager.curPausedState == PausedState.Inventory
-                    || UIManager.curPausedState == PausedState.Polaroids);
+                && UIManager.curPausedState == PausedState.Default;
             if (statsPanel.enabled != show) statsPanel.enabled = show;
             if (show) statsPanel.SetText(Effects.BuildStatsText(showAllLines));
         }

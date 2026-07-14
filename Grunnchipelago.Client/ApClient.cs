@@ -423,14 +423,17 @@ namespace Grunnchipelago.Client
 
         public void SendPolaroidCheck(PolaroidType type)
         {
+            // Ending polaroids are awarded by the endings, never shuffled.
+            if (type.ToString().StartsWith("Ending", StringComparison.Ordinal)) return;
+            // Round 2 request: always announce the collection itself (polaroids can be
+            // granted as a side effect of picking up an item, invisibly otherwise).
+            QueuePopup($"Polaroid : {type}");
             if (!PolaroidChecks)
             {
                 Info($"[Grunnchipelago] Silencieux : polaroid {type} (option off)");
                 return;
             }
-            // Ending polaroids are awarded by the endings, never shuffled.
-            if (type.ToString().StartsWith("Ending", StringComparison.Ordinal)) return;
-            SendByName("Polaroid: " + type);
+            SendByName("Polaroid: " + type, announceSelf: true);
         }
 
         /// <summary>Ghost / gulden indices come from the frozen path tables in GameIds.</summary>
@@ -441,10 +444,17 @@ namespace Grunnchipelago.Client
                 Info($"[Grunnchipelago] Silencieux : fantome #{index + 1} (option off)");
                 return;
             }
-            TrySend(GameIds.GhostBaseId + index, $"Calm Ghost #{index + 1}");
+            long id = GameIds.GhostBaseId + index;
+            if (TrySend(id, $"Calm Ghost #{index + 1}"))
+                AnnounceScoutedContent(id, announceSelf: true);
         }
 
-        public void SendGuldenCheck(int index) => TrySend(GameIds.GuldenBaseId + index, GameIds.GuldenLocationNames[index]);
+        public void SendGuldenCheck(int index)
+        {
+            long id = GameIds.GuldenBaseId + index;
+            if (TrySend(id, GameIds.GuldenLocationNames[index]))
+                AnnounceScoutedContent(id, announceSelf: true);
+        }
 
         // ---------- Endings & goal ----------
 
@@ -453,9 +463,16 @@ namespace Grunnchipelago.Client
             if (!Connected) return;
             if (ending != EndingType.DemoEnding)
             {
-                // announceSelf (playtest D.1): show the ending check's reward even in solo;
-                // popups queue and display back in-game (after the ending cutscene).
-                SendByName("Ending: " + ending, announceSelf: true);
+                // The reward is announced EVEN when the check was already sent (round 2:
+                // re-watching an ending must still tell what it unlocked); popups queue
+                // and display back in-game, after the ending cutscene.
+                string location = "Ending: " + ending;
+                long id = session.Locations.GetLocationIdFromName(Game, location);
+                if (id > 0)
+                {
+                    TrySend(id, location);
+                    AnnounceScoutedContent(id, announceSelf: true);
+                }
                 endingsSeen.Add(ending);
             }
             CheckGoal(ending);

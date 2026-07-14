@@ -250,6 +250,15 @@ namespace Grunnchipelago.Client
             if (items != null && items.Count > 0 && !__instance.isRepeatablePickup)
             {
                 KeyItem first = items[0];
+                // Vanilla floods the bunker once the player HOLDS the Trowel inside it
+                // (GameManager.cs:2231 polls ObtainedKeyItem) - our interception cancels
+                // the grant, so the pickup itself must fire the earthquake (round 2).
+                if (first == KeyItem.Trowel && AmbienceManager.instance != null
+                    && AmbienceManager.instance.curAmbienceArea == AmbienceArea.Bunker)
+                {
+                    GameManager.TriggerEarthQuake();
+                    Plugin.Log?.LogInfo("[Grunnchipelago] Bunker trowel taken - earthquake triggered.");
+                }
                 if (SaveManager.ObtainedKeyItem(first))
                 {
                     if (ap.KeyItemCheckPending(first))
@@ -369,6 +378,44 @@ namespace Grunnchipelago.Client
         {
             if (!Effects.InvertedControlsActive) return;
             InputManager.moveDirection = -InputManager.moveDirection;
+        }
+    }
+
+    /// <summary>GameManager.ToGameState (GameManager.cs:3422). Round 2 request: during an
+    /// ending NPC dialogue (Owner / OwnerSaved talking), Escape SKIPS the dialogue instead
+    /// of opening the pause menu - we fast-forward the prompt chain (the NPC's own
+    /// HandleTalking then runs EndConversation, preserving its side effects such as the
+    /// AtticKey grant) and swallow the pause. Outside dialogues, Escape pauses as usual.</summary>
+    [HarmonyPatch(typeof(GameManager), nameof(GameManager.ToGameState))]
+    public static class EscSkipsEndingDialoguePatch
+    {
+        private static bool Prefix(GameManager.GameState _to)
+        {
+            if (_to != GameManager.GameState.Paused) return true;
+            ApClient ap = Plugin.Ap;
+            if (ap == null || !ap.Connected) return true;
+
+            bool skipped = false;
+            Owner owner = GameManager.owner;
+            if (owner != null && owner.curState == Owner.State.Talk)
+            {
+                owner.curPromptIndex = owner.curPromptIndexMax;
+                owner.waitingForInput = false;
+                skipped = true;
+            }
+            OwnerSaved saved = GameManager.ownerSaved;
+            if (saved != null && saved.curState == OwnerSaved.State.Talk)
+            {
+                saved.curPromptIndex = saved.curPromptIndexMax;
+                saved.waitingForInput = false;
+                skipped = true;
+            }
+            if (skipped)
+            {
+                Plugin.Log?.LogInfo("[Grunnchipelago] Ending dialogue skipped (ESC).");
+                return false;   // Escape consumed: no pause menu
+            }
+            return true;
         }
     }
 
