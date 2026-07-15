@@ -158,15 +158,15 @@ namespace Grunnchipelago.Client
             float speed = (1f + MoveSpeedBoosts * MoveSpeedPerTier)
                           * (SpeedTrapActive ? TrapSpeedMultiplier : 1f) * 100f;
             if (showAllLines || !Mathf.Approximately(speed, 100f))
-                sb.AppendLine($"Vitesse : {speed:0} %{TrapSuffix(speedTrap)}");
+                sb.AppendLine($"Vitesse de déplacement : {speed:0} %{TrapSuffix(speedTrap)}");
 
             float range = CutterScaleMultiplier * 100f;
             if (showAllLines || !Mathf.Approximately(range, 100f))
-                sb.AppendLine($"Portee secateur : {range:0} %");
+                sb.AppendLine($"Portée du sécateur : {range:0} %");
 
             float rate = SwingSpeedMultiplier * 100f;
             if (showAllLines || !Mathf.Approximately(rate, 100f))
-                sb.AppendLine($"Cadence : {rate:0} %");
+                sb.AppendLine($"Cadence de découpe : {rate:0} %");
 
             float size = SizeTrapActive ? TrapSizeMultiplier * 100f : 100f;
             if (showAllLines || SizeTrapActive)
@@ -174,8 +174,8 @@ namespace Grunnchipelago.Client
 
             if (showAllLines || InvertedControlsActive)
                 sb.AppendLine(InvertedControlsActive
-                    ? $"Controles : INVERSES{TrapSuffix(invertedTrap)}"
-                    : "Controles : Normaux");
+                    ? $"Contrôles : INVERSÉS{TrapSuffix(invertedTrap)}"
+                    : "Contrôles : normaux");
 
             return sb.ToString();
         }

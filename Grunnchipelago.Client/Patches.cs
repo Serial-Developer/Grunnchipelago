@@ -24,6 +24,33 @@ namespace Grunnchipelago.Client
         }
     }
 
+    /// <summary>UIManager.BuildStaticStrings (private, UIManager.cs:4101-4107) sets
+    /// titleText to "&lt;i&gt;GRUNN&lt;/i&gt;" at load and on every language change.
+    /// Session 2, 1.1: while the mod is Enabled the title itself becomes
+    /// GRUNNCHIPELAGO, font size scaled down (ratio of TMP preferred widths) so it
+    /// fits the original title's width and never covers the "made by" subtitle.
+    /// Mod disabled = no patch = vanilla title.</summary>
+    [HarmonyPatch(typeof(UIManager), "BuildStaticStrings")]
+    public static class TitleTextPatch
+    {
+        private static float origFontSize = -1f;
+
+        private static void Postfix(UIManager __instance)
+        {
+            var title = __instance.titleText;
+            if (title == null) return;
+            if (origFontSize < 0f) origFontSize = title.fontSize;
+
+            // Width ratio is font-size invariant; 0.98 margin against rounding.
+            title.enableAutoSizing = false;
+            float baseWidth = title.GetPreferredValues("GRUNN").x;
+            float newWidth = title.GetPreferredValues("GRUNNCHIPELAGO").x;
+            if (baseWidth > 0f && newWidth > 0f)
+                title.fontSize = origFontSize * (baseWidth / newWidth) * 0.98f;
+            title.SetText("<i>GRUNNCHIPELAGO</i>");
+        }
+    }
+
     // ---------- Pickup/shop visibility = CHECK STATE, never possession ----------
     // Playtest round 1 bug: an item received from the multiworld marked its key item as
     // owned, and the game hides every pickup/shop article whose item is owned

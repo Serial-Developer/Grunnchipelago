@@ -1,5 +1,27 @@
 # Notes de playtest — à consolider dans le prompt CC global (en cours, 2026-07-13)
 
+## Session 2 (CC, 2026-07-16) — statuts
+
+### Bloc 1 — UI : LIVRÉ, à valider in-game
+- [x] 1.1 Titre : `TitleTextPatch` (postfix `UIManager.BuildStaticStrings`,
+  UIManager.cs:4103) — le titre devient « GRUNNCHIPELAGO », police réduite au ratio
+  des largeurs TMP pour tenir dans la largeur de « GRUNN » ; marqueur rouge
+  « ARCHIPELAGO » supprimé ; mod désactivé = titre vanilla (aucun patch).
+- [x] 1.2 Panneau de stats : descendu sous le bloc jour/heure (ancre haut-droite,
+  y −230 au lieu de −40 — choix « sous jour/heure », alternative haut-gauche possible
+  si ça déborde) ; libellés précis avec accents (« Vitesse de déplacement »,
+  « Portée du sécateur », « Cadence de découpe », « Taille », « Contrôles :
+  normaux / INVERSÉS ») ; durée restante des traps inchangée (temps de jeu).
+  ⚠ à vérifier in-game : rendu des accents avec la police TMP du jeu.
+- [x] 1.3 Item sur l'écran de fin : panneau à GAUCHE du polaroid pendant
+  `EndingState.Start` (visible tant que `polaroidRead` est affiché) — « Objet
+  débloqué : X » ou « Envoyé : X -> joueur » depuis le scout. Texte seul pour v1 :
+  le jeu n'a AUCUN sprite d'item (KeyItemInfo = textes, SaveManager.cs:1176) ;
+  visuel 3D sur canvas overlay = non trivial (render texture), reporté.
+
+### Bloc 2 — Modèles : EN ATTENTE (après validation bloc 1)
+### Bloc 3 — Fins & profil de sauvegarde : plan 3.1 rédigé, attend le GO de Jonath
+
 ## ✅ Statut consolidation (CC, 2026-07-14) — tout traité
 - [x] A/PRIORITÉ 1 — visibilité pickups/boutique = état du check (commit 9211112) :
   CheckIfAlreadyObtainedThisItem + ResetState + hiders KeyItem[Not]Obtained ciblant un

@@ -323,6 +323,21 @@ namespace Grunnchipelago.Client
 
         public void QueuePopup(string text) => pendingPopups.Enqueue(text);
 
+        /// <summary>Session 2, 1.3 - text shown next to the ending polaroid: what the
+        /// "Ending: X" check unlocked (scouted content). Null when unknown (location
+        /// absent from the seed, or scout not completed yet).</summary>
+        public string DescribeEndingReward(EndingType ending)
+        {
+            if (!Connected || session == null) return null;
+            long id;
+            try { id = session.Locations.GetLocationIdFromName(Game, "Ending: " + ending); }
+            catch (Exception) { return null; }
+            if (id <= 0 || !TryGetScout(id, out ScoutedItemInfo info) || info == null) return null;
+            if (info.IsReceiverRelatedToActivePlayer)
+                return "Objet débloqué :\n<b>" + info.ItemName + "</b>";
+            return "Envoyé :\n<b>" + info.ItemName + "</b>\n-> " + info.Player?.Name;
+        }
+
         /// <summary>design section 10, feature #5 - Grunn has a single save file: on a
         /// finished save, GlobalData.polaroidsCollected already holds everything, killing
         /// the 35 polaroid checks. Drop every polaroid whose AP check is NOT sent yet so
