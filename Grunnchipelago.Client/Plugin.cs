@@ -192,14 +192,15 @@ namespace Grunnchipelago.Client
         /// EndingState.End - the orb fades (HandleOrb only shows it during Orb,
         /// GameManager.cs:1478) and once orbFactorCur reaches ~0 the vanilla
         /// EndingScreenLogic (UIManager.cs:1817-1822) restarts the run exactly like
-        /// the dialogue's natural end. Escape is read from InputManager.cancelData
-        /// (input-system callback, InputManager.cs:387 - it keeps updating even when
-        /// the game ignores it).</summary>
+        /// the dialogue's natural end. Escape is the QUIT action, not cancel
+        /// (quitString="input_esc" vs cancelString="Q" - InputManager.cs:244-246);
+        /// quitData keeps updating via the input-system callback even when the game
+        /// ignores it.</summary>
         private void HandleSkipOrbDialogue()
         {
             if (GameManager.CurGameState != GameManager.GameState.Ending
                 || GameManager.curEndingState != GameManager.EndingState.Orb) return;
-            if (InputManager.cancelData == null || !InputManager.cancelData.pressed) return;
+            if (InputManager.quitData == null || !InputManager.quitData.pressed) return;
 
             GameManager.curEndingOrbPromptIndex = GameManager.curEndingOrbPromptIndexMax;
             GameManager.orbWaitingForInput = false;
