@@ -29,12 +29,14 @@ def main() -> None:
 
     os.environ["SKIP_REQUIREMENTS_UPDATE"] = "1"
     os.chdir(AP)
+    # MultiServer imports its neighbours (ModuleUpdate, Utils...) by name: the checkout
+    # dir must be on sys.path (running via runpy does not add the cwd).
+    sys.path.insert(0, str(AP))
     sys.argv = ["MultiServer.py", str(data), "--port", str(port)]
     print(f"[serve] hosting {data.name} on port {port} (Ctrl+C to stop)")
-    runpy_path = AP / "MultiServer.py"
     import runpy
 
-    runpy.run_path(str(runpy_path), run_name="__main__")
+    runpy.run_path(str(AP / "MultiServer.py"), run_name="__main__")
 
 
 if __name__ == "__main__":
