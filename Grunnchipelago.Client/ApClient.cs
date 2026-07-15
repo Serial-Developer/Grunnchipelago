@@ -333,9 +333,12 @@ namespace Grunnchipelago.Client
             try { id = session.Locations.GetLocationIdFromName(Game, "Ending: " + ending); }
             catch (Exception) { return null; }
             if (id <= 0 || !TryGetScout(id, out ScoutedItemInfo info) || info == null) return null;
+            // Plain text only (no <b>: TMP faux-bold smears with the game font, and
+            // no model/sprite either - reintroduced later via a dedicated
+            // RenderTexture, never an inherited clone shader).
             if (info.IsReceiverRelatedToActivePlayer)
-                return "Objet débloqué :\n<b>" + info.ItemName + "</b>";
-            return "Envoyé :\n<b>" + info.ItemName + "</b>\n-> " + info.Player?.Name;
+                return "Objet débloqué :\n" + info.ItemName;
+            return "Envoyé :\n" + info.ItemName + "\n-> " + info.Player?.Name;
         }
 
         /// <summary>design section 10, feature #5 - Grunn has a single save file: on a

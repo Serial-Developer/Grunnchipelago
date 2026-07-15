@@ -26,28 +26,49 @@ namespace Grunnchipelago.Client
 
     /// <summary>UIManager.BuildStaticStrings (private, UIManager.cs:4101-4107) sets
     /// titleText to "&lt;i&gt;GRUNN&lt;/i&gt;" at load and on every language change.
-    /// Session 2, 1.1: while the mod is Enabled the title itself becomes
+    /// Session 2, 1.1 (iteration 2): while the mod is Enabled the title itself becomes
     /// GRUNNCHIPELAGO, font size scaled down (ratio of TMP preferred widths) so it
-    /// fits the original title's width and never covers the "made by" subtitle.
-    /// Mod disabled = no patch = vanilla title.</summary>
+    /// fits the original title's width. The text BOTTOM stays exactly where the
+    /// vanilla "GRUNN" bottom renders: both bottoms are MEASURED via textBounds on
+    /// the original RectTransform (no invented offset) and the rect is shifted by
+    /// the difference. Mod disabled = no patch = vanilla title.</summary>
     [HarmonyPatch(typeof(UIManager), "BuildStaticStrings")]
     public static class TitleTextPatch
     {
         private static float origFontSize = -1f;
+        private static Vector2 origAnchoredPos;
 
         private static void Postfix(UIManager __instance)
         {
             var title = __instance.titleText;
             if (title == null) return;
-            if (origFontSize < 0f) origFontSize = title.fontSize;
+            if (origFontSize < 0f)
+            {
+                origFontSize = title.fontSize;
+                origAnchoredPos = title.rectTransform.anchoredPosition;
+            }
+
+            // Reference pass: vanilla text at the vanilla size on the vanilla rect
+            // (BuildStaticStrings just set "<i>GRUNN</i>"). textBounds is in the
+            // text object's local space - comparable between both passes.
+            title.enableAutoSizing = false;
+            title.fontSize = origFontSize;
+            title.rectTransform.anchoredPosition = origAnchoredPos;
+            title.ForceMeshUpdate(true, true);
+            float vanillaBottom = title.textBounds.min.y;
 
             // Width ratio is font-size invariant; 0.98 margin against rounding.
-            title.enableAutoSizing = false;
             float baseWidth = title.GetPreferredValues("GRUNN").x;
             float newWidth = title.GetPreferredValues("GRUNNCHIPELAGO").x;
             if (baseWidth > 0f && newWidth > 0f)
                 title.fontSize = origFontSize * (baseWidth / newWidth) * 0.98f;
             title.SetText("<i>GRUNNCHIPELAGO</i>");
+
+            // Align our bottom onto the measured vanilla bottom.
+            title.ForceMeshUpdate(true, true);
+            float newBottom = title.textBounds.min.y;
+            title.rectTransform.anchoredPosition =
+                origAnchoredPos + new Vector2(0f, vanillaBottom - newBottom);
         }
     }
 

@@ -97,12 +97,18 @@ namespace Grunnchipelago.Client
                 position: new Vector2(-40f, -230f), size: new Vector2(700f, 600f),
                 fontSize: 34f, TextAlignmentOptions.TopRight, Color.white);
 
-            // Left of the centered ending polaroid (session 2, 1.3): right-aligned
-            // toward the polaroid, vertically centered.
+            // Left of the centered ending polaroid (session 2, 1.3, iteration 2):
+            // fixed-width column that can NEVER spill onto the polaroid - word wrap
+            // inside the box + auto-size bounded down when a long item name needs it.
             endingItemPanel = MakeText(root.transform, "endingItemPanel", font,
                 anchor: new Vector2(0.5f, 0.5f), pivot: new Vector2(1f, 0.5f),
-                position: new Vector2(-330f, 0f), size: new Vector2(560f, 400f),
-                fontSize: 36f, TextAlignmentOptions.Right, Color.white);
+                position: new Vector2(-330f, 0f), size: new Vector2(480f, 400f),
+                fontSize: 30f, TextAlignmentOptions.Right, Color.white);
+            endingItemPanel.enableWordWrapping = true;
+            endingItemPanel.overflowMode = TextOverflowModes.Truncate;
+            endingItemPanel.enableAutoSizing = true;
+            endingItemPanel.fontSizeMax = 30f;
+            endingItemPanel.fontSizeMin = 18f;
 
             escHint = MakeText(root.transform, "escHint", font,
                 anchor: new Vector2(0.5f, 0f), pivot: new Vector2(0.5f, 0f),
