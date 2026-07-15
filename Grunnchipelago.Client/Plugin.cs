@@ -98,10 +98,13 @@ namespace Grunnchipelago.Client
             Ap.TickGrants();
             // Buff multipliers + timed-trap expiry (restores vanilla when disconnected).
             Effects.Tick(Ap.Connected);
-            // "ESC : skip" hint state (skip logic lives in EscSkipsEndingDialoguePatch).
+            // "ESC : skip" hint state (skip logic: EscSkipsEndingDialoguePatch for the
+            // ending NPCs, HandleSkipOrbDialogue for the post-death orb sequence).
             EndingDialogueActive =
                 (GameManager.owner != null && GameManager.owner.curState == Owner.State.Talk)
-                || (GameManager.ownerSaved != null && GameManager.ownerSaved.curState == OwnerSaved.State.Talk);
+                || (GameManager.ownerSaved != null && GameManager.ownerSaved.curState == OwnerSaved.State.Talk)
+                || (Ap.Connected && GameManager.CurGameState == GameManager.GameState.Ending
+                    && GameManager.curEndingState == GameManager.EndingState.Orb);
             // Title marker + stats panel (playtest H).
             ModUi.Tick(Ap, cfgStatsShowAllLines.Value);
             // Dev helper (VerboseLogs): trigger traps by key for testing.
@@ -114,6 +117,7 @@ namespace Grunnchipelago.Client
                 // ending-check rewards land at the new run, after cutscene AND bus intro.
                 if (safe) Ap.FlushPendingPopups();
                 HandleSkipEndingDialogues();
+                HandleSkipOrbDialogue();
                 HutLock.Tick(Ap);
                 // Bone gift pickup near the start (design section 10, feature #3).
                 BoneGift.EnsureSpawned(Ap);
@@ -180,6 +184,28 @@ namespace Grunnchipelago.Client
             if (ui.promptCharIndex < ui.promptCharMax) ui.promptCharIndex = ui.promptCharMax;
             ui.skipPromptTimer.counter = ui.skipPromptTimer.duration;
             ui.skipPromptTimer.finished = true;
+        }
+
+        /// <summary>Session 2 (retour Jonath) - the post-death-ending ORB dialogue
+        /// (EndingState.Orb) ignores every key but Interact in vanilla, Escape
+        /// included. While it runs, Escape ends the whole sequence: jump to
+        /// EndingState.End - the orb fades (HandleOrb only shows it during Orb,
+        /// GameManager.cs:1478) and once orbFactorCur reaches ~0 the vanilla
+        /// EndingScreenLogic (UIManager.cs:1817-1822) restarts the run exactly like
+        /// the dialogue's natural end. Escape is read from InputManager.cancelData
+        /// (input-system callback, InputManager.cs:387 - it keeps updating even when
+        /// the game ignores it).</summary>
+        private void HandleSkipOrbDialogue()
+        {
+            if (GameManager.CurGameState != GameManager.GameState.Ending
+                || GameManager.curEndingState != GameManager.EndingState.Orb) return;
+            if (InputManager.cancelData == null || !InputManager.cancelData.pressed) return;
+
+            GameManager.curEndingOrbPromptIndex = GameManager.curEndingOrbPromptIndexMax;
+            GameManager.orbWaitingForInput = false;
+            GameManager.FinishPromptTimer();   // drop the line being displayed
+            GameManager.SetEndingState(GameManager.EndingState.End);
+            Logger.LogInfo("[Grunnchipelago] Orb dialogue skipped (ESC).");
         }
 
         /// <summary>Received DeathLink sequence (design Jonath 2026-07-13):
