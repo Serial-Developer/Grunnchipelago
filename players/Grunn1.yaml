@@ -1,0 +1,22 @@
+﻿# Profil de playtest local (slot "Grunn1") - fichier versionné, les seeds
+# précédentes avaient été générées avec un YAML temporaire perdu.
+# Génération : voir scripts/generate_seed (ou la commande dans le README).
+name: Grunn1
+game: Grunn
+description: Playtest Grunnchipelago - all_endings + death_link
+
+Grunn:
+  progression_balancing: 50
+  accessibility: full
+
+  goal: all_endings
+  keep_shears: true
+  exclude_bridge_key: true
+  polaroid_checks: true
+  ghost_checks: true
+  coinsanity: false
+  persistent_shortcuts: true
+  lock_player_hut: false
+  trap_percentage: 20
+  buff_count: 3
+  death_link: true
