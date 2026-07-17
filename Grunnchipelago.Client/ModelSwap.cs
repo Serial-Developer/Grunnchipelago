@@ -8,19 +8,20 @@ using Color = UnityEngine.Color;   // Models has its own Color type
 namespace Grunnchipelago.Client
 {
     /// <summary>
-    /// Features #1/#2 (prompt_cc_modeles) - a pickup shows the model of what its check
-    /// actually CONTAINS (from the connection scout), not the vanilla item:
+    /// Features #1/#2 (prompt_cc_modeles) + session 2 (2.1/2.2) - a pickup OR a world
+    /// polaroid shows the model of what its check actually CONTAINS (from the
+    /// connection scout), not the vanilla item:
     /// - our own Grunn items use the real item model, harvested from the visualsObject
     ///   of the scene's own ItemPickups (feature #1);
     /// - other players' items, and Grunn items with no harvested model, use an
     ///   "Archipelago" model per classification: progression / useful / filler
-    ///   (feature #2, PROVISIONAL art direction: tinted polaroid clone - Jonath picks
-    ///   the final look);
+    ///   (feature #2, PROVISIONAL art direction: tinted polaroid clone scaled up
+    ///   ApModelScale - Jonath picks the final look);
     /// - trap-flagged checks disguise as useful OR progression, deterministically per
     ///   seed+location so relaunching never betrays them.
     /// Only the visuals change: colliders, interaction and check flow stay vanilla
     /// (the model is parented under visualsObject, whose SetActive keeps driving
-    /// visibility - ItemPickup.cs:133).
+    /// visibility - ItemPickup.cs:133, Polaroid.cs:87).
     /// </summary>
     internal static class ModelSwap
     {
@@ -29,6 +30,10 @@ namespace Grunnchipelago.Client
         private static readonly Color ProgressionTint = new Color(1f, 0.35f, 0.2f);  // AP red-orange
         private static readonly Color UsefulTint = new Color(0.35f, 0.55f, 1f);      // blue
         private static readonly Color FillerTint = new Color(0.75f, 0.75f, 0.75f);   // grey
+
+        /// <summary>Session 2, 2.2 - the tinted-polaroid AP models are too small in
+        /// world: scale the clone up. (1.75 proposed, Jonath validates on capture.)</summary>
+        private const float ApModelScale = 1.75f;
 
         private static bool applied;
         private static readonly Dictionary<KeyItem, GameObject> library = new Dictionary<KeyItem, GameObject>();
@@ -40,6 +45,9 @@ namespace Grunnchipelago.Client
             if (applied || !ap.Connected || !ap.ScoutReady) return;
             if (GameManager.instance == null || GameManager.allItemPickups == null
                 || GameManager.allItemPickups.Count < 50) return;
+            // Session 2, 2.1: polaroids are swapped too - wait for their registry
+            // (Polaroid.Init populates allPolaroids over the first world frames).
+            if (GameManager.allPolaroids == null || GameManager.allPolaroids.Count == 0) return;
 
             BuildLibrary();
             int swapped = 0, apModels = 0, uncovered = 0;
@@ -50,9 +58,17 @@ namespace Grunnchipelago.Client
                 else if (result == 2) apModels++;
                 else if (result == 3) uncovered++;
             }
+            int polaroidSwapped = 0, polaroidAp = 0;
+            foreach (Polaroid polaroid in GameManager.allPolaroids)
+            {
+                int result = ApplyPolaroid(polaroid, ap);
+                if (result == 1) polaroidSwapped++;
+                else if (result == 2) polaroidAp++;
+            }
             applied = true;
             Plugin.Log?.LogInfo($"[Grunnchipelago] Model swap: {swapped} item models, " +
-                                $"{apModels} AP models, {uncovered} left vanilla (no visual).");
+                                $"{apModels} AP models, {uncovered} left vanilla (no visual); " +
+                                $"polaroids: {polaroidSwapped} item models, {polaroidAp} AP models.");
         }
 
         // ---------- library (feature #1.1) ----------
@@ -105,7 +121,7 @@ namespace Grunnchipelago.Client
                 if (library.TryGetValue(contained, out GameObject model))
                 {
                     if (pickup.visualsObject == null) return 3;
-                    SwapVisual(pickup, model, null);
+                    SwapVisual(pickup.visualsObject, model, null);
                     return 1;
                 }
                 // Grunn item without a harvested model -> AP model fallback.
@@ -114,7 +130,36 @@ namespace Grunnchipelago.Client
             if (pickup.visualsObject == null) return 3;
             ApKind kind = KindFor(scout.Flags, locationId, ap.SeedString);
             if (apModelSource == null) return 3;
-            SwapVisual(pickup, apModelSource, TintFor(kind));
+            SwapVisual(pickup.visualsObject, apModelSource, TintFor(kind));
+            return 2;
+        }
+
+        /// <summary>Session 2, 2.1 - same swap for the scene's Polaroid objects (seen
+        /// in-game: a picked polaroid granted a Plank with no visual hint). Rules match
+        /// Apply: own scouted Grunn item -> its real model, anything else -> AP model
+        /// by classification. Ending polaroids are ending rewards, never locations.
+        /// 0 = untouched, 1 = item model, 2 = AP model.</summary>
+        private static int ApplyPolaroid(Polaroid polaroid, ApClient ap)
+        {
+            if (polaroid == null || polaroid.visualsObject == null) return 0;
+            string typeName = polaroid.polaroidType.ToString();
+            if (typeName.StartsWith("Ending", StringComparison.Ordinal)) return 0;
+
+            long locationId = ap.LocationIdByName("Polaroid: " + typeName);
+            if (locationId <= 0 || !ap.TryGetScout(locationId, out ScoutedItemInfo scout) || scout == null)
+                return 0;   // polaroid_checks off or absent from the seed -> vanilla
+
+            if (scout.IsReceiverRelatedToActivePlayer
+                && Enum.TryParse(scout.ItemName, out KeyItem contained)
+                && library.TryGetValue(contained, out GameObject model))
+            {
+                SwapVisual(polaroid.visualsObject, model, null);
+                return 1;
+            }
+
+            if (apModelSource == null) return 0;
+            ApKind kind = KindFor(scout.Flags, locationId, ap.SeedString);
+            SwapVisual(polaroid.visualsObject, apModelSource, TintFor(kind));
             return 2;
         }
 
@@ -143,7 +188,9 @@ namespace Grunnchipelago.Client
         }
 
         /// <summary>Hide the original renderers and parent the replacement model under
-        /// visualsObject, so the vanilla SetActive flow keeps driving visibility.
+        /// the given visualsObject, so the vanilla SetActive flow keeps driving
+        /// visibility (ItemPickup and Polaroid both work that way). AP models (tinted)
+        /// are scaled up by ApModelScale (session 2, 2.2).
         ///
         /// CRITICAL (playtest round 2 freeze): the clone is instantiated under an
         /// INACTIVE holder so Awake NEVER runs. Cloning active then Destroy()ing the
@@ -152,16 +199,17 @@ namespace Grunnchipelago.Client
         /// Polaroid component then threw every frame (2153 NullReferenceException in
         /// Player.log), killing the loop and freezing all inputs. DestroyImmediate on
         /// never-awakened components is safe and leaves no trace.</summary>
-        private static void SwapVisual(ItemPickup pickup, GameObject modelSource, Color? tint)
+        private static void SwapVisual(GameObject visualsObject, GameObject modelSource, Color? tint)
         {
-            foreach (Renderer renderer in pickup.visualsObject.GetComponentsInChildren<Renderer>(true))
+            foreach (Renderer renderer in visualsObject.GetComponentsInChildren<Renderer>(true))
                 renderer.enabled = false;
 
             var holder = new GameObject("grunnchipelago_model");
             holder.SetActive(false);   // BEFORE receiving children: no Awake ever fires
-            holder.transform.SetParent(pickup.visualsObject.transform, false);
+            holder.transform.SetParent(visualsObject.transform, false);
             holder.transform.localPosition = Vector3.zero;
             holder.transform.localRotation = Quaternion.identity;
+            if (tint.HasValue) holder.transform.localScale = Vector3.one * ApModelScale;
 
             GameObject clone = UnityEngine.Object.Instantiate(modelSource, holder.transform);
             clone.name = "model";

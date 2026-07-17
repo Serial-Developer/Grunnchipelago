@@ -19,8 +19,21 @@
   le jeu n'a AUCUN sprite d'item (KeyItemInfo = textes, SaveManager.cs:1176) ;
   visuel 3D sur canvas overlay = non trivial (render texture), reporté.
 
-### Bloc 2 — Modèles : EN ATTENTE (après validation bloc 1)
-### Bloc 3 — Fins & profil de sauvegarde : plan 3.1 rédigé, attend le GO de Jonath
+### Bloc 1 — validé in-game par Jonath (2026-07-16), + ESC-skip du dialogue de
+l'orbe ajouté en cours de bloc (quitData, pas cancelData : ESC = action quit).
+
+### Bloc 2 — Modèles : LIVRÉ, à valider in-game
+- [x] 2.1 Swap étendu aux `Polaroid` de la scène (ApplyPolaroid) : mêmes règles
+  que les pickups (item Grunn local scouté -> vrai modèle, sinon modèle AP par
+  classification, traps déguisés) ; polaroids Ending exclus ; parent inactif.
+- [x] 2.2 Modèles AP agrandis : ×1.75 (const ApModelScale, appliquée au holder
+  des clones teintés uniquement) — facteur à valider sur capture.
+- [x] 2.3 Popup « Objet obtenu : X » pour les buffs/fillers reçus (GrantItem,
+  même canal QueuePopup ; traps conservent leur popup « X ! », key items le
+  popup vanilla).
+
+### Bloc 3 — Fins & profil de sauvegarde : plan 3.1 rédigé ; décision Jonath :
+traité EN DERNIER (3.2 liste des fins d'abord possible, sur l'état AP).
 
 ## ✅ Statut consolidation (CC, 2026-07-14) — tout traité
 - [x] A/PRIORITÉ 1 — visibilité pickups/boutique = état du check (commit 9211112) :

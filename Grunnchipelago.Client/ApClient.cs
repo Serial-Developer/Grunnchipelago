@@ -110,6 +110,19 @@ namespace Grunnchipelago.Client
             return id > 0 ? id : 0;
         }
 
+        /// <summary>Location id by full name, 0 if absent from the seed (session 2, 2.1:
+        /// lets ModelSwap resolve "Polaroid: X" locations).</summary>
+        public long LocationIdByName(string location)
+        {
+            if (!Connected || session == null) return 0;
+            try
+            {
+                long id = session.Locations.GetLocationIdFromName(Game, location);
+                return id > 0 ? id : 0;
+            }
+            catch (Exception) { return 0; }
+        }
+
         // Popups queued from patch context (vanilla-popup suppression is active there);
         // drained by Plugin.Update outside any pickup call.
         private readonly ConcurrentQueue<string> pendingPopups = new ConcurrentQueue<string>();
@@ -679,6 +692,14 @@ namespace Grunnchipelago.Client
                 {
                     Effects.ApplyTrap(name);
                     Info($"[Grunnchipelago] Trap applied: {name}.");
+                }
+                else
+                {
+                    // Session 2, 2.3 - buffs and fillers had NO pickup feedback (key
+                    // items go through the vanilla TriggerItemObtainPopup, traps
+                    // announce themselves in ApplyTrap). Same popup channel.
+                    QueuePopup($"Objet obtenu : {name}");
+                    Info($"[Grunnchipelago] Received {name}.");
                 }
             }
         }
