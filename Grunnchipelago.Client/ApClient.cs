@@ -676,11 +676,16 @@ namespace Grunnchipelago.Client
             }
             else if (name == "Gulden")
             {
-                // Money only matters under coinsanity. Historical gulden are already in the
-                // save; run resets are restored wholesale by ReinjectInventory.
-                if (realtime && !historical && Coinsanity)
+                // Session 2 retour Jonath: Gulden is the pool's flavour filler even
+                // WITHOUT coinsanity (items.py get_filler_item_name) and used to be
+                // granted silently (mystery pickups). Always announce and credit the
+                // coin (+1 is harmless flavour off-coinsanity). Historical gulden are
+                // already in the save; only coinsanity money is restored per run by
+                // ReinjectInventory (off-coinsanity it stays a one-shot gift).
+                if (realtime && !historical)
                 {
                     GameManager.AddGulden(1, false);
+                    QueuePopup("Objet obtenu : 1 Gulden");
                     Info("[Grunnchipelago] Granted 1 Gulden.");
                 }
             }

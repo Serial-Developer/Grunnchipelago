@@ -27,13 +27,17 @@ namespace Grunnchipelago.Client
     {
         private enum ApKind { Progression, Useful, Filler }
 
-        private static readonly Color ProgressionTint = new Color(1f, 0.35f, 0.2f);  // AP red-orange
-        private static readonly Color UsefulTint = new Color(0.35f, 0.55f, 1f);      // blue
-        private static readonly Color FillerTint = new Color(0.75f, 0.75f, 0.75f);   // grey
+        // Saturated tints (session 2 iter 2: the old grey filler blended into paths,
+        // capture Jonath) - filler is now bright yellow.
+        private static readonly Color ProgressionTint = new Color(1f, 0.3f, 0.1f);   // AP red-orange
+        private static readonly Color UsefulTint = new Color(0.2f, 0.5f, 1f);        // blue
+        private static readonly Color FillerTint = new Color(1f, 0.85f, 0.1f);       // yellow
 
-        /// <summary>Session 2, 2.2 - the tinted-polaroid AP models are too small in
-        /// world: scale the clone up. (1.75 proposed, Jonath validates on capture.)</summary>
-        private const float ApModelScale = 1.75f;
+        /// <summary>Session 2, 2.2 (iter 2) - the tinted-polaroid AP models were still
+        /// barely visible at 1.75 (captures Jonath): scale up harder and lift the card
+        /// slightly off the ground.</summary>
+        private const float ApModelScale = 2.75f;
+        private const float ApModelLift = 0.12f;
 
         private static bool applied;
         private static readonly Dictionary<KeyItem, GameObject> library = new Dictionary<KeyItem, GameObject>();
@@ -207,7 +211,8 @@ namespace Grunnchipelago.Client
             var holder = new GameObject("grunnchipelago_model");
             holder.SetActive(false);   // BEFORE receiving children: no Awake ever fires
             holder.transform.SetParent(visualsObject.transform, false);
-            holder.transform.localPosition = Vector3.zero;
+            holder.transform.localPosition = tint.HasValue
+                ? new Vector3(0f, ApModelLift, 0f) : Vector3.zero;
             holder.transform.localRotation = Quaternion.identity;
             if (tint.HasValue) holder.transform.localScale = Vector3.one * ApModelScale;
 
@@ -220,7 +225,19 @@ namespace Grunnchipelago.Client
             foreach (Renderer renderer in clone.GetComponentsInChildren<Renderer>(true))
             {
                 renderer.enabled = true;
-                if (tint.HasValue) renderer.material.color = tint.Value;
+                if (tint.HasValue)
+                {
+                    // Session 2 iter 2 (capture de nuit): also push the tint through
+                    // the emission channel when the shader has one, so AP models stay
+                    // readable in the dark. No-op on shaders without _EmissionColor.
+                    Material material = renderer.material;
+                    material.color = tint.Value;
+                    if (material.HasProperty("_EmissionColor"))
+                    {
+                        material.EnableKeyword("_EMISSION");
+                        material.SetColor("_EmissionColor", tint.Value * 0.5f);
+                    }
+                }
             }
             clone.SetActive(true);
             holder.SetActive(true);   // only renderers/meshes remain: nothing to awake

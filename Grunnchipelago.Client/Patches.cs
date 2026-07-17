@@ -279,12 +279,10 @@ namespace Grunnchipelago.Client
                 int index = ScenePaths.GuldenIndex(__instance);
                 if (index >= 0)
                 {
+                    // Diagnostic popup removed (session 2, retour Jonath): it had
+                    // identified the unknown gulden spots (#2, #8) - job done. Log only.
                     if (ApClient.Verbose)
-                    {
-                        // FLAG diagnostic [J 2026-07-13]: identify unknown gulden spots in-game.
                         Plugin.Log?.LogInfo($"[Grunnchipelago] Gulden pickup: {GameIds.GuldenLocationNames[index]}");
-                        ap.QueuePopup(GameIds.GuldenLocationNames[index]);
-                    }
                     if (ap.Coinsanity)
                     {
                         ap.SendGuldenCheck(index);

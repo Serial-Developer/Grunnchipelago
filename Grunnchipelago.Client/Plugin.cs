@@ -40,7 +40,7 @@ namespace Grunnchipelago.Client
             cfgPort = Config.Bind("Connection", "Port", 38281, "Archipelago server port.");
             cfgSlot = Config.Bind("Connection", "Slot", "", "Your slot (player) name.");
             cfgPassword = Config.Bind("Connection", "Password", "", "Server password (optional).");
-            cfgVerboseLogs = Config.Bind("Logging", "VerboseLogs", true,
+            cfgVerboseLogs = Config.Bind("Logging", "VerboseLogs", false,
                 "Log every check/grant/trap (dev). When false, only connection, errors and goal.");
             cfgSkipEndingDialogues = Config.Bind("QoL", "SkipEndingDialogues", false,
                 "Ending NPC dialogues (Owner / saved Owner) display instantly and advance " +
