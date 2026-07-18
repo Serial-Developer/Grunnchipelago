@@ -17,6 +17,8 @@ from typing import TYPE_CHECKING
 
 from BaseClasses import Item, ItemClassification
 
+from . import constants as c
+
 if TYPE_CHECKING:
     from . import GrunnWorld
 
@@ -101,13 +103,14 @@ def create_item(world: "GrunnWorld", name: str) -> GrunnItem:
 def get_filler_item_name(world: "GrunnWorld") -> str:
     """Infinitely repeatable filler used for item links / start inventory / pool fill.
 
-    Trap chance is honoured here so that ``create_filler`` naturally injects traps.
-    Under coinsanity, non-trap filler is "Gulden" (spendable money); otherwise it is
-    still "Gulden" as harmless flavour filler (a calibrer).
+    Filler is ONLY traps and buffs (decision Jonath 2026-07-16): Gulden is never
+    filler. Under coinsanity the money supply is added explicitly by
+    create_all_items instead. Trap chance is honoured here so that
+    ``create_filler`` naturally injects traps.
     """
     if world.random.randint(0, 99) < world.options.trap_percentage:
         return world.random.choice(TRAPS)
-    return "Gulden"
+    return world.random.choice(BUFFS)
 
 
 def create_all_items(world: "GrunnWorld") -> None:
@@ -137,6 +140,18 @@ def create_all_items(world: "GrunnWorld") -> None:
     for name in BUFFS:
         for _ in range(buff_count):
             itempool.append(create_item(world, name))
+
+    # 2.5) Coinsanity money supply: enough Gulden to afford every shop purchase in
+    # a single run (can_afford checks the CUMULATIVE received count against each
+    # price - rules.py:56, prices in constants.py). Added explicitly because
+    # Gulden is NEVER filler (decision Jonath 2026-07-16).
+    if world.options.coinsanity.value:
+        gulden_needed = (
+            c.PRICE_BUS + c.PRICE_CD + c.PRICE_COMPASS
+            + c.PRICE_OFFICE_KEY + c.PRICE_MEDAL + c.PRICE_EGGBALL
+        )
+        for _ in range(gulden_needed):
+            itempool.append(create_item(world, "Gulden"))
 
     # 3) Fill the rest with traps / filler so items == unfilled locations.
     number_of_unfilled = len(world.multiworld.get_unfilled_locations(player))
