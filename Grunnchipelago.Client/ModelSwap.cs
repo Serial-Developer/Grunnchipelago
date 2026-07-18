@@ -82,10 +82,17 @@ namespace Grunnchipelago.Client
             library.Clear();
             foreach (ItemPickup pickup in GameManager.allItemPickups)
             {
-                if (pickup == null || pickup.isGulden || pickup.visualsObject == null) continue;
+                if (pickup == null || pickup.isGulden) continue;
                 if (pickup.keyItemObtain == null || pickup.keyItemObtain.Count == 0) continue;
                 KeyItem key = pickup.keyItemObtain[0];
-                if (!library.ContainsKey(key)) library[key] = pickup.visualsObject;
+                // Some pickups have no designated visualsObject (suspected: flowerGem0,
+                // whose location showed the AP card instead of the gem - retour Jonath).
+                // MODEL SOURCE fallback only: harvest the whole pickup object (renderers
+                // included, scripts stripped at clone time); swap TARGETS still require
+                // a real visualsObject.
+                GameObject source = pickup.visualsObject != null
+                    ? pickup.visualsObject : pickup.gameObject;
+                if (!library.ContainsKey(key)) library[key] = source;
             }
             // Approximations for items with no placed pickup (given by NPC/event):
             // GoldFishAlive looks like the dead one, AtticKey like another generic key.
@@ -112,6 +119,12 @@ namespace Grunnchipelago.Client
                 return 0;   // bone gift really contains a bone
 
             KeyItem vanilla = pickup.keyItemObtain[0];
+            // Session 2 retour Jonath: the worm pickups reveal through a WORLD EVENT
+            // (apple placed on the plate - worm0's interaction has preventTypes
+            // ObjectInactive/NotPlacedApple, dump:5334). The vanilla mesh sits in a
+            // child object kept inactive until then, but our clone under visualsObject
+            // rendered immediately and betrayed the spot: leave worm pickups vanilla.
+            if (vanilla == KeyItem.Worm) return 0;
             long locationId = ap.ObtainLocationIdFor(vanilla);
             if (locationId <= 0 || !ap.TryGetScout(locationId, out ScoutedItemInfo scout) || scout == null)
                 return 0;

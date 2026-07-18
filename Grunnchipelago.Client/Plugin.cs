@@ -121,6 +121,23 @@ namespace Grunnchipelago.Client
                 HutLock.Tick(Ap);
                 // Bone gift pickup near the start (design section 10, feature #3).
                 BoneGift.EnsureSpawned(Ap);
+                // One-shot on the FIRST connect to a new seed:slot - the vanilla save
+                // (and the static ShortcutCache) carry the previous multiworld's
+                // shortcuts; a fresh seed must start with vanilla-fresh shortcuts.
+                if (Ap.NeedsShortcutReset && SaveManager.progressDataCheck != null)
+                {
+                    Ap.NeedsShortcutReset = false;
+                    ShortcutCache.Clear();
+                    var pd = SaveManager.progressDataCheck;
+                    pd.unlockedBijkeukenShortcut = false;
+                    pd.unlockedIntratuin = false;
+                    pd.createdShortcut = false;
+                    pd.parkUnlockedHooibaalGarden = false;
+                    pd.parkUnlockedMaze = false;
+                    pd.locksUnlocked = new System.Collections.Generic.List<Lock>();
+                    SaveManager.Save(SaveManager.curSlotIndex);
+                    Log.LogInfo("[Grunnchipelago] Nouvelle seed : raccourcis remis a zero.");
+                }
                 // One-shot after login: restore uncollected-check polaroids to the world.
                 if (Ap.NeedsPolaroidSync && GameManager.allPolaroids != null
                     && GameManager.allPolaroids.Count > 0)

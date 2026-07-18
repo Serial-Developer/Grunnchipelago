@@ -242,6 +242,12 @@ namespace Grunnchipelago.Client
             deathLinkService.OnDeathLinkReceived += OnDeathLinkReceived;
         }
 
+        /// <summary>Set at login when this seed:slot differs from the last stored one
+        /// (session 2 retour Jonath: the vanilla save + the static ShortcutCache leaked
+        /// shortcuts from the previous multiworld into a fresh seed). Plugin.Update
+        /// consumes it once the save is available and resets the shortcut state.</summary>
+        public bool NeedsShortcutReset { get; set; }
+
         private void LoadSeenItemCount()
         {
             seenItemCount = 0;
@@ -251,7 +257,16 @@ namespace Grunnchipelago.Client
                 string key = session.RoomState.Seed + ":" + slotName;
                 int sep = stored.LastIndexOf(':');
                 if (sep > 0 && stored.Substring(0, sep) == key)
+                {
                     seenItemCount = int.Parse(stored.Substring(sep + 1));
+                }
+                else
+                {
+                    NeedsShortcutReset = true;   // first connect to this seed:slot
+                    // Store the key NOW so a reconnect before the first grant does not
+                    // re-trigger the reset (it would wipe legitimately earned shortcuts).
+                    PersistSeenItemCount();
+                }
             }
             catch (Exception) { seenItemCount = 0; }
         }
@@ -300,7 +315,7 @@ namespace Grunnchipelago.Client
             return true;
         }
 
-        private bool SendByName(string location, bool announceSelf = false)
+        private bool SendByName(string location)
         {
             if (!Connected || session == null) return false;
             long id = session.Locations.GetLocationIdFromName(Game, location);
@@ -310,27 +325,24 @@ namespace Grunnchipelago.Client
                 return false;
             }
             bool sent = TrySend(id, location);
-            if (sent) AnnounceScoutedContent(id, announceSelf);
+            if (sent) AnnounceScoutedContent(id);
             return sent;
         }
 
-        /// <summary>Popup fix (design section 10): the vanilla pickup popup shows the item
-        /// SEEN, not the item the location holds. Another player's item is announced as
-        /// "Envoye"; our own items announce themselves on receipt - except when
-        /// announceSelf is set (ending checks, playtest D.1: show the reward).</summary>
-        private void AnnounceScoutedContent(long id, bool announceSelf)
+        /// <summary>Popup fix (design section 10, simplifie session 2 - retour Jonath:
+        /// UN message concret par obtention, pas trois). Another player's item is the
+        /// only pickup-time announce ("Envoye : X -> joueur", the send is otherwise
+        /// invisible); our own items announce themselves ON RECEIPT (vanilla popup for
+        /// key items, "Objet obtenu : X" for buffs/fillers/gulden, "X !" for traps).
+        /// Ending rewards additionally show on the ending screen panel (1.3).</summary>
+        private void AnnounceScoutedContent(long id)
         {
             ScoutedItemInfo info;
             lock (scouted)
             {
                 if (!scouted.TryGetValue(id, out info)) return;
             }
-            if (info == null) return;
-            if (info.IsReceiverRelatedToActivePlayer)
-            {
-                if (announceSelf) QueuePopup($"Recompense : {info.ItemName}");
-                return;
-            }
+            if (info == null || info.IsReceiverRelatedToActivePlayer) return;
             QueuePopup($"Envoye : {info.ItemName} -> {info.Player?.Name}");
         }
 
@@ -455,16 +467,15 @@ namespace Grunnchipelago.Client
         public void SendPolaroidCheck(PolaroidType type)
         {
             // Ending polaroids are awarded by the endings, never shuffled.
+            // (Session 2 retour Jonath: no "Polaroid : X" / "Recompense : X" popups -
+            // the receipt popup alone says what was concretely obtained.)
             if (type.ToString().StartsWith("Ending", StringComparison.Ordinal)) return;
-            // Round 2 request: always announce the collection itself (polaroids can be
-            // granted as a side effect of picking up an item, invisibly otherwise).
-            QueuePopup($"Polaroid : {type}");
             if (!PolaroidChecks)
             {
                 Info($"[Grunnchipelago] Silencieux : polaroid {type} (option off)");
                 return;
             }
-            SendByName("Polaroid: " + type, announceSelf: true);
+            SendByName("Polaroid: " + type);
         }
 
         /// <summary>Ghost / gulden indices come from the frozen path tables in GameIds.</summary>
@@ -477,14 +488,14 @@ namespace Grunnchipelago.Client
             }
             long id = GameIds.GhostBaseId + index;
             if (TrySend(id, $"Calm Ghost #{index + 1}"))
-                AnnounceScoutedContent(id, announceSelf: true);
+                AnnounceScoutedContent(id);
         }
 
         public void SendGuldenCheck(int index)
         {
             long id = GameIds.GuldenBaseId + index;
             if (TrySend(id, GameIds.GuldenLocationNames[index]))
-                AnnounceScoutedContent(id, announceSelf: true);
+                AnnounceScoutedContent(id);
         }
 
         // ---------- Endings & goal ----------
@@ -494,16 +505,13 @@ namespace Grunnchipelago.Client
             if (!Connected) return;
             if (ending != EndingType.DemoEnding)
             {
-                // The reward is announced EVEN when the check was already sent (round 2:
-                // re-watching an ending must still tell what it unlocked); popups queue
-                // and display back in-game, after the ending cutscene.
+                // The unlocked reward shows on the ending screen itself (panel 1.3,
+                // every re-watch included); the only popup left is "Envoye" for another
+                // player's item, on first send.
                 string location = "Ending: " + ending;
                 long id = session.Locations.GetLocationIdFromName(Game, location);
-                if (id > 0)
-                {
-                    TrySend(id, location);
-                    AnnounceScoutedContent(id, announceSelf: true);
-                }
+                if (id > 0 && TrySend(id, location))
+                    AnnounceScoutedContent(id);
                 endingsSeen.Add(ending);
             }
             CheckGoal(ending);

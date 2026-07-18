@@ -581,11 +581,23 @@ namespace Grunnchipelago.Client
                 return;
             }
 
-            Vector3 position = anchor + new Vector3(1.5f, 0f, 1.5f);
+            // Slightly ABOVE the flowerbed (retour Jonath: ground level buried it in
+            // the flowers) - a floating bone reads as the AP gift it is.
+            Vector3 position = anchor + new Vector3(1.5f, 0.45f, 1.5f);
             instance = Object.Instantiate(template.gameObject, position, Quaternion.identity);
             instance.name = "grunnchipelago_boneGift";
             ItemPickup clone = instance.GetComponent<ItemPickup>();
             clone.startState = ItemPickupState.Show;   // skeleton bones start hidden
+            // The template may already be MODEL-SWAPPED (its location's scouted content
+            // replaced the bone visuals - retour Jonath: the gift no longer looked like
+            // a bone). Undo the swap on the clone: drop our holder, re-enable renderers.
+            if (clone.visualsObject != null)
+            {
+                Transform swapped = clone.visualsObject.transform.Find("grunnchipelago_model");
+                if (swapped != null) Object.DestroyImmediate(swapped.gameObject);
+                foreach (Renderer renderer in clone.visualsObject.GetComponentsInChildren<Renderer>(true))
+                    renderer.enabled = true;
+            }
             instance.SetActive(true);
             // The clone initialises itself (UpdateNormal -> Init): registers in
             // allItemPickups, subscribes to GrabbedItemAction, then ResetState -> Show
@@ -640,6 +652,15 @@ namespace Grunnchipelago.Client
     {
         private static bool bijkeuken, intratuin, created, hooiGarden, maze;
         private static readonly List<Lock> locks = new List<Lock>();
+
+        /// <summary>Session 2 - the cache is monotonic and STATIC: without this reset a
+        /// new seed inherited the previous multiworld's shortcuts (Jonath: the
+        /// garden-exterior shears shortcut survived a reseed + fresh run).</summary>
+        public static void Clear()
+        {
+            bijkeuken = intratuin = created = hooiGarden = maze = false;
+            locks.Clear();
+        }
 
         public static void Capture()
         {
