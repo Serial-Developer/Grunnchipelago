@@ -114,6 +114,11 @@ namespace Grunnchipelago.Client
         private static int Apply(ItemPickup pickup, ApClient ap)
         {
             if (pickup == null || pickup.isGulden || pickup.isRepeatablePickup) return 0;
+            // Pretty flower (retour Jonath, iter 4): its visuals GROW (PrettyFlowerGrow
+            // scales the object from ~0), so a clone parented there is invisible until
+            // grown and mis-scaled after. Event-driven reveal -> left vanilla, like the
+            // worm.
+            if (pickup.isPrettyFlowerPickup) return 0;
             if (pickup.keyItemObtain == null || pickup.keyItemObtain.Count == 0) return 0;
             if (pickup.gameObject.name.StartsWith("grunnchipelago", StringComparison.Ordinal))
                 return 0;   // bone gift really contains a bone
@@ -224,15 +229,32 @@ namespace Grunnchipelago.Client
             var holder = new GameObject("grunnchipelago_model");
             holder.SetActive(false);   // BEFORE receiving children: no Awake ever fires
             holder.transform.SetParent(visualsObject.transform, false);
-            holder.transform.localPosition = tint.HasValue
-                ? new Vector3(0f, ApModelLift, 0f) : Vector3.zero;
             holder.transform.localRotation = Quaternion.identity;
-            if (tint.HasValue) holder.transform.localScale = Vector3.one * ApModelScale;
 
             GameObject clone = UnityEngine.Object.Instantiate(modelSource, holder.transform);
             clone.name = "model";
             clone.transform.localPosition = Vector3.zero;
             clone.transform.localRotation = Quaternion.identity;
+
+            // WORLD-size normalisation (retour Jonath, iter 4: "la taille du modele
+            // depend de sa position dans le monde") - the clone inherits the target
+            // parent's scale chain (soulFragment in a scaled bottle = giant, trowel
+            // under a shrunk parent = tiny). Cancel it out so the clone always renders
+            // at its source's natural world size, x ApModelScale for AP cards.
+            // cloneWorld = parentLossy * holderLocal * cloneLocal  =>  holderLocal =
+            // mult * sourceLossy / (parentLossy * cloneLocal), per component.
+            Vector3 parentLossy = visualsObject.transform.lossyScale;
+            Vector3 sourceLossy = modelSource.transform.lossyScale;
+            Vector3 cloneLocal = clone.transform.localScale;
+            float mult = tint.HasValue ? ApModelScale : 1f;
+            holder.transform.localScale = new Vector3(
+                mult * SafeRatio(sourceLossy.x, parentLossy.x * cloneLocal.x),
+                mult * SafeRatio(sourceLossy.y, parentLossy.y * cloneLocal.y),
+                mult * SafeRatio(sourceLossy.z, parentLossy.z * cloneLocal.z));
+            // Lift in world units too (AP cards only).
+            holder.transform.localPosition = tint.HasValue
+                ? new Vector3(0f, SafeRatio(ApModelLift, parentLossy.y), 0f)
+                : Vector3.zero;
 
             StripNonVisuals(clone);
             foreach (Renderer renderer in clone.GetComponentsInChildren<Renderer>(true))
@@ -247,13 +269,22 @@ namespace Grunnchipelago.Client
                     material.color = tint.Value;
                     if (material.HasProperty("_EmissionColor"))
                     {
+                        // 1.5: the bloom "glowing orb" look Jonath liked, now that the
+                        // cards render at their normalised (smaller) size.
                         material.EnableKeyword("_EMISSION");
-                        material.SetColor("_EmissionColor", tint.Value * 0.5f);
+                        material.SetColor("_EmissionColor", tint.Value * 1.5f);
                     }
                 }
             }
             clone.SetActive(true);
             holder.SetActive(true);   // only renderers/meshes remain: nothing to awake
+        }
+
+        /// <summary>0-safe component ratio (a growing/zero-scaled parent must not
+        /// produce NaN/Infinity - it stays invisible anyway while its scale is 0).</summary>
+        private static float SafeRatio(float a, float b)
+        {
+            return Mathf.Abs(b) < 1e-4f ? 1f : a / b;
         }
 
         /// <summary>Remove every script and collider from a never-activated clone.
