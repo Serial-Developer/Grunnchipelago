@@ -106,12 +106,28 @@ namespace Grunnchipelago.Client
                 if (!library.ContainsKey(key)) library[key] = Archive(source);
             }
             // Approximations for items with no placed pickup (given by NPC/event):
-            // GoldFishAlive looks like the dead one, AtticKey like another generic key.
+            // GoldFishAlive looks like the dead one.
             // NOT covered (fall back to AP models): KidTriangle.
             if (!library.ContainsKey(KeyItem.GoldFishAlive) && library.ContainsKey(KeyItem.GoldFishDead))
                 library[KeyItem.GoldFishAlive] = library[KeyItem.GoldFishDead];
-            if (!library.ContainsKey(KeyItem.AtticKey) && library.ContainsKey(KeyItem.OldKey))
-                library[KeyItem.AtticKey] = library[KeyItem.OldKey];
+
+            // Generic key fallback (retour Jonath iter 7): AbandonedKey / OldKey /
+            // AtticKey are ORPHAN keys - no placed pickup, so they showed AP cards.
+            // Grunn keys all look alike: any *Key item without a model borrows the
+            // first harvested key model.
+            GameObject genericKey = null;
+            KeyItem[] keySources =
+            {
+                KeyItem.GardenKey, KeyItem.BridgeKey, KeyItem.OfficeKey,
+                KeyItem.ToiletKey, KeyItem.ChurchKey, KeyItem.StrangeKey,
+            };
+            foreach (KeyItem k in keySources)
+                if (library.TryGetValue(k, out GameObject m)) { genericKey = m; break; }
+            if (genericKey != null)
+                foreach (KeyItem k in (KeyItem[])Enum.GetValues(typeof(KeyItem)))
+                    if (k.ToString().EndsWith("Key", StringComparison.Ordinal)
+                        && !library.ContainsKey(k))
+                        library[k] = genericKey;
 
             // Provisional AP-model source: a polaroid ("photo from another world") -
             // archived too, or the polaroid swaps (which now hide the WHOLE polaroid
