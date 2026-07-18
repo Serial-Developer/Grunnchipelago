@@ -47,6 +47,7 @@ namespace Grunnchipelago.Client
         private static bool applied;
         private static readonly Dictionary<KeyItem, GameObject> library = new Dictionary<KeyItem, GameObject>();
         private static GameObject apModelSource;   // polaroid visual (provisional)
+        private static Transform archiveRoot;      // inactive vault of pristine copies
 
         /// <summary>One-shot per session, once connected + scout done + world loaded.</summary>
         public static void Tick(ApClient ap)
@@ -93,11 +94,16 @@ namespace Grunnchipelago.Client
                 // Some pickups have no designated visualsObject (suspected: flowerGem0,
                 // whose location showed the AP card instead of the gem - retour Jonath).
                 // MODEL SOURCE fallback only: harvest the whole pickup object (renderers
-                // included, scripts stripped at clone time); swap TARGETS still require
-                // a real visualsObject.
+                // included, scripts stripped at archive time); swap TARGETS still
+                // require a real visualsObject.
                 GameObject source = pickup.visualsObject != null
                     ? pickup.visualsObject : pickup.gameObject;
-                if (!library.ContainsKey(key)) library[key] = source;
+                // ARCHIVE a pristine copy (retour Jonath iter 6, "objets enchevetres"):
+                // referencing the LIVE visualsObject meant that once a pickup got a
+                // clone embedded by a swap, every later swap using that pickup's model
+                // cloned the embedded model along (sandwich-in-fragment, and
+                // retroactively trowel-in-polaroid / boat-idol earlier).
+                if (!library.ContainsKey(key)) library[key] = Archive(source);
             }
             // Approximations for items with no placed pickup (given by NPC/event):
             // GoldFishAlive looks like the dead one, AtticKey like another generic key.
@@ -107,10 +113,34 @@ namespace Grunnchipelago.Client
             if (!library.ContainsKey(KeyItem.AtticKey) && library.ContainsKey(KeyItem.OldKey))
                 library[KeyItem.AtticKey] = library[KeyItem.OldKey];
 
-            // Provisional AP-model source: a polaroid ("photo from another world").
+            // Provisional AP-model source: a polaroid ("photo from another world") -
+            // archived too, or the polaroid swaps (which now hide the WHOLE polaroid
+            // render tree) would blank our own card source.
             if (apModelSource == null && GameManager.allPolaroids != null)
                 foreach (Polaroid polaroid in GameManager.allPolaroids)
-                    if (polaroid != null) { apModelSource = polaroid.gameObject; break; }
+                    if (polaroid != null) { apModelSource = Archive(polaroid.gameObject); break; }
+        }
+
+        /// <summary>Copy a scene visual into an INACTIVE off-world vault (no Awake ever
+        /// fires - playtest round 2 rule) with its WORLD scale baked in, scripts and
+        /// colliders stripped. Swaps clone from these pristine copies, never from the
+        /// live scene objects that later swaps mutate.</summary>
+        private static GameObject Archive(GameObject source)
+        {
+            if (archiveRoot == null)
+            {
+                var root = new GameObject("grunnchipelago_model_library");
+                root.SetActive(false);
+                UnityEngine.Object.DontDestroyOnLoad(root);
+                archiveRoot = root.transform;
+            }
+            GameObject copy = UnityEngine.Object.Instantiate(source, archiveRoot);
+            copy.name = source.name;
+            copy.transform.localPosition = Vector3.zero;
+            copy.transform.localRotation = Quaternion.identity;
+            copy.transform.localScale = source.transform.lossyScale;   // bake world scale
+            StripNonVisuals(copy);
+            return copy;
         }
 
         // ---------- per-pickup swap ----------
@@ -310,9 +340,13 @@ namespace Grunnchipelago.Client
                 {
                     // Session 2 iter 2 (capture de nuit): also push the tint through
                     // the emission channel when the shader has one, so AP models stay
-                    // readable in the dark. No-op on shaders without _EmissionColor.
+                    // readable in the dark. _BaseColor covers URP-style shaders whose
+                    // .color (_Color) is a no-op (iter 6: the buff fragment stayed
+                    // white). No-op on shaders without these properties.
                     Material material = renderer.material;
                     material.color = tint.Value;
+                    if (material.HasProperty("_BaseColor"))
+                        material.SetColor("_BaseColor", tint.Value);
                     if (material.HasProperty("_EmissionColor"))
                     {
                         // 1.5: the bloom "glowing orb" look Jonath liked, now that the
@@ -322,6 +356,12 @@ namespace Grunnchipelago.Client
                     }
                 }
             }
+            // The soul fragment carries a real Light (the white-blue halo, iter 6):
+            // Lights are not MonoBehaviours, StripNonVisuals leaves them - tint them
+            // with the model so a green buff glows GREEN.
+            if (tint.HasValue)
+                foreach (Light light in clone.GetComponentsInChildren<Light>(true))
+                    light.color = tint.Value;
             clone.SetActive(true);
             holder.SetActive(true);   // only renderers/meshes remain: nothing to awake
         }

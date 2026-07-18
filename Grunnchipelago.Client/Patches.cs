@@ -564,16 +564,16 @@ namespace Grunnchipelago.Client
                 || GameManager.allItemPickups.Count < 50) return;   // world not loaded yet
 
             ItemPickup template = null;
-            Vector3 anchor = new Vector3(-33.4f, 10.15f, -64f);   // bridgeKey0 pos (dump)
             foreach (ItemPickup pickup in GameManager.allItemPickups)
             {
                 if (pickup == null) continue;
-                if (template == null && !pickup.isGulden && !pickup.isTool
+                if (!pickup.isGulden && !pickup.isTool
                     && pickup.keyItemObtain != null && pickup.keyItemObtain.Count > 0
                     && pickup.keyItemObtain[0] == KeyItem.Bone)
+                {
                     template = pickup;
-                if (pickup.gameObject.name == "bridgeKey0")
-                    anchor = pickup.transform.position;
+                    break;
+                }
             }
             if (template == null)
             {
@@ -581,9 +581,10 @@ namespace Grunnchipelago.Client
                 return;
             }
 
-            // Slightly ABOVE the flowerbed (retour Jonath: ground level buried it in
-            // the flowers) - a floating bone reads as the AP gift it is.
-            Vector3 position = anchor + new Vector3(1.5f, 0.45f, 1.5f);
+            // Next to the roses sign / pupitre (plantSign0, dump: -36.5, 10.0, -66.2),
+            // on the side AWAY from the RedRoses bed (x -32..-37, z -61..-66) that kept
+            // swallowing the bone (retour Jonath iters 3 et 6).
+            Vector3 position = new Vector3(-37.3f, 10.35f, -67.5f);
             instance = Object.Instantiate(template.gameObject, position, Quaternion.identity);
             instance.name = "grunnchipelago_boneGift";
             ItemPickup clone = instance.GetComponent<ItemPickup>();
