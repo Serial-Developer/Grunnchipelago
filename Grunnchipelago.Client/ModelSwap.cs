@@ -39,6 +39,11 @@ namespace Grunnchipelago.Client
         private const float ApModelScale = 2.75f;
         private const float ApModelLift = 0.12f;
 
+        /// <summary>Retour Jonath iter 5: our own buffs (and disguised traps) use the
+        /// soul-fragment model tinted green instead of the AP card.</summary>
+        private static readonly Color BuffTint = new Color(0.35f, 1f, 0.4f);
+        private const float BuffModelScale = 1.25f;
+
         private static bool applied;
         private static readonly Dictionary<KeyItem, GameObject> library = new Dictionary<KeyItem, GameObject>();
         private static GameObject apModelSource;   // polaroid visual (provisional)
@@ -134,32 +139,69 @@ namespace Grunnchipelago.Client
             if (locationId <= 0 || !ap.TryGetScout(locationId, out ScoutedItemInfo scout) || scout == null)
                 return 0;
 
-            // Our own Grunn item -> concrete model (feature #1). Other players' items
-            // ALWAYS use AP models even if the item exists in Grunn (feature #2.3).
-            if (scout.IsReceiverRelatedToActivePlayer
-                && Enum.TryParse(scout.ItemName, out KeyItem contained))
+            return SwapForScout(pickup.visualsObject, scout, locationId, ap, vanilla);
+        }
+
+        /// <summary>Shared swap decision (pickups and world polaroids). Our own Grunn
+        /// item -> concrete model (feature #1); our own buffs AND trap-flagged checks ->
+        /// green soul-fragment (retour Jonath iter 5; traps MUST share the buff look,
+        /// the pool's own non-key items are only buffs and traps so a card would betray
+        /// them); anything else -> AP card by classification (feature #2).
+        /// 0 = untouched, 1 = item model, 2 = AP/buff model, 3 = no visual.</summary>
+        private static int SwapForScout(GameObject visualsObject, ScoutedItemInfo scout,
+            long locationId, ApClient ap, KeyItem? vanillaItem)
+        {
+            if (visualsObject == null) return 3;
+
+            if (scout.IsReceiverRelatedToActivePlayer)
             {
-                if (contained == vanilla) return 0;   // vanilla model already truthful
-                if (library.TryGetValue(contained, out GameObject model))
+                if (Enum.TryParse(scout.ItemName, out KeyItem contained))
                 {
-                    if (pickup.visualsObject == null) return 3;
-                    SwapVisual(pickup.visualsObject, model, null);
-                    return 1;
+                    if (vanillaItem.HasValue && contained == vanillaItem.Value)
+                        return 0;   // vanilla model already truthful
+                    if (library.TryGetValue(contained, out GameObject model))
+                    {
+                        SwapVisual(visualsObject, model, null, 1f, 0f);
+                        return 1;
+                    }
+                    // Grunn item without a harvested model -> AP card fallback.
                 }
-                // Grunn item without a harvested model -> AP model fallback.
+                else if ((IsBuffName(scout.ItemName) || (scout.Flags & ItemFlags.Trap) != 0)
+                         && TryGetBuffModel(out GameObject fragment))
+                {
+                    SwapVisual(visualsObject, fragment, BuffTint, BuffModelScale, ApModelLift);
+                    return 2;
+                }
             }
 
-            if (pickup.visualsObject == null) return 3;
-            ApKind kind = KindFor(scout.Flags, locationId, ap.SeedString);
             if (apModelSource == null) return 3;
-            SwapVisual(pickup.visualsObject, apModelSource, TintFor(kind));
+            ApKind kind = KindFor(scout.Flags, locationId, ap.SeedString);
+            SwapVisual(visualsObject, apModelSource, TintFor(kind), ApModelScale, ApModelLift);
             return 2;
+        }
+
+        private static bool IsBuffName(string name)
+        {
+            return name == GameIds.BuffMoveSpeed || name == GameIds.BuffCutterRange
+                || name == GameIds.BuffCuttingRate;
+        }
+
+        /// <summary>Buff model = a soul fragment (retour Jonath iter 5), harvested like
+        /// any library model (soulFragment1 sits in a bottle in the Big House).</summary>
+        private static bool TryGetBuffModel(out GameObject model)
+        {
+            if (library.TryGetValue(KeyItem.SoulFragment1, out model)) return true;
+            if (library.TryGetValue(KeyItem.SoulFragment2, out model)) return true;
+            if (library.TryGetValue(KeyItem.SoulFragment3, out model)) return true;
+            return false;
         }
 
         /// <summary>Session 2, 2.1 - same swap for the scene's Polaroid objects (seen
         /// in-game: a picked polaroid granted a Plank with no visual hint). Rules match
-        /// Apply: own scouted Grunn item -> its real model, anything else -> AP model
-        /// by classification. Ending polaroids are ending rewards, never locations.
+        /// Apply (SwapForScout). After a successful swap the polaroid's WHOLE render
+        /// tree is hidden, not just visualsObject - the big frame meshes live outside
+        /// it and framed our clones ("popcorn dans un polaroid geant", retour Jonath
+        /// iter 5). Ending polaroids are ending rewards, never locations.
         /// 0 = untouched, 1 = item model, 2 = AP model.</summary>
         private static int ApplyPolaroid(Polaroid polaroid, ApClient ap)
         {
@@ -171,18 +213,22 @@ namespace Grunnchipelago.Client
             if (locationId <= 0 || !ap.TryGetScout(locationId, out ScoutedItemInfo scout) || scout == null)
                 return 0;   // polaroid_checks off or absent from the seed -> vanilla
 
-            if (scout.IsReceiverRelatedToActivePlayer
-                && Enum.TryParse(scout.ItemName, out KeyItem contained)
-                && library.TryGetValue(contained, out GameObject model))
-            {
-                SwapVisual(polaroid.visualsObject, model, null);
-                return 1;
-            }
+            int result = SwapForScout(polaroid.visualsObject, scout, locationId, ap, null);
+            if (result == 1 || result == 2)
+                HideRenderersOutsideHolder(polaroid.gameObject, polaroid.visualsObject);
+            return result;
+        }
 
-            if (apModelSource == null) return 0;
-            ApKind kind = KindFor(scout.Flags, locationId, ap.SeedString);
-            SwapVisual(polaroid.visualsObject, apModelSource, TintFor(kind));
-            return 2;
+        /// <summary>Disable every renderer of the polaroid's whole tree except our
+        /// clone's (the frame meshes outside visualsObject stayed visible and framed
+        /// the content model). Vanilla hide-on-collect only drives visualsObject, which
+        /// our holder lives under - so collection behaviour is unchanged.</summary>
+        private static void HideRenderersOutsideHolder(GameObject root, GameObject visualsObject)
+        {
+            Transform holder = visualsObject.transform.Find("grunnchipelago_model");
+            foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
+                if (holder == null || !renderer.transform.IsChildOf(holder))
+                    renderer.enabled = false;
         }
 
         /// <summary>Trap checks disguise as useful or progression - deterministic per
@@ -221,7 +267,8 @@ namespace Grunnchipelago.Client
         /// Polaroid component then threw every frame (2153 NullReferenceException in
         /// Player.log), killing the loop and freezing all inputs. DestroyImmediate on
         /// never-awakened components is safe and leaves no trace.</summary>
-        private static void SwapVisual(GameObject visualsObject, GameObject modelSource, Color? tint)
+        private static void SwapVisual(GameObject visualsObject, GameObject modelSource,
+            Color? tint, float scaleMult, float lift)
         {
             foreach (Renderer renderer in visualsObject.GetComponentsInChildren<Renderer>(true))
                 renderer.enabled = false;
@@ -246,14 +293,13 @@ namespace Grunnchipelago.Client
             Vector3 parentLossy = visualsObject.transform.lossyScale;
             Vector3 sourceLossy = modelSource.transform.lossyScale;
             Vector3 cloneLocal = clone.transform.localScale;
-            float mult = tint.HasValue ? ApModelScale : 1f;
             holder.transform.localScale = new Vector3(
-                mult * SafeRatio(sourceLossy.x, parentLossy.x * cloneLocal.x),
-                mult * SafeRatio(sourceLossy.y, parentLossy.y * cloneLocal.y),
-                mult * SafeRatio(sourceLossy.z, parentLossy.z * cloneLocal.z));
-            // Lift in world units too (AP cards only).
-            holder.transform.localPosition = tint.HasValue
-                ? new Vector3(0f, SafeRatio(ApModelLift, parentLossy.y), 0f)
+                scaleMult * SafeRatio(sourceLossy.x, parentLossy.x * cloneLocal.x),
+                scaleMult * SafeRatio(sourceLossy.y, parentLossy.y * cloneLocal.y),
+                scaleMult * SafeRatio(sourceLossy.z, parentLossy.z * cloneLocal.z));
+            // Lift in world units too.
+            holder.transform.localPosition = lift > 0f
+                ? new Vector3(0f, SafeRatio(lift, parentLossy.y), 0f)
                 : Vector3.zero;
 
             StripNonVisuals(clone);
