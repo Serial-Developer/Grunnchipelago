@@ -112,9 +112,20 @@ namespace Grunnchipelago.Client
                 library[KeyItem.GoldFishAlive] = library[KeyItem.GoldFishDead];
             if (!library.ContainsKey(KeyItem.KidTriangle))
             {
-                if (library.TryGetValue(KeyItem.KidTrumpet, out GameObject instrument)
-                    || library.TryGetValue(KeyItem.KidCymbals, out instrument)
-                    || library.TryGetValue(KeyItem.Trumpet, out instrument))
+                // The triangle only exists IN HANDS (retour Jonath iter 9): harvest the
+                // scruffy man's held triangle+stick (scruffyMan_triangleStick0, in his
+                // right hand until TradedEggball - dump:15694). FindObjectsOfTypeAll
+                // reaches inactive bone children; one-shot at library build.
+                foreach (Transform t in Resources.FindObjectsOfTypeAll<Transform>())
+                    if (t != null && t.name == "scruffyMan_triangleStick0")
+                    {
+                        library[KeyItem.KidTriangle] = Archive(t.gameObject);
+                        break;
+                    }
+                if (!library.ContainsKey(KeyItem.KidTriangle)
+                    && (library.TryGetValue(KeyItem.KidTrumpet, out GameObject instrument)
+                        || library.TryGetValue(KeyItem.KidCymbals, out instrument)
+                        || library.TryGetValue(KeyItem.Trumpet, out instrument)))
                     library[KeyItem.KidTriangle] = instrument;
             }
 
@@ -161,7 +172,15 @@ namespace Grunnchipelago.Client
             copy.name = source.name;
             copy.transform.localPosition = Vector3.zero;
             copy.transform.localRotation = Quaternion.identity;
-            copy.transform.localScale = source.transform.lossyScale;   // bake world scale
+            // Bake the source's WORLD scale - clamping degenerate components to 1:
+            // the pretty flower is harvested at connect time, BEFORE it grows, at
+            // scale ~0 (retour Jonath iter 9: bake the FULLY GROWN flower, growth is
+            // a scale animation over the same mesh).
+            Vector3 s = source.transform.lossyScale;
+            copy.transform.localScale = new Vector3(
+                Mathf.Abs(s.x) < 0.01f ? 1f : s.x,
+                Mathf.Abs(s.y) < 0.01f ? 1f : s.y,
+                Mathf.Abs(s.z) < 0.01f ? 1f : s.z);
             StripNonVisuals(copy);
             return copy;
         }
