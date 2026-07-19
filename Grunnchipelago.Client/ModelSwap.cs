@@ -106,10 +106,17 @@ namespace Grunnchipelago.Client
                 if (!library.ContainsKey(key)) library[key] = Archive(source);
             }
             // Approximations for items with no placed pickup (given by NPC/event):
-            // GoldFishAlive looks like the dead one.
-            // NOT covered (fall back to AP models): KidTriangle.
+            // GoldFishAlive looks like the dead one; KidTriangle borrows another kid
+            // instrument (retour Jonath iter 8: no model at all).
             if (!library.ContainsKey(KeyItem.GoldFishAlive) && library.ContainsKey(KeyItem.GoldFishDead))
                 library[KeyItem.GoldFishAlive] = library[KeyItem.GoldFishDead];
+            if (!library.ContainsKey(KeyItem.KidTriangle))
+            {
+                if (library.TryGetValue(KeyItem.KidTrumpet, out GameObject instrument)
+                    || library.TryGetValue(KeyItem.KidCymbals, out instrument)
+                    || library.TryGetValue(KeyItem.Trumpet, out instrument))
+                    library[KeyItem.KidTriangle] = instrument;
+            }
 
             // Generic key fallback (retour Jonath iter 7): AbandonedKey / OldKey /
             // AtticKey are ORPHAN keys - no placed pickup, so they showed AP cards.
@@ -165,11 +172,10 @@ namespace Grunnchipelago.Client
         private static int Apply(ItemPickup pickup, ApClient ap)
         {
             if (pickup == null || pickup.isGulden || pickup.isRepeatablePickup) return 0;
-            // Pretty flower (retour Jonath, iter 4): its visuals GROW (PrettyFlowerGrow
-            // scales the object from ~0), so a clone parented there is invisible until
-            // grown and mis-scaled after. Event-driven reveal -> left vanilla, like the
-            // worm.
-            if (pickup.isPrettyFlowerPickup) return 0;
+            // Pretty flower: swapped again since iter 8 - Jonath wants the content
+            // model there, and the growth animation works WITH the normalisation:
+            // while the parent scale is ~0 the clone is invisible (SafeRatio caps the
+            // ratio), and at full growth (scale 1) it lands at natural world size.
             if (pickup.keyItemObtain == null || pickup.keyItemObtain.Count == 0) return 0;
             if (pickup.gameObject.name.StartsWith("grunnchipelago", StringComparison.Ordinal))
                 return 0;   // bone gift really contains a bone

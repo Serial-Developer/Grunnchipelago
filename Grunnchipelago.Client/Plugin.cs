@@ -119,8 +119,9 @@ namespace Grunnchipelago.Client
                 HandleSkipEndingDialogues();
                 HandleSkipOrbDialogue();
                 HutLock.Tick(Ap);
-                // Bone gift pickup near the start (design section 10, feature #3).
-                BoneGift.EnsureSpawned(Ap);
+                // Bone + compass gift pickups near the start (design section 10 #3,
+                // session 2 iter 8 - both items would kill a loupable ending).
+                GiftPickups.EnsureSpawned(Ap);
                 // One-shot on the FIRST connect to a new seed:slot - the vanilla save
                 // (and the static ShortcutCache) carry the previous multiworld's
                 // shortcuts; a fresh seed must start with vanilla-fresh shortcuts.

@@ -74,6 +74,11 @@ namespace Grunnchipelago.Client
         /// start instead, so the Dog ending stays reachable (design section 10).</summary>
         public bool BoneOwnedFromAp { get; private set; }
 
+        /// <summary>Same treatment for Compass (session 2 iter 8): auto-injecting it
+        /// made the no-compass maze - and the HedgeMaze ending - unreachable. A world
+        /// pickup spawns next to the bone gift instead.</summary>
+        public bool CompassOwnedFromAp { get; private set; }
+
         /// <summary>Set after login: the local save must drop uncollected-check polaroids.</summary>
         public bool NeedsPolaroidSync { get; set; }
 
@@ -661,13 +666,22 @@ namespace Grunnchipelago.Client
             if (Enum.TryParse(name, out KeyItem keyItem))
             {
                 // Bone is special (design section 10): never injected into the inventory.
-                // A world pickup spawns near the start instead (BoneGift), so the player
-                // only takes it when needed and the Dog ending stays reachable.
+                // A world pickup spawns near the start instead (GiftPickups), so the
+                // player only takes it when needed and the Dog ending stays reachable.
                 if (keyItem == KeyItem.Bone)
                 {
                     BoneOwnedFromAp = true;
-                    if (realtime && !historical) QueuePopup("Un os attend pres du bus...");
+                    if (realtime && !historical) QueuePopup("Un os attend près du panneau des roses...");
                     Info("[Grunnchipelago] Bone received - world pickup will spawn near the start.");
+                    return;
+                }
+                // Compass too (session 2 iter 8): injected, it deletes the no-compass
+                // maze and the HedgeMaze ending with it (loupable, like the Dog bone).
+                if (keyItem == KeyItem.Compass)
+                {
+                    CompassOwnedFromAp = true;
+                    if (realtime && !historical) QueuePopup("Une boussole attend près du panneau des roses...");
+                    Info("[Grunnchipelago] Compass received - world pickup will spawn near the start.");
                     return;
                 }
                 try
@@ -732,6 +746,7 @@ namespace Grunnchipelago.Client
                         case GameIds.BuffCutterRange: range++; break;
                         case GameIds.BuffCuttingRate: rate++; break;
                         case "Bone": BoneOwnedFromAp = true; break;
+                        case "Compass": CompassOwnedFromAp = true; break;
                     }
                 }
             }

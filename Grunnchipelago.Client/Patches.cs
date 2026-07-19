@@ -136,14 +136,17 @@ namespace Grunnchipelago.Client
     }
 
     /// <summary>ContentHider.CheckCondition (private, ContentHider.cs:416). Hiders whose
-    /// target object holds an ItemPickup (shop articles like officeKey0_shop, world
-    /// spawns like hammer0_car) hide it on KeyItemObtained: switch those to check-state.
-    /// World-mechanic hiders (maze paths on Compass/TallIdol, portals...) target no
-    /// pickup and keep vanilla possession semantics.</summary>
+    /// target object holds an ItemPickup OF THE CONDITION'S OWN key item (shop articles
+    /// like officeKey0_shop, world spawns like hammer0_car) hide it on KeyItemObtained:
+    /// switch those to check-state. World-mechanic hiders keep vanilla possession
+    /// semantics - session 2 iter 8: "contains ANY pickup" was too loose, the
+    /// HedgeMaze_NotObtainedCompass container (Compass condition) nests unrelated
+    /// pickups, and flipping it to check-state removed the no-compass maze - and its
+    /// strange symbol - once "Obtain Compass" was sent, killing the HedgeMaze ending.</summary>
     [HarmonyPatch(typeof(ContentHider), "CheckCondition")]
     public static class ContentHiderConditionPatch
     {
-        // instanceID -> does objectRef contain an ItemPickup (cached: polled every frame)
+        // instanceID -> does objectRef wrap a pickup of the hider's own key item
         private static readonly Dictionary<int, bool> hidesPickup = new Dictionary<int, bool>();
 
         private static void Postfix(ContentHider __instance, HideCondition _c, ref bool __result)
@@ -155,8 +158,16 @@ namespace Grunnchipelago.Client
             int key = __instance.GetInstanceID();
             if (!hidesPickup.TryGetValue(key, out bool isPickupHider))
             {
-                isPickupHider = __instance.objectRef != null
-                    && __instance.objectRef.GetComponentInChildren<ItemPickup>(true) != null;
+                isPickupHider = false;
+                if (__instance.objectRef != null)
+                    foreach (ItemPickup pickup in __instance.objectRef.GetComponentsInChildren<ItemPickup>(true))
+                        if (pickup != null && pickup.keyItemObtain != null
+                            && pickup.keyItemObtain.Count > 0
+                            && pickup.keyItemObtain[0] == __instance.keyItemRef)
+                        {
+                            isPickupHider = true;
+                            break;
+                        }
                 hidesPickup[key] = isPickupHider;
             }
             if (!isPickupHider) return;
@@ -546,30 +557,42 @@ namespace Grunnchipelago.Client
         }
     }
 
-    /// <summary>design section 10, feature #3 - the AP "Bone" item is never injected into
-    /// the inventory. Instead a world pickup (clone of a skeleton-bone ItemPickup) spawns
-    /// near the start (next to the Bridge Key spot, outside the bus). Taking it grants the
-    /// vanilla Bone WITHOUT sending a check (ItemPickupTriggerPatch.SpecialPickupActive),
-    /// so the player only picks it up when needed and the Dog ending stays reachable.
-    /// Across runs the clone follows vanilla rules: ResetWorld -> ResetState shows it
-    /// again whenever Bone is not currently held.</summary>
-    internal static class BoneGift
+    /// <summary>design section 10, feature #3 + session 2 iter 8 - the AP "Bone" AND
+    /// "Compass" items are never injected into the inventory: each would kill a
+    /// loupable ending (Dog / HedgeMaze). Instead a world pickup clone spawns next to
+    /// the roses sign at the start; taking it grants the vanilla item WITHOUT sending
+    /// a check (ItemPickupTriggerPatch.SpecialPickupActive), so the player only picks
+    /// it up when needed. Across runs the clones follow vanilla rules: ResetWorld ->
+    /// ResetState shows them again whenever the item is not currently held.</summary>
+    internal static class GiftPickups
     {
-        private static GameObject instance;
+        private static GameObject boneInstance;
+        private static GameObject compassInstance;
+
+        // Next to the roses sign / pupitre (plantSign0, dump: -36.5, 10.0, -66.2), on
+        // the side AWAY from the RedRoses bed (x -32..-37, z -61..-66) that kept
+        // swallowing the bone (retours Jonath iters 3, 6 - "super bien positionné").
+        private static readonly Vector3 BonePosition = new Vector3(-37.3f, 10.35f, -67.5f);
+        private static readonly Vector3 CompassPosition = new Vector3(-38.6f, 10.35f, -66.6f);
 
         public static void EnsureSpawned(ApClient ap)
         {
-            if (instance != null || !ap.BoneOwnedFromAp) return;
             if (GameManager.instance == null || GameManager.allItemPickups == null
                 || GameManager.allItemPickups.Count < 50) return;   // world not loaded yet
+            if (boneInstance == null && ap.BoneOwnedFromAp)
+                boneInstance = Spawn(KeyItem.Bone, "grunnchipelago_boneGift", BonePosition);
+            if (compassInstance == null && ap.CompassOwnedFromAp)
+                compassInstance = Spawn(KeyItem.Compass, "grunnchipelago_compassGift", CompassPosition);
+        }
 
+        private static GameObject Spawn(KeyItem item, string name, Vector3 position)
+        {
             ItemPickup template = null;
             foreach (ItemPickup pickup in GameManager.allItemPickups)
             {
-                if (pickup == null) continue;
-                if (!pickup.isGulden && !pickup.isTool
-                    && pickup.keyItemObtain != null && pickup.keyItemObtain.Count > 0
-                    && pickup.keyItemObtain[0] == KeyItem.Bone)
+                if (pickup == null || pickup.isGulden || pickup.isTool) continue;
+                if (pickup.keyItemObtain != null && pickup.keyItemObtain.Count > 0
+                    && pickup.keyItemObtain[0] == item)
                 {
                     template = pickup;
                     break;
@@ -577,21 +600,21 @@ namespace Grunnchipelago.Client
             }
             if (template == null)
             {
-                Plugin.Log?.LogWarning("[Grunnchipelago] BoneGift: no Bone pickup template found.");
-                return;
+                Plugin.Log?.LogWarning($"[Grunnchipelago] GiftPickups: no {item} template found.");
+                return null;
             }
 
-            // Next to the roses sign / pupitre (plantSign0, dump: -36.5, 10.0, -66.2),
-            // on the side AWAY from the RedRoses bed (x -32..-37, z -61..-66) that kept
-            // swallowing the bone (retour Jonath iters 3 et 6).
-            Vector3 position = new Vector3(-37.3f, 10.35f, -67.5f);
-            instance = Object.Instantiate(template.gameObject, position, Quaternion.identity);
-            instance.name = "grunnchipelago_boneGift";
+            GameObject instance = Object.Instantiate(template.gameObject, position, Quaternion.identity);
+            instance.name = name;
             ItemPickup clone = instance.GetComponent<ItemPickup>();
-            clone.startState = ItemPickupState.Show;   // skeleton bones start hidden
+            clone.startState = ItemPickupState.Show;
+            // The compass template is a SHOP article (Hooibaal): the gift is free.
+            clone.inShop = false;
+            clone.soldByKid = false;
+            clone.cost = 0;
             // The template may already be MODEL-SWAPPED (its location's scouted content
-            // replaced the bone visuals - retour Jonath: the gift no longer looked like
-            // a bone). Undo the swap on the clone: drop our holder, re-enable renderers.
+            // replaced the visuals - retour Jonath: the gift no longer looked like a
+            // bone). Undo the swap on the clone: drop our holder, re-enable renderers.
             if (clone.visualsObject != null)
             {
                 Transform swapped = clone.visualsObject.transform.Find("grunnchipelago_model");
@@ -600,10 +623,13 @@ namespace Grunnchipelago.Client
                     renderer.enabled = true;
             }
             instance.SetActive(true);
-            // The clone initialises itself (UpdateNormal -> Init): registers in
-            // allItemPickups, subscribes to GrabbedItemAction, then ResetState -> Show
-            // (Bone not currently held) or Hide (held this run).
-            Plugin.Log?.LogInfo($"[Grunnchipelago] BoneGift spawned at {position}.");
+            // Awake already ran Init->ResetState DURING Instantiate, with the
+            // TEMPLATE's startState - re-run it now that startState is Show, or the
+            // gift only appears at the next world reset (retour Jonath iter 8: the
+            // bone showed up one run late).
+            clone.ResetState();
+            Plugin.Log?.LogInfo($"[Grunnchipelago] Gift {item} spawned at {position}.");
+            return instance;
         }
     }
 
@@ -651,7 +677,7 @@ namespace Grunnchipelago.Client
     /// restore them after each ResetRunProgress. Fields: SaveManager.cs progressData.</summary>
     internal static class ShortcutCache
     {
-        private static bool bijkeuken, intratuin, created, hooiGarden, maze;
+        private static bool bijkeuken, created, hooiGarden, maze;
         private static readonly List<Lock> locks = new List<Lock>();
 
         /// <summary>Session 2 - the cache is monotonic and STATIC: without this reset a
@@ -659,7 +685,7 @@ namespace Grunnchipelago.Client
         /// garden-exterior shears shortcut survived a reseed + fresh run).</summary>
         public static void Clear()
         {
-            bijkeuken = intratuin = created = hooiGarden = maze = false;
+            bijkeuken = created = hooiGarden = maze = false;
             locks.Clear();
         }
 
@@ -668,7 +694,6 @@ namespace Grunnchipelago.Client
             var pd = SaveManager.progressDataCheck;
             if (pd == null) return;
             bijkeuken |= pd.unlockedBijkeukenShortcut;
-            intratuin |= pd.unlockedIntratuin;
             created |= pd.createdShortcut;
             hooiGarden |= pd.parkUnlockedHooibaalGarden;
             maze |= pd.parkUnlockedMaze;
@@ -677,12 +702,15 @@ namespace Grunnchipelago.Client
                     if (!locks.Contains(l)) locks.Add(l);
         }
 
+        // unlockedIntratuin is deliberately NOT restored (session 2 iter 8): restoring
+        // the flag colours the door's flower emblem but the door itself only opens
+        // through the watering event - the flag being "already true" then prevents
+        // re-watering from opening it. Vanilla per-run behaviour is strictly better.
         public static void Restore()
         {
             var pd = SaveManager.progressDataCheck;
             if (pd == null) return;
             pd.unlockedBijkeukenShortcut = bijkeuken;
-            pd.unlockedIntratuin = intratuin;
             pd.createdShortcut = created;
             pd.parkUnlockedHooibaalGarden = hooiGarden;
             pd.parkUnlockedMaze = maze;
