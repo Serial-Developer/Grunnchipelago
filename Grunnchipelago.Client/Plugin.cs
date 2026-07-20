@@ -12,9 +12,13 @@ namespace Grunnchipelago.Client
     /// Archipelago client plugin for Grunn (BepInEx 5). Milestone 1: connect + first check.
     /// When disabled or not connected, all patches are no-ops (100 % vanilla behaviour).
     /// </summary>
-    [BepInPlugin("grunnchipelago.client", "Grunnchipelago Client", "0.1.0")]
+    [BepInPlugin("grunnchipelago.client", "Grunnchipelago Client", ModVersion)]
     public class Plugin : BaseUnityPlugin
     {
+        /// <summary>Mod version - shown under the main-menu title and used as the
+        /// BepInEx plugin version, so both can never drift apart.</summary>
+        public const string ModVersion = "0.1.0";
+
         /// <summary>Set of the running plugin, used by the Harmony patches.</summary>
         public static ApClient Ap { get; private set; }
 

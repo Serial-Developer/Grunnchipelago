@@ -174,13 +174,13 @@ namespace Grunnchipelago.Client
             scaler.matchWidthOrHeight = 0.5f;
 
             // Mod credit (demande Jonath) - bottom-right of the title screen, in red,
-            // italic like the vanilla title. Bottom corner = zero overlap risk with the
-            // title, the "made by" subtitle and the menu options.
+            // italic like the vanilla title. Sits ABOVE the "E - sélectionner" prompt
+            // box, whose top edge is ~190 px off the bottom (capture Jonath).
             titleCredit = MakeText(root.transform, "titleCredit", font,
                 anchor: new Vector2(1f, 0f), pivot: new Vector2(1f, 0f),
-                position: new Vector2(-40f, 30f), size: new Vector2(700f, 60f),
+                position: new Vector2(-40f, 205f), size: new Vector2(700f, 100f),
                 fontSize: 28f, TextAlignmentOptions.BottomRight, new Color(0.9f, 0.15f, 0.15f));
-            titleCredit.SetText("<i>modded by Serial</i>");
+            titleCredit.SetText($"<i>v{Plugin.ModVersion}\nmodded by Serial</i>");
 
             // Below the pause menu's day/time block (timePausedText, top-right,
             // UIManager.cs:3510) so it no longer covers "samedi 08:00" (session 2, 1.2).
