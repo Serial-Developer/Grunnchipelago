@@ -367,8 +367,25 @@ namespace Grunnchipelago.Client
             // no model/sprite either - reintroduced later via a dedicated
             // RenderTexture, never an inherited clone shader).
             if (info.IsReceiverRelatedToActivePlayer)
-                return "Objet débloqué :\n" + info.ItemName;
+                return "Objet débloqué :\n" + LocalItemName(info.ItemName);
             return "Envoyé :\n" + info.ItemName + "\n-> " + info.Player?.Name;
+        }
+
+        /// <summary>Our own Grunn items display their LOCALIZED in-game name ("pièce
+        /// étrange", not the internal AP name "Coin" - retour Jonath). AP-only items
+        /// (buffs...) and other players' items keep their AP name.</summary>
+        private static string LocalItemName(string apName)
+        {
+            try
+            {
+                if (Enum.TryParse(apName, out KeyItem keyItem)
+                    && SaveManager.keyItemInfoDict != null
+                    && SaveManager.keyItemInfoDict.TryGetValue(keyItem, out KeyItemInfo info)
+                    && !string.IsNullOrEmpty(info.name))
+                    return info.name;
+            }
+            catch (Exception) { }
+            return apName;
         }
 
         /// <summary>design section 10, feature #5 - Grunn has a single save file: on a
