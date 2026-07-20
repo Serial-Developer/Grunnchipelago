@@ -105,25 +105,33 @@ namespace Grunnchipelago.Client
         /// (a veteran save reads 11/11 on a brand-new seed).</summary>
         private static string BuildEndingList(ApClient ap)
         {
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine("<i>Fins</i>");
+            var lines = new List<KeyValuePair<int, string>>();
             int found = 0;
-            foreach (KeyValuePair<EndingType, PolaroidType> pair in EndingPolaroids)
+            for (int i = 0; i < EndingPolaroids.Length; i++)
             {
-                string label = "???";
-                string number = "";
+                KeyValuePair<EndingType, PolaroidType> pair = EndingPolaroids[i];
                 PolaroidData data = null;
                 try { data = PolaroidManager.GetPolaroidData(pair.Value); }
                 catch (System.Exception) { }
-                if (data != null) number = data.myIndex + ". ";
 
+                // The game's own numbering is NOT the enum order (retour Jonath: the
+                // list came out shuffled) - sort on myIndex so it reads 1..11.
+                int number = i + 1;
+                if (data != null && !int.TryParse(data.myIndex, out number)) number = i + 1;
+
+                string label = "???";
                 if (ap.EndingCheckSent(pair.Key))
                 {
                     found++;
                     label = NameOf(pair.Value, data);
                 }
-                sb.AppendLine(number + label);
+                lines.Add(new KeyValuePair<int, string>(number, number + ". " + label));
             }
+            lines.Sort((a, b) => a.Key.CompareTo(b.Key));
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("<i>Fins</i>");
+            foreach (KeyValuePair<int, string> line in lines) sb.AppendLine(line.Value);
             sb.AppendLine($"<i>{found} / {EndingPolaroids.Length}</i>");
             return sb.ToString();
         }
