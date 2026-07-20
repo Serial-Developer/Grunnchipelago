@@ -151,6 +151,17 @@ namespace Grunnchipelago.Client
         // instanceID -> the polaroid this hider drives (session 2: same randomizer
         // semantics for polaroids, whose check would otherwise die on possession)
         private static readonly Dictionary<int, Polaroid> hidesPolaroid = new Dictionary<int, Polaroid>();
+        // Hiders we have already announced (VerboseLogs): every flip is a deviation
+        // from vanilla, so the list must stay short and auditable.
+        private static readonly HashSet<int> logged = new HashSet<int>();
+
+        private static void LogFlip(ContentHider hider, string kind)
+        {
+            if (!ApClient.Verbose || !logged.Add(hider.GetInstanceID())) return;
+            string target = hider.objectRef != null ? hider.objectRef.name : "(null)";
+            Plugin.Log?.LogInfo($"[Grunnchipelago] Hider bascule en etat-check ({kind}) : "
+                                + $"cible '{target}', item {hider.keyItemRef}.");
+        }
 
         private static void Postfix(ContentHider __instance, HideCondition _c, ref bool __result)
         {
@@ -179,27 +190,38 @@ namespace Grunnchipelago.Client
             }
             if (polaroid != null)
             {
+                LogFlip(__instance, "polaroid " + polaroid.polaroidType);
                 bool polaroidSent = ap.PolaroidCheckSent(polaroid.polaroidType);
                 __result = _c == HideCondition.KeyItemObtained ? polaroidSent : !polaroidSent;
                 return;
             }
 
+            // The hider must TARGET that pickup, not merely contain it somewhere deep:
+            // objectRef is the pickup's own object or its direct parent. Anything wider
+            // is a zone container (the hedge-maze variants nest dozens of objects) and
+            // must keep vanilla semantics - flipping one blanked the whole maze.
             if (!hidesPickup.TryGetValue(key, out bool isPickupHider))
             {
                 isPickupHider = false;
-                if (__instance.objectRef != null)
-                    foreach (ItemPickup pickup in __instance.objectRef.GetComponentsInChildren<ItemPickup>(true))
-                        if (pickup != null && pickup.keyItemObtain != null
-                            && pickup.keyItemObtain.Count > 0
-                            && pickup.keyItemObtain[0] == __instance.keyItemRef)
+                GameObject target = __instance.objectRef;
+                if (target != null)
+                    foreach (ItemPickup pickup in target.GetComponentsInChildren<ItemPickup>(true))
+                    {
+                        if (pickup == null || pickup.keyItemObtain == null
+                            || pickup.keyItemObtain.Count == 0
+                            || pickup.keyItemObtain[0] != __instance.keyItemRef) continue;
+                        if (pickup.gameObject == target
+                            || pickup.transform.parent == target.transform)
                         {
                             isPickupHider = true;
                             break;
                         }
+                    }
                 hidesPickup[key] = isPickupHider;
             }
             if (!isPickupHider) return;
 
+            LogFlip(__instance, "pickup");
             bool sent = ap.KeyItemCheckSent(__instance.keyItemRef);
             __result = _c == HideCondition.KeyItemObtained ? sent : !sent;
         }
