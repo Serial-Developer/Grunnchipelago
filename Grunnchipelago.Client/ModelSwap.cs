@@ -150,6 +150,10 @@ namespace Grunnchipelago.Client
                 // require a real visualsObject.
                 GameObject source = pickup.visualsObject != null
                     ? pickup.visualsObject : pickup.gameObject;
+                // Never archive a source without a single mesh: some pickups are pure
+                // interaction markers whose visual lives elsewhere (prettyFlower_remove0
+                // archived 0 renderers - retour Jonath). Handled case by case below.
+                if (source.GetComponentsInChildren<Renderer>(true).Length == 0) continue;
                 // ARCHIVE a pristine copy (retour Jonath iter 6, "objets enchevetres"):
                 // referencing the LIVE visualsObject meant that once a pickup got a
                 // clone embedded by a swap, every later swap using that pickup's model
@@ -157,6 +161,25 @@ namespace Grunnchipelago.Client
                 // retroactively trowel-in-polaroid / boat-idol earlier).
                 if (!library.ContainsKey(key)) library[key] = Archive(source);
             }
+            // The pretty flower's mesh does NOT belong to its pickup (that one is a
+            // bare interaction marker): it is three MeshRenderers on the Flower itself -
+            // prettyFlowerBase / Leaves / Top - which the game merely ENABLES as the
+            // plant grows (Flower.UpdatePrettyFlowerVisuals, Flower.cs:165-175). Harvest
+            // the flower object and force the three on, which is the fully grown bloom
+            // Jonath asked for.
+            if (GameManager.prettyFlower != null)
+            {
+                GameObject bloom = Archive(GameManager.prettyFlower.gameObject);
+                int meshes = 0;
+                foreach (Renderer renderer in bloom.GetComponentsInChildren<Renderer>(true))
+                {
+                    renderer.enabled = true;
+                    meshes++;
+                }
+                library[KeyItem.PrettyFlower] = bloom;
+                Plugin.Log?.LogInfo($"[Grunnchipelago] Modele PrettyFlower recolte sur la fleur ({meshes} renderers).");
+            }
+
             // Approximations for items with no placed pickup (given by NPC/event):
             // GoldFishAlive looks like the dead one; KidTriangle borrows another kid
             // instrument (retour Jonath iter 8: no model at all).
