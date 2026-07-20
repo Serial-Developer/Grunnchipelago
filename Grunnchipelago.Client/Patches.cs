@@ -688,12 +688,12 @@ namespace Grunnchipelago.Client
                 Transform swapped = clone.visualsObject.transform.Find("grunnchipelago_model");
                 if (swapped != null) Object.DestroyImmediate(swapped.gameObject);
                 foreach (Renderer renderer in clone.visualsObject.GetComponentsInChildren<Renderer>(true))
-                    renderer.enabled = true;
-                // DEBUG: dress the gift in the archived library model instead, so what
-                // stands near the bus is exactly what the swap shows elsewhere.
-                if (showLibraryModel && !ModelSwap.TryShowLibraryModel(clone.visualsObject, item))
-                    Plugin.Log?.LogWarning($"[Grunnchipelago] Aucun modele archive pour {item}.");
+                    renderer.enabled = !showLibraryModel;
             }
+            // DEBUG: dress the gift in the archived library model, attached to the
+            // pickup ROOT - the flower's own visuals are scale-animated (invisible
+            // before blooming), so a model parented there would vanish with them.
+            if (showLibraryModel) ModelSwap.TryAttachLibraryModel(instance.transform, item);
             instance.SetActive(true);
             // Awake already ran Init->ResetState DURING Instantiate, with the
             // TEMPLATE's startState - re-run it now that startState is Show, or the
