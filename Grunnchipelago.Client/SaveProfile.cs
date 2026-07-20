@@ -45,6 +45,11 @@ namespace Grunnchipelago.Client
         /// <summary>Seed:slot the active profile belongs to.</summary>
         public static string ActiveKey { get; private set; }
 
+        /// <summary>Set after a failed swap: the feature is disabled for the session
+        /// instead of retrying every frame (the first version spammed hundreds of
+        /// identical errors per second - retour Jonath).</summary>
+        private static bool disabled;
+
         /// <summary>True once this session plays on a dedicated profile.</summary>
         public static bool Active => activePath != null;
 
@@ -52,7 +57,7 @@ namespace Grunnchipelago.Client
         /// sits on the title screen with a pending profile request.</summary>
         public static void Tick(ApClient ap)
         {
-            if (!ap.Connected) return;
+            if (disabled || !ap.Connected) return;
             string key = ap.ProfileKey;
             if (string.IsNullOrEmpty(key) || key == ActiveKey) return;
             if (GameManager.CurGameState != GameManager.GameState.Title) return;
@@ -83,11 +88,14 @@ namespace Grunnchipelago.Client
             }
             catch (Exception e)
             {
-                // Never strand the player on a half-swapped state: go back to vanilla.
-                Plugin.Log?.LogError("[Grunnchipelago] Bascule de profil impossible : " + e.Message);
+                // Never strand the player on a half-swapped state: go back to vanilla,
+                // and give up for the session rather than retrying every frame.
+                Plugin.Log?.LogError("[Grunnchipelago] Bascule de profil impossible, "
+                                     + "sauvegarde vanilla conservee : " + e);
                 if (vanillaPath != null) SavePathRef() = vanillaPath;
                 activePath = null;
                 ActiveKey = null;
+                disabled = true;
             }
         }
 
@@ -101,8 +109,25 @@ namespace Grunnchipelago.Client
             int slot = SaveManager.curSlotIndex;
             bool exists = (bool)AccessTools.Method(typeof(SaveManager), "CheckIfFileExists")
                 .Invoke(null, new object[] { slot });
-            string method = exists ? "LoadFromFile" : "CreateNewSave";
-            AccessTools.Method(typeof(SaveManager), method).Invoke(null, new object[] { slot });
+
+            if (exists)
+            {
+                // LoadFromFile is an INSTANCE method (SaveManager.cs:2050) - calling it
+                // with a null target threw "Non-static method requires a target" every
+                // frame (retour Jonath). SaveManager is a MonoBehaviour with no static
+                // accessor, so fetch the live component.
+                var manager = UnityEngine.Object.FindObjectOfType<SaveManager>();
+                if (manager == null) throw new Exception("SaveManager introuvable en scene.");
+                AccessTools.Method(typeof(SaveManager), "LoadFromFile")
+                    .Invoke(manager, new object[] { slot });
+            }
+            else
+            {
+                // CreateNewSave is static (SaveManager.cs:2001).
+                AccessTools.Method(typeof(SaveManager), "CreateNewSave")
+                    .Invoke(null, new object[] { slot });
+            }
+
             SaveManager.UpdateSaveDataCheck();
             if (!exists) SaveManager.SaveReal(slot);   // materialise the file at once
         }
