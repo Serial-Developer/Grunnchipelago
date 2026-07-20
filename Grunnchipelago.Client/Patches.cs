@@ -163,10 +163,18 @@ namespace Grunnchipelago.Client
             // Polaroid hiders keyed on possession (polaroid_lighterMolehill0 hides once
             // the Lighter is owned): drive them from the POLAROID's own check instead,
             // or receiving that key item from the multiworld strands the polaroid check.
+            //
+            // CRITICAL (retour Jonath: empty out-of-bounds hedge maze): the polaroid
+            // must be the hider's OWN target object, never a descendant.
+            // GetComponentInChildren matched any polaroid buried in a big container -
+            // HedgeMaze_NotObtainedCompass / _ObtainedCompass (Compass hiders wrapping
+            // the whole maze, dump:19332/19799) each nest one, so collecting a maze
+            // polaroid hid BOTH maze variants at once and dropped the player into the
+            // raw non-euclidian space, next to other areas' portals.
             if (!hidesPolaroid.TryGetValue(key, out Polaroid polaroid))
             {
                 polaroid = __instance.objectRef != null
-                    ? __instance.objectRef.GetComponentInChildren<Polaroid>(true) : null;
+                    ? __instance.objectRef.GetComponent<Polaroid>() : null;
                 hidesPolaroid[key] = polaroid;
             }
             if (polaroid != null)

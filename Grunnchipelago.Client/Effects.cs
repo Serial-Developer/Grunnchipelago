@@ -24,6 +24,10 @@ namespace Grunnchipelago.Client
         private const float TrapSpeedMultiplier = 0.5f;  // Speed Trap: half speed
         private const float TrapSizeMultiplier = 0.45f;  // Size Trap: shrunk player
 
+        /// <summary>Timed traps last this many IN-GAME hours (2 h, demande Jonath -
+        /// 1 h passait trop vite pour se faire sentir).</summary>
+        private const int TrapDurationHours = 2;
+
         public static int MoveSpeedBoosts;
         public static int CutterRangeBoosts;
         public static int CuttingRateBoosts;
@@ -136,8 +140,9 @@ namespace Grunnchipelago.Client
 
         private static void Expire(ref TimedTrap trap, int day, int hour)
         {
-            // 1 in-game hour (TimeController.cs:151); a day change or run reset also ends it.
-            if (trap.active && (day != trap.startDay || hour >= trap.startHour + 1))
+            // TrapDurationHours in-game hours (TimeController.cs:151); a day change or
+            // run reset also ends it.
+            if (trap.active && (day != trap.startDay || hour >= trap.startHour + TrapDurationHours))
                 trap.active = false;
         }
 
@@ -190,7 +195,7 @@ namespace Grunnchipelago.Client
         {
             if (!trap.active) return "";
             int now = TimeController.currentHour * 60 + TimeController.currentMinute;
-            int end = (trap.startHour + 1) * 60;
+            int end = (trap.startHour + TrapDurationHours) * 60;
             int left = Mathf.Max(0, end - now);
             return $" ({left / 60}h{left % 60:00})";
         }

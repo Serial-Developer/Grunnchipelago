@@ -182,7 +182,25 @@ namespace Grunnchipelago.Client
                 Mathf.Abs(s.y) < 0.01f ? 1f : s.y,
                 Mathf.Abs(s.z) < 0.01f ? 1f : s.z);
             StripNonVisuals(copy);
+            RevealIfEmpty(copy);
             return copy;
+        }
+
+        /// <summary>Some models keep their mesh in a child object that the game only
+        /// activates on an event - the pretty flower's grown bloom is the one Jonath
+        /// asked for (iter 10: it stayed invisible). When a freshly archived copy has
+        /// no usable renderer at all, activate its whole tree so the mesh exists.
+        /// Scoped to otherwise-EMPTY copies: models that already display something keep
+        /// exactly the variant the scene shows (no "destroyed + intact" doubles).</summary>
+        private static void RevealIfEmpty(GameObject copy)
+        {
+            foreach (Renderer renderer in copy.GetComponentsInChildren<Renderer>(false))
+                if (renderer.enabled) return;   // already shows something
+
+            foreach (Transform child in copy.GetComponentsInChildren<Transform>(true))
+                if (!child.gameObject.activeSelf) child.gameObject.SetActive(true);
+            foreach (Renderer renderer in copy.GetComponentsInChildren<Renderer>(true))
+                renderer.enabled = true;
         }
 
         // ---------- per-pickup swap ----------

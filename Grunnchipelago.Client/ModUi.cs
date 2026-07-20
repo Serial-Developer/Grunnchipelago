@@ -19,6 +19,7 @@ namespace Grunnchipelago.Client
     internal static class ModUi
     {
         private static Canvas canvas;
+        private static TextMeshProUGUI titleCredit;
         private static TextMeshProUGUI statsPanel;
         private static TextMeshProUGUI escHint;
         private static TextMeshProUGUI endingItemPanel;
@@ -51,6 +52,11 @@ namespace Grunnchipelago.Client
             UIManager ui = UIManager.instance;
             if (ui == null || ui.titleText == null) return;
             if (canvas == null && !CreateUi(ui)) return;
+
+            // Mod credit: title screen only, following the vanilla title's fade.
+            bool showCredit = GameManager.CurGameState == GameManager.GameState.Title
+                              && ui.titleText.enabled && ui.titleText.gameObject.activeInHierarchy;
+            if (titleCredit.enabled != showCredit) titleCredit.enabled = showCredit;
 
             // Stats panel: PAUSE menu only (Tab removed on request), while connected.
             bool showStats = ap.Connected
@@ -166,6 +172,15 @@ namespace Grunnchipelago.Client
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
+
+            // Mod credit (demande Jonath) - bottom-right of the title screen, in red,
+            // italic like the vanilla title. Bottom corner = zero overlap risk with the
+            // title, the "made by" subtitle and the menu options.
+            titleCredit = MakeText(root.transform, "titleCredit", font,
+                anchor: new Vector2(1f, 0f), pivot: new Vector2(1f, 0f),
+                position: new Vector2(-40f, 30f), size: new Vector2(700f, 60f),
+                fontSize: 28f, TextAlignmentOptions.BottomRight, new Color(0.9f, 0.15f, 0.15f));
+            titleCredit.SetText("<i>modded by Serial</i>");
 
             // Below the pause menu's day/time block (timePausedText, top-right,
             // UIManager.cs:3510) so it no longer covers "samedi 08:00" (session 2, 1.2).
