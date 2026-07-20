@@ -148,6 +148,9 @@ namespace Grunnchipelago.Client
     {
         // instanceID -> does objectRef wrap a pickup of the hider's own key item
         private static readonly Dictionary<int, bool> hidesPickup = new Dictionary<int, bool>();
+        // instanceID -> the polaroid this hider drives (session 2: same randomizer
+        // semantics for polaroids, whose check would otherwise die on possession)
+        private static readonly Dictionary<int, Polaroid> hidesPolaroid = new Dictionary<int, Polaroid>();
 
         private static void Postfix(ContentHider __instance, HideCondition _c, ref bool __result)
         {
@@ -156,6 +159,23 @@ namespace Grunnchipelago.Client
             if (ap == null || !ap.Connected) return;
 
             int key = __instance.GetInstanceID();
+
+            // Polaroid hiders keyed on possession (polaroid_lighterMolehill0 hides once
+            // the Lighter is owned): drive them from the POLAROID's own check instead,
+            // or receiving that key item from the multiworld strands the polaroid check.
+            if (!hidesPolaroid.TryGetValue(key, out Polaroid polaroid))
+            {
+                polaroid = __instance.objectRef != null
+                    ? __instance.objectRef.GetComponentInChildren<Polaroid>(true) : null;
+                hidesPolaroid[key] = polaroid;
+            }
+            if (polaroid != null)
+            {
+                bool polaroidSent = ap.PolaroidCheckSent(polaroid.polaroidType);
+                __result = _c == HideCondition.KeyItemObtained ? polaroidSent : !polaroidSent;
+                return;
+            }
+
             if (!hidesPickup.TryGetValue(key, out bool isPickupHider))
             {
                 isPickupHider = false;

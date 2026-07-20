@@ -486,6 +486,32 @@ namespace Grunnchipelago.Client
             lock (sentLocations) return sentLocations.Contains(id);
         }
 
+        // PolaroidType -> location id, cached (PolaroidCheckSent is polled per frame
+        // by the ContentHider visibility patch).
+        private readonly Dictionary<PolaroidType, long> polaroidLocationIds =
+            new Dictionary<PolaroidType, long>();
+
+        /// <summary>True if this polaroid's check HAS been sent. Drives polaroid
+        /// visibility under hiders that vanilla keys on item possession (session 2:
+        /// polaroid_lighterMolehill0 hides once the Lighter is owned - receiving the
+        /// Lighter from the multiworld would strand that check forever).</summary>
+        public bool PolaroidCheckSent(PolaroidType type)
+        {
+            if (!Connected || session == null) return false;
+            long id;
+            lock (polaroidLocationIds)
+            {
+                if (!polaroidLocationIds.TryGetValue(type, out id))
+                {
+                    try { id = session.Locations.GetLocationIdFromName(Game, "Polaroid: " + type); }
+                    catch (Exception) { id = 0; }
+                    polaroidLocationIds[type] = id;
+                }
+            }
+            if (id <= 0) return false;
+            lock (sentLocations) return sentLocations.Contains(id);
+        }
+
         public void SendPolaroidCheck(PolaroidType type)
         {
             // Ending polaroids are awarded by the endings, never shuffled.

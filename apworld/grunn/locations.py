@@ -27,10 +27,23 @@ if TYPE_CHECKING:
 LOCATION_NAME_TO_ID: dict[str, int] = {name: data["id"] for name, data in IDS["locations"].items()}
 LOCATION_CATEGORY: dict[str, str] = {name: data["category"] for name, data in IDS["locations"].items()}
 
+# --- Unsourced locations --------------------------------------------------------
+# "Calm Ghost #8" does NOT exist in game [J 2026-07-16, confirmed in dump + code]:
+# the scene holds 8 ghost objects but only 7 GhostTouch interactions, and the 8th
+# object (*** GHOSTS ***/ghost0_backup) sits at the EXACT position of
+# ghost0_pillarspace with no interaction of its own - a spare left in the scene.
+# SaveManager.ghostCalmMax = 7 (SaveManager.cs:1351) confirms the real count.
+# The id stays reserved in ids.json, but the location is never created: an item
+# placed there would be permanently unobtainable (seed 7 put the Compass on it).
+UNSOURCED_LOCATIONS = {"Calm Ghost #8 (PillarSpace)"}
+
 KEYITEM_LOCS = [n for n, cat in LOCATION_CATEGORY.items() if cat == "keyitem"]
 ENDING_LOCS = [n for n, cat in LOCATION_CATEGORY.items() if cat == "ending"]
 POLAROID_LOCS = [n for n, cat in LOCATION_CATEGORY.items() if cat == "polaroid"]
-GHOST_LOCS = [n for n, cat in LOCATION_CATEGORY.items() if cat == "ghost"]
+GHOST_LOCS = [
+    n for n, cat in LOCATION_CATEGORY.items()
+    if cat == "ghost" and n not in UNSOURCED_LOCATIONS
+]
 GULDEN_LOCS = [n for n, cat in LOCATION_CATEGORY.items() if cat == "gulden"]
 
 # --- Physical-check region assignments -----------------------------------------
@@ -85,7 +98,7 @@ GHOST_REGION: dict[str, str] = {
     "Calm Ghost #5 (Void)": c.VOID,
     "Calm Ghost #6 (GnomeForest)": c.PASSAGE_GNOMES,
     "Calm Ghost #7 (PillarSpace)": c.PILLAR_SPACE,
-    "Calm Ghost #8 (PillarSpace)": c.PILLAR_SPACE,
+    # "Calm Ghost #8 (PillarSpace)": never created - see UNSOURCED_LOCATIONS.
 }
 
 GULDEN_REGION: dict[str, str] = {

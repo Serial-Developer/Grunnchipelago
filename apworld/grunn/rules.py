@@ -281,6 +281,19 @@ def set_all_rules(world: "GrunnWorld") -> None:
         for name in locations.GHOST_LOCS:
             add_rule(world.get_location(name), lambda s: s.has("Trumpet", player))
 
+    # Two polaroids only APPEAR in the start garden after talking to the Orb in the
+    # Orb Room [J 2026-07-16, dump: Polaroid_crypt_contentHider0 /
+    # Polaroid_gnomeIdol_contentHider0, condition NotTalkedToOrbInOrbRoom]. The Orb
+    # Room is first entered through the final hallway (portal_LongHallwayToOrbRoom0;
+    # the StartGarden portal stays hidden until that first talk), so they are gated
+    # on CouloirFinal - not free garden pickups as their position suggests.
+    if world.options.polaroid_checks:
+        for name in ("Polaroid: Crypt", "Polaroid: GnomeIdol"):
+            add_rule(
+                world.get_location(name),
+                lambda s: _reach(s, world, c.COULOIR_FINAL),
+            )
+
     # Gulden #8 is inside a pot on the road that must be smashed with the Hammer
     # [J 2026-07-13]. (Gulden locations only exist under coinsanity.)
     if world.options.coinsanity:
