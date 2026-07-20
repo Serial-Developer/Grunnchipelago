@@ -68,7 +68,13 @@ namespace Grunnchipelago.Client
                 case GameIds.TrapSpeed: speedTrap = timed; break;
                 case GameIds.TrapSize: sizeTrap = timed; break;
                 case GameIds.TrapInvertedControls: invertedTrap = timed; break;
-                case GameIds.TrapRegrowGrass: ApplyRegrowTrap(Element.Grass); break;
+                // Regrow Grass Trap is NO LONGER generated (apworld: the grass is
+                // DOTS-rendered and only rebuilt when the world loads, so it could not
+                // grow back mid-run - the counter dropped with no way to recover, which
+                // could block zone-completion checks). Ignored if an old seed sends it.
+                case GameIds.TrapRegrowGrass:
+                    Plugin.Log?.LogInfo("[Grunnchipelago] Regrow Grass Trap ignore (non implementable en cours de run).");
+                    return;
                 case GameIds.TrapRewaterFlowers: ApplyRegrowTrap(Element.Flowers); break;
                 case GameIds.TrapRegrowHedge: ApplyRegrowTrap(Element.Hedge); break;
                 case GameIds.TrapReturnTrash: ApplyRegrowTrap(Element.Trash); break;
@@ -225,7 +231,53 @@ namespace Grunnchipelago.Client
                 list.RemoveAll(v => bounds.ContainsPoint(v.UnityVector));
 
             SaveManager.Save(SaveManager.curSlotIndex);
-            Plugin.Log?.LogInfo($"[Grunnchipelago] Regrow trap: {element} reset in area {(Area)area}.");
+            // Restore the objects IN WORLD right away (session 2, retour Jonath: the
+            // counter dropped but nothing grew back, so the zone could never reach
+            // 100 % again that run). Each ResetState re-reads the (now cleared) save
+            // positions via its own CheckForLoadOperation, exactly like ResetWorld
+            // does on a run reset - GameManager.cs:3918-4023.
+            int restored = RestoreObjects(element, (Area)area);
+            Plugin.Log?.LogInfo(
+                $"[Grunnchipelago] Regrow trap: {element} reset in area {(Area)area} ({restored} objets restaures).");
+        }
+
+        /// <summary>Bring back the world objects of one element in one area. Grass is
+        /// absent on purpose: it is rendered by the DOTS GrassSystem and only rebuilt
+        /// through the world-load replay, never live.</summary>
+        private static int RestoreObjects(Element element, Area area)
+        {
+            int count = 0;
+            try
+            {
+                switch (element)
+                {
+                    case Element.Flowers:
+                        if (GameManager.allFlowers != null)
+                            foreach (Flower flower in GameManager.allFlowers)
+                                if (flower != null && flower.myArea == area) { flower.ResetState(); count++; }
+                        break;
+                    case Element.Molehills:
+                        if (GameManager.allMolehills != null)
+                            foreach (Molehill molehill in GameManager.allMolehills)
+                                if (molehill != null && molehill.myArea == area) { molehill.ResetState(); count++; }
+                        break;
+                    case Element.Trash:
+                        if (GameManager.allTroepjes != null)
+                            foreach (Troepje troepje in GameManager.allTroepjes)
+                                if (troepje != null && troepje.myArea == area) { troepje.ResetState(); count++; }
+                        break;
+                    case Element.Hedge:
+                        if (GameManager.allTrimballs != null)
+                            foreach (TrimBall trimBall in GameManager.allTrimballs)
+                                if (trimBall != null && trimBall.myArea == area) { trimBall.ResetState(); count++; }
+                        break;
+                }
+            }
+            catch (Exception e)
+            {
+                Plugin.Log?.LogWarning("[Grunnchipelago] Regrow trap restore failed: " + e.Message);
+            }
+            return count;
         }
 
         private static PolygonTommie BoundsOf(int area)

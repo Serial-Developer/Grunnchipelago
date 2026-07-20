@@ -32,7 +32,7 @@ ITEM_CATEGORY: dict[str, str] = {name: data["category"] for name, data in IDS["i
 
 KEYITEMS = [n for n, c in ITEM_CATEGORY.items() if c == "keyitem"]
 BUFFS = [n for n, c in ITEM_CATEGORY.items() if c == "buff"]
-TRAPS = [n for n, c in ITEM_CATEGORY.items() if c == "trap"]
+TRAPS = [n for n, c in ITEM_CATEGORY.items() if c == "trap"]  # filtered below
 FILLER = [n for n, c in ITEM_CATEGORY.items() if c == "filler"]  # ["Gulden"]
 
 # --- Unsourced items ------------------------------------------------------------
@@ -41,6 +41,17 @@ FILLER = [n for n, c in ITEM_CATEGORY.items() if c == "filler"]  # ["Gulden"]
 # ObtainKeyItem(KeyItem.Cymbals). It is an unused enum entry. Its id stays reserved in
 # ids.json, but neither its item nor its "Obtain Cymbals" location is created.
 UNSOURCED_ITEMS = {"Cymbals"}
+
+# --- Unimplementable items ------------------------------------------------------
+# "Regrow Grass Trap" cannot work [J 2026-07-16, playtest]: grass is rendered by the
+# DOTS GrassSystem and is only rebuilt through the world-load replay, never live. The
+# trap therefore dropped the zone counter with no way to re-cut anything that run,
+# stranding zone-completion checks until a run reset. The other four regrow traps act
+# on real objects (Flower / Molehill / Troepje / TrimBall) which the client restores
+# in place. The id stays reserved in ids.json; the item is simply never created.
+UNIMPLEMENTED_ITEMS = {"Regrow Grass Trap"}
+
+TRAPS = [n for n in TRAPS if n not in UNIMPLEMENTED_ITEMS]
 
 # --- Progression classification -------------------------------------------------
 # Items referenced by a region entrance or an "Obtain X" / ending rule in rules.py are

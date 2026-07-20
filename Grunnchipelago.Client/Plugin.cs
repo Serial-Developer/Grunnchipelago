@@ -173,7 +173,7 @@ namespace Grunnchipelago.Client
             {
                 string[] regrows =
                 {
-                    GameIds.TrapRegrowGrass, GameIds.TrapRewaterFlowers, GameIds.TrapRegrowHedge,
+                    GameIds.TrapRewaterFlowers, GameIds.TrapRegrowHedge,
                     GameIds.TrapReturnTrash, GameIds.TrapRegrowMolehills,
                 };
                 DebugTrap(regrows[UnityEngine.Random.Range(0, regrows.Length)]);

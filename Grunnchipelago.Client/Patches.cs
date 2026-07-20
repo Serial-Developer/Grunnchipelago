@@ -197,6 +197,38 @@ namespace Grunnchipelago.Client
         }
     }
 
+    /// <summary>Interaction.CheckPreventCondition(PreventType) - Interaction.cs:936.
+    /// THIRD possession layer (session 2, retour Jonath: the church Doorknob never
+    /// appeared once the AP Doorknob was received, and never came back). Beyond
+    /// pickup visibility and ContentHiders, an Interaction can be blocked outright by
+    /// PreventType.KeyItemObtained, which reads SaveManager.ObtainedKeyItem
+    /// (Interaction.cs:960) - the two doorknob pickups
+    /// (missingDoorknob0_grass / _branchHole) use exactly that. Receiving the item
+    /// from the multiworld therefore killed their check for good.
+    ///
+    /// Scoped tightly: only flipped when the interaction HANDS OUT a pickup of that
+    /// very key item. Interactions that REQUIRE an item to act (unlocking a door with
+    /// a key: KeyItemNotObtained with no matching pickup) keep vanilla semantics, so
+    /// no check-state shortcut can open something the player cannot legitimately
+    /// open.</summary>
+    [HarmonyPatch(typeof(Interaction), nameof(Interaction.CheckPreventCondition))]
+    public static class InteractionPreventPatch
+    {
+        private static void Postfix(Interaction __instance, PreventType _type, ref bool __result)
+        {
+            if (_type != PreventType.KeyItemObtained && _type != PreventType.KeyItemNotObtained) return;
+            ApClient ap = Plugin.Ap;
+            if (ap == null || !ap.Connected) return;
+
+            ItemPickup pickup = __instance.itemReference;
+            if (pickup == null || pickup.keyItemObtain == null || pickup.keyItemObtain.Count == 0) return;
+            if (pickup.keyItemObtain[0] != __instance.keyItemObtainedRef) return;
+
+            bool sent = ap.KeyItemCheckSent(__instance.keyItemObtainedRef);
+            __result = _type == PreventType.KeyItemObtained ? sent : !sent;
+        }
+    }
+
     /// <summary>PlayerManager.AddTool(Item) - PlayerManager.cs:213. Tools have both an
     /// Item and a KeyItem; both hooks send the same "Obtain X" check, deduplicated by
     /// ApClient's sent-locations cache.</summary>
