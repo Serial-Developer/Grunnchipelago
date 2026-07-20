@@ -79,6 +79,12 @@ namespace Grunnchipelago.Client
         /// pickup spawns next to the bone gift instead.</summary>
         public bool CompassOwnedFromAp { get; private set; }
 
+        /// <summary>DEBUG (demande Jonath 2026-07-16): PrettyFlower gets the same
+        /// treatment so its archived model can be inspected next to the bus. Purely a
+        /// verification aid - drop this flag, its GrantItem branch and the flower entry
+        /// in GiftPickups to go back to a normal inventory grant.</summary>
+        public bool PrettyFlowerOwnedFromAp { get; private set; }
+
         /// <summary>Set after login: the local save must drop uncollected-check polaroids.</summary>
         public bool NeedsPolaroidSync { get; set; }
 
@@ -759,6 +765,15 @@ namespace Grunnchipelago.Client
                     Info("[Grunnchipelago] Compass received - world pickup will spawn near the start.");
                     return;
                 }
+                // DEBUG (demande Jonath): same path for the pretty flower, to inspect
+                // its archived model in world.
+                if (keyItem == KeyItem.PrettyFlower)
+                {
+                    PrettyFlowerOwnedFromAp = true;
+                    if (realtime && !historical) QueuePopup("Une jolie fleur attend près du panneau des roses...");
+                    Info("[Grunnchipelago] PrettyFlower received - world pickup will spawn near the start.");
+                    return;
+                }
                 try
                 {
                     GrantGuard = true;
@@ -822,6 +837,7 @@ namespace Grunnchipelago.Client
                         case GameIds.BuffCuttingRate: rate++; break;
                         case "Bone": BoneOwnedFromAp = true; break;
                         case "Compass": CompassOwnedFromAp = true; break;
+                        case "PrettyFlower": PrettyFlowerOwnedFromAp = true; break;   // DEBUG
                     }
                 }
             }

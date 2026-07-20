@@ -81,6 +81,18 @@ namespace Grunnchipelago.Client
                                 $"polaroids: {polaroidSwapped} item models, {polaroidAp} AP models.");
         }
 
+        /// <summary>Show the ARCHIVED library model of an item on any visualsObject.
+        /// Used by the debug gift pickups so what you see near the bus is exactly the
+        /// model the swap would use elsewhere. False when the item has no model yet
+        /// (library not built, or item never harvested).</summary>
+        public static bool TryShowLibraryModel(GameObject visualsObject, KeyItem item)
+        {
+            if (visualsObject == null) return false;
+            if (!library.TryGetValue(item, out GameObject model) || model == null) return false;
+            SwapVisual(visualsObject, model, null, 1f, 0f);
+            return true;
+        }
+
         // ---------- library (feature #1.1) ----------
 
         private static void BuildLibrary()
