@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -21,9 +22,29 @@ namespace Grunnchipelago.Client
         private static TextMeshProUGUI statsPanel;
         private static TextMeshProUGUI escHint;
         private static TextMeshProUGUI endingItemPanel;
+        private static TextMeshProUGUI endingListPanel;
 
         // Ending whose reward text is currently built (rebuilt when it changes).
         private static EndingType? endingShown;
+
+        /// <summary>Session 2, 3.2 - the 11 goal endings paired with their ending
+        /// polaroid, which carries the game's own number and localized name
+        /// (PolaroidManager.GetPolaroidData -> myIndex, PolaroidManager.cs:141) so the
+        /// list reads exactly like the polaroids do ("+3. bus"). DemoEnding excluded.</summary>
+        private static readonly KeyValuePair<EndingType, PolaroidType>[] EndingPolaroids =
+        {
+            new KeyValuePair<EndingType, PolaroidType>(EndingType.Mist, PolaroidType.EndingMist),
+            new KeyValuePair<EndingType, PolaroidType>(EndingType.Bus, PolaroidType.EndingBus),
+            new KeyValuePair<EndingType, PolaroidType>(EndingType.SacredFlowers, PolaroidType.EndingSacredFlowers),
+            new KeyValuePair<EndingType, PolaroidType>(EndingType.Darkness, PolaroidType.EndingDarkness),
+            new KeyValuePair<EndingType, PolaroidType>(EndingType.Drown, PolaroidType.EndingDrowned),
+            new KeyValuePair<EndingType, PolaroidType>(EndingType.LongHallway, PolaroidType.EndingLongHallway),
+            new KeyValuePair<EndingType, PolaroidType>(EndingType.HedgeMaze, PolaroidType.EndingHedgeMaze),
+            new KeyValuePair<EndingType, PolaroidType>(EndingType.WorldEnd, PolaroidType.EndingWorldEnd),
+            new KeyValuePair<EndingType, PolaroidType>(EndingType.GoodEnd, PolaroidType.EndingGoodEnd),
+            new KeyValuePair<EndingType, PolaroidType>(EndingType.Dog, PolaroidType.EndingDog),
+            new KeyValuePair<EndingType, PolaroidType>(EndingType.Picnic, PolaroidType.EndingPicnic),
+        };
 
         public static void Tick(ApClient ap, bool statsShowAllLines)
         {
@@ -65,14 +86,62 @@ namespace Grunnchipelago.Client
                 {
                     endingShown = ending;
                     endingItemPanel.SetText(ap.DescribeEndingReward(ending) ?? "");
+                    endingListPanel.SetText(BuildEndingList(ap));
                 }
-                show = endingItemPanel.text.Length > 0;
             }
             else
             {
                 endingShown = null;   // re-watching the same ending rebuilds the text
             }
-            if (endingItemPanel.enabled != show) endingItemPanel.enabled = show;
+
+            bool showItem = show && endingItemPanel.text.Length > 0;
+            if (endingItemPanel.enabled != showItem) endingItemPanel.enabled = showItem;
+            if (endingListPanel.enabled != show) endingListPanel.enabled = show;
+        }
+
+        /// <summary>Session 2, 3.2 - the 11 endings, right of the polaroid: those whose
+        /// AP check is sent show the game's own number + localized name, the others
+        /// "???". Session state only - GlobalData.endingTypesSeen is meaningless here
+        /// (a veteran save reads 11/11 on a brand-new seed).</summary>
+        private static string BuildEndingList(ApClient ap)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("<i>Fins</i>");
+            int found = 0;
+            foreach (KeyValuePair<EndingType, PolaroidType> pair in EndingPolaroids)
+            {
+                string label = "???";
+                string number = "";
+                PolaroidData data = null;
+                try { data = PolaroidManager.GetPolaroidData(pair.Value); }
+                catch (System.Exception) { }
+                if (data != null) number = data.myIndex + ". ";
+
+                if (ap.EndingCheckSent(pair.Key))
+                {
+                    found++;
+                    label = NameOf(pair.Value, data);
+                }
+                sb.AppendLine(number + label);
+            }
+            sb.AppendLine($"<i>{found} / {EndingPolaroids.Length}</i>");
+            return sb.ToString();
+        }
+
+        /// <summary>Localized polaroid name, via the game's own string table.</summary>
+        private static string NameOf(PolaroidType type, PolaroidData data)
+        {
+            try
+            {
+                // DefinePolaroidString gives "<sprite…>3. bus"; we lay the number out
+                // ourselves, so strip everything up to the first ". ".
+                string full = PolaroidManager.DefinePolaroidString(data, false, "", "", true);
+                int cut = full.IndexOf(". ", System.StringComparison.Ordinal);
+                if (cut >= 0 && cut + 2 < full.Length) return full.Substring(cut + 2);
+                if (!string.IsNullOrEmpty(full)) return full;
+            }
+            catch (System.Exception) { }
+            return type.ToString().Replace("Ending", "");
         }
 
         private static bool CreateUi(UIManager ui)
@@ -111,6 +180,19 @@ namespace Grunnchipelago.Client
             endingItemPanel.enableAutoSizing = true;
             endingItemPanel.fontSizeMax = 30f;
             endingItemPanel.fontSizeMin = 18f;
+
+            // Session 2, 3.2: the 11 endings, RIGHT of the polaroid. Starts at +450
+            // from centre for the same reason the item panel ends at -450 - the
+            // polaroid card renders above our canvas (capture Jonath, 1.3 iter 3).
+            endingListPanel = MakeText(root.transform, "endingListPanel", font,
+                anchor: new Vector2(0.5f, 0.5f), pivot: new Vector2(0f, 0.5f),
+                position: new Vector2(450f, 0f), size: new Vector2(420f, 620f),
+                fontSize: 26f, TextAlignmentOptions.Left, Color.white);
+            endingListPanel.enableWordWrapping = false;
+            endingListPanel.overflowMode = TextOverflowModes.Truncate;
+            endingListPanel.enableAutoSizing = true;
+            endingListPanel.fontSizeMax = 26f;
+            endingListPanel.fontSizeMin = 15f;
 
             escHint = MakeText(root.transform, "escHint", font,
                 anchor: new Vector2(0.5f, 0f), pivot: new Vector2(0.5f, 0f),

@@ -32,8 +32,25 @@ l'orbe ajouté en cours de bloc (quitData, pas cancelData : ESC = action quit).
   même canal QueuePopup ; traps conservent leur popup « X ! », key items le
   popup vanilla).
 
-### Bloc 3 — Fins & profil de sauvegarde : plan 3.1 rédigé ; décision Jonath :
-traité EN DERNIER (3.2 liste des fins d'abord possible, sur l'état AP).
+### Bloc 3 — Fins
+- [x] 3.2 Liste des 11 fins à DROITE du polaroid de fin (x +450, même raison que
+  le panneau item à −450 : la carte du polaroid rend au-dessus de notre canvas).
+  Basée sur l'ÉTAT AP (`ApClient.EndingCheckSent`), jamais sur
+  GlobalData.endingTypesSeen. Numérotation + noms repris du jeu via
+  `PolaroidManager.GetPolaroidData(...).myIndex` et `DefinePolaroidString`, donc
+  identiques aux polaroids (« 3. bus »). Fins non envoyées = « ??? ».
+  Compteur « n / 11 » en pied de liste.
+- [ ] 3.1 Profil de sauvegarde par seed : plan rédigé, EN DERNIER (décision Jonath).
+
+### Bugs bloquants trouvés au playtest (2026-07-16) — tous corrigés
+- Fantômes exigent la Trompette (logique les croyait libres).
+- « Calm Ghost #8 » n'existe pas (ghost0_backup, 7 GhostTouch, ghostCalmMax=7).
+- Polaroid Crypt/GnomeIdol gatés par l'Orbe (couloir final).
+- Polaroid LighterMolehill tué par la possession du Briquet (hider polaroid).
+- Poignée de porte tuée par la possession (Interaction.PreventType.KeyItemObtained,
+  3e couche de possession, jamais patchée).
+- Regrow Grass Trap impossible en cours de run (DOTS) -> retiré du pool ; les 4
+  autres traps de repousse restaurent désormais les objets en monde.
 
 ## ✅ Statut consolidation (CC, 2026-07-14) — tout traité
 - [x] A/PRIORITÉ 1 — visibilité pickups/boutique = état du check (commit 9211112) :

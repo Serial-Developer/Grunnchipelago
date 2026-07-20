@@ -353,15 +353,42 @@ namespace Grunnchipelago.Client
 
         public void QueuePopup(string text) => pendingPopups.Enqueue(text);
 
+        // EndingType -> "Ending: X" location id, cached (polled by the ending screen).
+        private readonly Dictionary<EndingType, long> endingLocationIds =
+            new Dictionary<EndingType, long>();
+
+        private long EndingLocationId(EndingType ending)
+        {
+            if (!Connected || session == null) return 0;
+            lock (endingLocationIds)
+            {
+                if (!endingLocationIds.TryGetValue(ending, out long id))
+                {
+                    try { id = session.Locations.GetLocationIdFromName(Game, "Ending: " + ending); }
+                    catch (Exception) { id = 0; }
+                    endingLocationIds[ending] = id;
+                }
+                return id;
+            }
+        }
+
+        /// <summary>Session 2, 3.2 - has this ending's check been sent THIS session?
+        /// Drives the ending-screen list, which must reflect the AP session and never
+        /// GlobalData.endingTypesSeen (a veteran save shows 11/11 from the start).</summary>
+        public bool EndingCheckSent(EndingType ending)
+        {
+            long id = EndingLocationId(ending);
+            if (id <= 0) return false;
+            lock (sentLocations) return sentLocations.Contains(id);
+        }
+
         /// <summary>Session 2, 1.3 - text shown next to the ending polaroid: what the
         /// "Ending: X" check unlocked (scouted content). Null when unknown (location
         /// absent from the seed, or scout not completed yet).</summary>
         public string DescribeEndingReward(EndingType ending)
         {
             if (!Connected || session == null) return null;
-            long id;
-            try { id = session.Locations.GetLocationIdFromName(Game, "Ending: " + ending); }
-            catch (Exception) { return null; }
+            long id = EndingLocationId(ending);
             if (id <= 0 || !TryGetScout(id, out ScoutedItemInfo info) || info == null) return null;
             // Plain text only (no <b>: TMP faux-bold smears with the game font, and
             // no model/sprite either - reintroduced later via a dedicated
