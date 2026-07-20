@@ -293,6 +293,13 @@ def set_all_rules(world: "GrunnWorld") -> None:
                 world.get_location(name),
                 lambda s: _reach(s, world, c.COULOIR_FINAL),
             )
+        # Polaroid: GasStation sits INSIDE the smashed garden gnome (dump: hider
+        # objectRef gardengnome_Destroyed, condition GnomeNotDestroyed), so it needs
+        # a breaking tool - the same gate the GnomeIdol obtain already models.
+        add_rule(
+            world.get_location("Polaroid: GasStation"),
+            lambda s: s.has_any(("Hammer", "MagicSword", "Trowel"), player),
+        )
 
     # Gulden #8 is inside a pot on the road that must be smashed with the Hammer
     # [J 2026-07-13]. (Gulden locations only exist under coinsanity.)
