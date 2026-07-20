@@ -12,9 +12,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Callable
 
 from BaseClasses import CollectionState
-from worlds.generic.Rules import set_rule
+from worlds.generic.Rules import add_rule, set_rule
 
 from . import constants as c
+from . import locations
 
 if TYPE_CHECKING:
     from . import GrunnWorld
@@ -268,6 +269,17 @@ def set_all_rules(world: "GrunnWorld") -> None:
     # Ending checks.
     for ending, rule in ENDING_RULES.items():
         set_rule(world.get_location(f"Ending: {ending}"), lambda s, r=rule: r(s, world))
+
+    # Ghost checks REQUIRE the Trumpet [J 2026-07-16, in-game + code]: ghosts are
+    # invisible and untouchable until revealed, and Ghost.Show() is only ever called
+    # by GameManager.ShowNearbyGhosts(), itself only called by PerformTrumpetAction()
+    # (GameManager.cs:5153-5167). Touching a hidden ghost is impossible
+    # (Interaction.GhostTouch acts on the ghost object, Ghost.Touch checks
+    # activeInHierarchy). Without this rule the generator treated the 8 ghosts as
+    # free and could hide progression behind them (seed 7: ChurchKey/Compass/Trowel).
+    if world.options.ghost_checks:
+        for name in locations.GHOST_LOCS:
+            add_rule(world.get_location(name), lambda s: s.has("Trumpet", player))
 
     # Gulden #8 is inside a pot on the road that must be smashed with the Hammer
     # [J 2026-07-13]. (Gulden locations only exist under coinsanity.)

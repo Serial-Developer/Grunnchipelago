@@ -88,6 +88,27 @@ class TestHellChain(GrunnTestBase):
         self.assertFalse(self.multiworld.can_beat_game(self.multiworld.state))
 
 
+class TestGhostsNeedTrumpet(GrunnTestBase):
+    """Ghosts are invisible until the Trumpet reveals them (Ghost.Show is only called
+    by ShowNearbyGhosts <- PerformTrumpetAction, GameManager.cs:5153-5167), so every
+    ghost check requires it. Regression: seed 7 put ChurchKey/Compass/Trowel behind
+    ghosts in an early sphere and the player was hard-blocked in game [J 2026-07-16].
+    """
+
+    options = {"goal": "all_endings", "ghost_checks": True, "exclude_bridge_key": False}
+
+    def test_ghost_checks_require_trumpet(self) -> None:
+        from ..locations import GHOST_LOCS
+
+        self.collect_all_but("Trumpet")
+        for name in GHOST_LOCS:
+            location = self.world.get_location(name)
+            self.assertFalse(
+                location.can_reach(self.multiworld.state),
+                f"{name} must require the Trumpet (ghosts are invisible without it)",
+            )
+
+
 class TestLockPlayerHut(GrunnTestBase):
     """Experimental lock_player_hut: AbandonedKey gates the hut (Shears/ToiletKey spots
     and the Sunday hallway)."""
