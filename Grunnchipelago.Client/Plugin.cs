@@ -113,6 +113,10 @@ namespace Grunnchipelago.Client
             ModelSwap.Tick(Ap);
             if (Ap.Connected)
             {
+                // Per-seed save profile (3.1): swaps SaveManager's save-path prefix at
+                // the title screen, before any world load. Must run outside the "safe
+                // state" gate - the title screen is never a safe state.
+                SaveProfile.Tick(Ap);
                 // Popups queued from patch context; drained only in a safe state so
                 // ending-check rewards land at the new run, after cutscene AND bus intro.
                 if (safe) Ap.FlushPendingPopups();
@@ -125,6 +129,10 @@ namespace Grunnchipelago.Client
                 // One-shot on the FIRST connect to a new seed:slot - the vanilla save
                 // (and the static ShortcutCache) carry the previous multiworld's
                 // shortcuts; a fresh seed must start with vanilla-fresh shortcuts.
+                // Pointless (and undesirable) on a dedicated profile: that save IS
+                // fresh, and re-clearing would wipe shortcuts legitimately earned on a
+                // resumed seed.
+                if (SaveProfile.Active) Ap.NeedsShortcutReset = false;
                 if (Ap.NeedsShortcutReset && SaveManager.progressDataCheck != null)
                 {
                     Ap.NeedsShortcutReset = false;
@@ -140,6 +148,14 @@ namespace Grunnchipelago.Client
                     Log.LogInfo("[Grunnchipelago] Nouvelle seed : raccourcis remis a zero.");
                 }
                 // One-shot after login: restore uncollected-check polaroids to the world.
+                // On a dedicated profile the save is this seed's own, so its polaroid
+                // list is already correct - the destructive GlobalData edit (design
+                // section 3.1) is skipped entirely.
+                if (Ap.NeedsPolaroidSync && SaveProfile.Active)
+                {
+                    Ap.NeedsPolaroidSync = false;
+                    Log.LogInfo("[Grunnchipelago] Resync polaroids inutile (sauvegarde dediee).");
+                }
                 if (Ap.NeedsPolaroidSync && GameManager.allPolaroids != null
                     && GameManager.allPolaroids.Count > 0)
                 {

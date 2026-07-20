@@ -102,6 +102,11 @@ namespace Grunnchipelago.Client
         /// <summary>Seed string of the room, for deterministic per-location randomness.</summary>
         public string SeedString { get; private set; } = "";
 
+        /// <summary>"&lt;seed&gt;_&lt;slot&gt;" - identity of this multiworld slot, used to name
+        /// the dedicated save profile (session 2, 3.1). Empty until logged in.</summary>
+        public string ProfileKey =>
+            string.IsNullOrEmpty(SeedString) ? "" : SeedString + "_" + slotName;
+
         public bool TryGetScout(long locationId, out ScoutedItemInfo info)
         {
             lock (scouted) return scouted.TryGetValue(locationId, out info);

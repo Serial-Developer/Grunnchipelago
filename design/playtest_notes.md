@@ -40,7 +40,18 @@ l'orbe ajouté en cours de bloc (quitData, pas cancelData : ESC = action quit).
   `PolaroidManager.GetPolaroidData(...).myIndex` et `DefinePolaroidString`, donc
   identiques aux polaroids (« 3. bus »). Fins non envoyées = « ??? ».
   Compteur « n / 11 » en pied de liste.
-- [ ] 3.1 Profil de sauvegarde par seed : plan rédigé, EN DERNIER (décision Jonath).
+- [x] 3.1 Profil de sauvegarde par seed (`SaveProfile.cs`) : `SaveManager.savePath`
+  est un PRÉFIXE (`savePath + slotIndex + ".txt"`, SaveManager.cs:2055/2080/2092)
+  et `curSlotIndex` vaut toujours 0 (assigné une seule fois, ligne 1405) — on
+  redirige donc le préfixe vers `grunn_ap_<seed>_<slot>`, sans toucher aux slots
+  ni ajouter d'UI. Bascule UNIQUEMENT au menu titre (avant tout chargement de
+  monde), puis rejeu de la routine de boot (`CheckIfFileExists` →
+  `LoadFromFile` / `CreateNewSave` + `UpdateSaveDataCheck`).
+  Conséquences : save vanilla intouchée, compteur de fins / polaroids /
+  runsCompleted / raccourcis à zéro par seed, resync destructive des polaroids
+  et reset des raccourcis désormais court-circuités. Réglages partagés
+  (`settingsPath` distinct). Déconnexion en cours de partie = on reste sur le
+  profil (pas de bascule à chaud). En cas d'erreur, retour au chemin vanilla.
 
 ### Bugs bloquants trouvés au playtest (2026-07-16) — tous corrigés
 - Fantômes exigent la Trompette (logique les croyait libres).

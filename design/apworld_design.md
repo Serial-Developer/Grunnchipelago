@@ -80,9 +80,16 @@ progression selon les règles finales.
 - **Flags de monde** : reset vanilla à chaque run (les fins exigent des états frais ;
   le graphe HideCondition contient beaucoup de conditions négatives)
 - **Option `persistent_shortcuts`** (défaut : **off**) : restaure après reset la liste
-  blanche de confort — unlockedBijkeukenShortcut, unlockedIntratuin, createdShortcut,
-  parkUnlockedHooibaalGarden, parkUnlockedMaze, locksUnlocked
+  blanche de confort — unlockedBijkeukenShortcut, createdShortcut,
+  parkUnlockedHooibaalGarden, parkUnlockedMaze, locksUnlocked.
+  ⚠ `unlockedIntratuin` EXCLU (session 2) : restaurer ce flag colore l'emblème de la
+  porte aux fleurs mystérieuses mais empêche le ré-arrosage de l'ouvrir.
 - Pas d'option de persistance totale (décision Jonath)
+- **Profil de sauvegarde par seed** (session 2, 3.1 — `SaveProfile.cs`) : connecté, le
+  mod redirige le PRÉFIXE `SaveManager.savePath` vers `grunn_ap_<seed>_<slot>`, au
+  menu titre uniquement. La sauvegarde vanilla du joueur n'est jamais touchée et
+  chaque seed a son propre monde (fins, polaroids, runs, raccourcis à zéro).
+  Les réglages restent partagés (`settingsPath` distinct).
 
 ## 6. Logique (voir regions_v3.md pour le graphe complet)
 
