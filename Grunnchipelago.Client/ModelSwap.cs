@@ -81,58 +81,6 @@ namespace Grunnchipelago.Client
                                 $"polaroids: {polaroidSwapped} item models, {polaroidAp} AP models.");
         }
 
-        /// <summary>Attach the ARCHIVED library model of an item under an arbitrary
-        /// transform, at its natural world size. Used by the debug gift pickups so what
-        /// stands near the bus is exactly the model the swap uses elsewhere.
-        ///
-        /// Attaches to the pickup ROOT rather than its visualsObject on purpose: the
-        /// pretty flower's visuals are SCALE-ANIMATED as it grows (Flower.sclCur, from
-        /// ~0 before blooming), so anything parented there inherits a near-zero scale
-        /// and stays invisible - which is exactly why the flower gift showed nothing
-        /// (retour Jonath). Returns false when the item has no archived model.</summary>
-        public static bool TryAttachLibraryModel(Transform parent, KeyItem item)
-        {
-            if (parent == null) return false;
-            if (!library.TryGetValue(item, out GameObject model) || model == null)
-            {
-                Plugin.Log?.LogWarning($"[Grunnchipelago] Aucun modele archive pour {item}.");
-                return false;
-            }
-
-            var holder = new GameObject("grunnchipelago_model");
-            holder.SetActive(false);   // BEFORE receiving children: no Awake ever fires
-            holder.transform.SetParent(parent, false);
-            holder.transform.localPosition = Vector3.zero;
-            holder.transform.localRotation = Quaternion.identity;
-
-            GameObject clone = UnityEngine.Object.Instantiate(model, holder.transform);
-            clone.name = "model";
-            clone.transform.localPosition = Vector3.zero;
-            clone.transform.localRotation = Quaternion.identity;
-
-            Vector3 parentLossy = parent.lossyScale;
-            Vector3 sourceLossy = model.transform.lossyScale;
-            Vector3 cloneLocal = clone.transform.localScale;
-            holder.transform.localScale = new Vector3(
-                SafeRatio(sourceLossy.x, parentLossy.x * cloneLocal.x),
-                SafeRatio(sourceLossy.y, parentLossy.y * cloneLocal.y),
-                SafeRatio(sourceLossy.z, parentLossy.z * cloneLocal.z));
-
-            StripNonVisuals(clone);
-            int renderers = 0;
-            foreach (Renderer renderer in clone.GetComponentsInChildren<Renderer>(true))
-            {
-                renderer.enabled = true;
-                renderers++;
-            }
-            clone.SetActive(true);
-            holder.SetActive(true);
-
-            Plugin.Log?.LogInfo($"[Grunnchipelago] Modele archive de {item} attache "
-                                + $"({renderers} renderers, echelle source {sourceLossy}).");
-            return renderers > 0;
-        }
-
         // ---------- library (feature #1.1) ----------
 
         private static void BuildLibrary()

@@ -650,14 +650,12 @@ namespace Grunnchipelago.Client
     {
         private static GameObject boneInstance;
         private static GameObject compassInstance;
-        private static GameObject flowerInstance;   // DEBUG (demande Jonath)
 
         // Next to the roses sign / pupitre (plantSign0, dump: -36.5, 10.0, -66.2), on
         // the side AWAY from the RedRoses bed (x -32..-37, z -61..-66) that kept
         // swallowing the bone (retours Jonath iters 3, 6 - "super bien positionné").
         private static readonly Vector3 BonePosition = new Vector3(-37.3f, 10.35f, -67.5f);
         private static readonly Vector3 CompassPosition = new Vector3(-38.6f, 10.35f, -66.6f);
-        private static readonly Vector3 FlowerPosition = new Vector3(-36.1f, 10.35f, -68.3f);
 
         public static void EnsureSpawned(ApClient ap)
         {
@@ -667,15 +665,9 @@ namespace Grunnchipelago.Client
                 boneInstance = Spawn(KeyItem.Bone, "grunnchipelago_boneGift", BonePosition);
             if (compassInstance == null && ap.CompassOwnedFromAp)
                 compassInstance = Spawn(KeyItem.Compass, "grunnchipelago_compassGift", CompassPosition);
-            // DEBUG (demande Jonath): the pretty flower, wearing the ARCHIVED model so
-            // the library entry itself can be inspected in world.
-            if (flowerInstance == null && ap.PrettyFlowerOwnedFromAp)
-                flowerInstance = Spawn(KeyItem.PrettyFlower, "grunnchipelago_flowerGift",
-                    FlowerPosition, showLibraryModel: true);
         }
 
-        private static GameObject Spawn(KeyItem item, string name, Vector3 position,
-            bool showLibraryModel = false)
+        private static GameObject Spawn(KeyItem item, string name, Vector3 position)
         {
             ItemPickup template = null;
             foreach (ItemPickup pickup in GameManager.allItemPickups)
@@ -710,12 +702,8 @@ namespace Grunnchipelago.Client
                 Transform swapped = clone.visualsObject.transform.Find("grunnchipelago_model");
                 if (swapped != null) Object.DestroyImmediate(swapped.gameObject);
                 foreach (Renderer renderer in clone.visualsObject.GetComponentsInChildren<Renderer>(true))
-                    renderer.enabled = !showLibraryModel;
+                    renderer.enabled = true;
             }
-            // DEBUG: dress the gift in the archived library model, attached to the
-            // pickup ROOT - the flower's own visuals are scale-animated (invisible
-            // before blooming), so a model parented there would vanish with them.
-            if (showLibraryModel) ModelSwap.TryAttachLibraryModel(instance.transform, item);
             instance.SetActive(true);
             // Awake already ran Init->ResetState DURING Instantiate, with the
             // TEMPLATE's startState - re-run it now that startState is Show, or the
