@@ -171,19 +171,24 @@ namespace Grunnchipelago.Client
 
             int key = __instance.GetInstanceID();
 
-            // Hedge-maze EXIT portals are gated on POSSESSING TallIdol, but the player
-            // earns TallIdol's CHECK in the end room while we intercept its grant - so
-            // the exit portal never appeared and the player was trapped after beating
-            // the tall man (retour Jonath). Drive these two portals
-            // (portal_HedgeMazeEndToStartGarden / portal_HedgeMazeToStartGarden) by
-            // "check sent OR item owned"; the maze ENTRANCES (portal_StartGardenTo...)
-            // are untouched and keep vanilla routing.
+            // ALL FOUR hedge-maze portals (2 entrances + 2 exits) route on POSSESSING
+            // TallIdol. Vanilla: you get the idol by beating the tall man, so within a
+            // run "have idol" == "cleared the maze", and it RESETS next run (key items
+            // are per-run) - so next run you redo the puzzle (retour Jonath: "jusqu'a
+            // la prochaine run"). We intercept the idol grant, so possession never
+            // happens -> the exit never opened AND re-entry never routed to the solved
+            // maze. Drive all four by destroyedTallMan (per-run, set when you beat the
+            // tall man) instead of possession: same per-run semantics as vanilla, and
+            // it resets each run. Persistent check-state would WRONGLY skip the puzzle
+            // forever after the first solve. Matches on Contains("HedgeMaze") to catch
+            // both the exits (portal_HedgeMaze*) and the entrances
+            // (portal_StartGardenToHedgeMazeA/B).
             if (__instance.keyItemRef == KeyItem.TallIdol && __instance.objectRef != null
-                && __instance.objectRef.name.StartsWith("portal_HedgeMaze", System.StringComparison.Ordinal))
+                && __instance.objectRef.name.IndexOf("HedgeMaze", System.StringComparison.Ordinal) >= 0)
             {
-                bool has = ap.KeyItemCheckSent(KeyItem.TallIdol)
-                           || SaveManager.ObtainedKeyItem(KeyItem.TallIdol);
-                __result = _c == HideCondition.KeyItemObtained ? has : !has;
+                bool cleared = SaveManager.progressDataCheck != null
+                               && SaveManager.progressDataCheck.destroyedTallMan;
+                __result = _c == HideCondition.KeyItemObtained ? cleared : !cleared;
                 return;
             }
 
