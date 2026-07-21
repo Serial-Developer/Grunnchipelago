@@ -128,11 +128,21 @@ namespace Grunnchipelago.Client
                 Plugin.Log?.LogInfo($"[Grunnchipelago] Modele PrettyFlower recolte sur la fleur ({meshes} renderers).");
             }
 
-            // Approximations for items with no placed pickup (given by NPC/event):
-            // GoldFishAlive looks like the dead one; KidTriangle borrows another kid
-            // instrument (retour Jonath iter 8: no model at all).
-            if (!library.ContainsKey(KeyItem.GoldFishAlive) && library.ContainsKey(KeyItem.GoldFishDead))
-                library[KeyItem.GoldFishAlive] = library[KeyItem.GoldFishDead];
+            // GoldFishAlive has no placed pickup, but the LIVING fish visual exists in
+            // the scene, hidden until revealed (MagicPond_FishAlive_Content / the
+            // fishbowl's FishAliveContainer). Harvest it so the alive fish no longer
+            // wears the dead-fish model (retour Jonath). Fall back to the dead fish
+            // only if neither living visual is found.
+            if (!library.ContainsKey(KeyItem.GoldFishAlive))
+            {
+                GameObject alive = FindInactiveByName("MagicPond_FishAlive_Content")
+                                   ?? FindInactiveByName("FishAliveContainer");
+                if (alive != null) library[KeyItem.GoldFishAlive] = Archive(alive);
+                else if (library.ContainsKey(KeyItem.GoldFishDead))
+                    library[KeyItem.GoldFishAlive] = library[KeyItem.GoldFishDead];
+            }
+
+            // KidTriangle borrows another kid instrument (retour Jonath iter 8).
             if (!library.ContainsKey(KeyItem.KidTriangle))
             {
                 // The triangle only exists IN HANDS (retour Jonath iter 9): harvest the
@@ -446,6 +456,17 @@ namespace Grunnchipelago.Client
                     light.color = tint.Value;
             clone.SetActive(true);
             holder.SetActive(true);   // only renderers/meshes remain: nothing to awake
+        }
+
+        /// <summary>Find a scene object by exact name, INCLUDING inactive ones
+        /// (Resources.FindObjectsOfTypeAll reaches disabled hierarchy, unlike
+        /// GameObject.Find). First match wins.</summary>
+        private static GameObject FindInactiveByName(string name)
+        {
+            foreach (Transform t in Resources.FindObjectsOfTypeAll<Transform>())
+                if (t != null && t.name == name && t.gameObject.scene.IsValid())
+                    return t.gameObject;
+            return null;
         }
 
         /// <summary>0-safe component ratio (a growing/zero-scaled parent must not

@@ -126,6 +126,7 @@ namespace Grunnchipelago.Client
                 if (safe) Ap.FlushPendingPopups();
                 HandleSkipEndingDialogues();
                 HandleSkipOrbDialogue();
+                BunkerFlood.Tick(Ap);
                 HutLock.Tick(Ap);
                 // Bone + compass gift pickups near the start (design section 10 #3,
                 // session 2 iter 8 - both items would kill a loupable ending).

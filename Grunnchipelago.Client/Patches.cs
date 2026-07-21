@@ -171,6 +171,22 @@ namespace Grunnchipelago.Client
 
             int key = __instance.GetInstanceID();
 
+            // Hedge-maze EXIT portals are gated on POSSESSING TallIdol, but the player
+            // earns TallIdol's CHECK in the end room while we intercept its grant - so
+            // the exit portal never appeared and the player was trapped after beating
+            // the tall man (retour Jonath). Drive these two portals
+            // (portal_HedgeMazeEndToStartGarden / portal_HedgeMazeToStartGarden) by
+            // "check sent OR item owned"; the maze ENTRANCES (portal_StartGardenTo...)
+            // are untouched and keep vanilla routing.
+            if (__instance.keyItemRef == KeyItem.TallIdol && __instance.objectRef != null
+                && __instance.objectRef.name.StartsWith("portal_HedgeMaze", System.StringComparison.Ordinal))
+            {
+                bool has = ap.KeyItemCheckSent(KeyItem.TallIdol)
+                           || SaveManager.ObtainedKeyItem(KeyItem.TallIdol);
+                __result = _c == HideCondition.KeyItemObtained ? has : !has;
+                return;
+            }
+
             // Polaroid hiders keyed on possession (polaroid_lighterMolehill0 hides once
             // the Lighter is owned): drive them from the POLAROID's own check instead,
             // or receiving that key item from the multiworld strands the polaroid check.
@@ -389,15 +405,11 @@ namespace Grunnchipelago.Client
             if (items != null && items.Count > 0 && !__instance.isRepeatablePickup)
             {
                 KeyItem first = items[0];
-                // Vanilla floods the bunker once the player HOLDS the Trowel inside it
-                // (GameManager.cs:2231 polls ObtainedKeyItem) - our interception cancels
-                // the grant, so the pickup itself must fire the earthquake (round 2).
-                if (first == KeyItem.Trowel && AmbienceManager.instance != null
-                    && AmbienceManager.instance.curAmbienceArea == AmbienceArea.Bunker)
-                {
-                    GameManager.TriggerEarthQuake();
-                    Plugin.Log?.LogInfo("[Grunnchipelago] Bunker trowel taken - earthquake triggered.");
-                }
+                // (Bunker flood note: vanilla raises the water while the player HOLDS
+                // the Trowel in the bunker, GameManager.cs:2231. We intercept that
+                // grant, so BunkerFlood.Tick drives it from the Trowel CHECK every run -
+                // firing it only here, on pickup, broke re-runs once the check was sent
+                // and the pickup vanished, retour Jonath.)
                 if (SaveManager.ObtainedKeyItem(first))
                 {
                     if (ap.KeyItemCheckPending(first))
@@ -752,6 +764,32 @@ namespace Grunnchipelago.Client
             if (door.unlockItemNeeded == null || door.unlockItemNeeded.Count == 0
                 || door.unlockItemNeeded[0] != KeyItem.AbandonedKey)
                 door.unlockItemNeeded = new List<KeyItem> { KeyItem.AbandonedKey };
+        }
+    }
+
+    /// <summary>Bunker flood (retour Jonath): vanilla raises the water while the player
+    /// HOLDS the Trowel in the bunker (a short timer then TriggerEarthQuake,
+    /// GameManager.cs:2221-2242). Our interception means the "Obtain Trowel" pickup
+    /// never grants the vanilla Trowel, and once its CHECK is sent the pickup is hidden
+    /// - so firing the quake on pickup only worked the first run. Drive it from the
+    /// check state instead: every run, in the bunker, if the Trowel check is sent (or
+    /// the item is genuinely owned), trigger the quake once. triggeredEarthquake is
+    /// per-run (reset by ResetRunProgress), so the water rises again each run.</summary>
+    internal static class BunkerFlood
+    {
+        public static void Tick(ApClient ap)
+        {
+            var pd = SaveManager.progressDataCheck;
+            if (pd == null || pd.triggeredEarthquake) return;
+            if (AmbienceManager.instance == null
+                || AmbienceManager.instance.curAmbienceArea != AmbienceArea.Bunker) return;
+            if (GameManager.PlayerReading || GameManager.BlackScreen
+                || GameManager.SwitchingState || GameManager.TriggeredNewDay) return;
+            if (!ap.KeyItemCheckSent(KeyItem.Trowel)
+                && !SaveManager.ObtainedKeyItem(KeyItem.Trowel)) return;
+
+            GameManager.TriggerEarthQuake();
+            Plugin.Log?.LogInfo("[Grunnchipelago] Bunker : seisme declenche (etat du check truelle).");
         }
     }
 
