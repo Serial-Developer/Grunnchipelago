@@ -1151,7 +1151,7 @@ vérifier que son emplacement reste ramassable et envoie le check.
 7. **Gulden #8** : Extérieur + `Hammer` (pot à casser) — règle à mettre à jour.
 8. **Cabane -> Couloir final** : confirmé libre (aucun item, attendre dimanche soir).
 
-## Considérations de design à discuter (Jonath + Claude)
+## Considérations de design à discuter
 1. **Consommables (Plank/OldPlank, Bone, etc.)** : la logique traite has_plank en
    booléen, mais les planches se CONSOMMENT (pont + gap = 2 usages potentiels dans une
    même run, max 2 items planche dans le pool). Cas limite : seed où l'Extérieur n'est

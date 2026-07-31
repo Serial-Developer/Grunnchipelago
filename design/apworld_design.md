@@ -1,6 +1,6 @@
 # Grunnchipelago — Document de design de l'APWorld
 
-Synthèse des décisions de design (Jonath × Claude, juillet 2026).
+Synthèse des décisions de design (Jonath, juillet 2026).
 Références : `regions_v3.md` (graphe/logique), `zone_logic.md` (données exhaustives),
 `analysis/decompiled/` (code du jeu).
 
@@ -168,8 +168,8 @@ les anciens noms pour qu'une seed antérieure au 2026-07-27 reste jouable (`Game
 ## 9. Étapes suivantes
 
 1. Génération des IDs items/locations depuis les données (script -> items/locations apworld)
-2. Prompt Claude Code : scaffold mod client (BepInEx + MultiClient.Net + hooks) 
-3. Prompt Claude Code : scaffold apworld (regions.py généré depuis regions_v3 + zone_logic)
+2. Scaffold du mod client (BepInEx + MultiClient.Net + hooks) 
+3. Scaffold de l'apworld (regions.py généré depuis regions_v3 + zone_logic)
 4. Test bout en bout solo, puis calibrage buffs/traps
 5. Post de présentation Discord AP (#future-game-design)
 
