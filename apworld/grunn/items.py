@@ -185,7 +185,7 @@ def create_all_items(world: "GrunnWorld") -> None:
             continue
         itempool.append(create_item(world, name))
 
-    # 2) Progressive buffs: a fixed number of copies each (a calibrer).
+    # 2) Progressive buffs: a fixed number of copies each (buff_count).
     buff_count = world.options.buff_count.value
     for name in BUFFS:
         for _ in range(buff_count):

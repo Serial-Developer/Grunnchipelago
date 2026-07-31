@@ -9,10 +9,46 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <!-- Bring the Archipelago package + its runtime deps into the output folder. -->
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <GameDir>C:\Program Files (x86)\Steam\steamapps\common\Grunn\Grunn</GameDir>
+
+    <!-- Path to the Grunn install (the folder holding Grunn.exe). Only a DEFAULT: it is
+         the usual Steam location on Windows. Override it without touching this file:
+           dotnet build -p:GameDir="D:\Games\Grunn"
+         or set a GameDir environment variable. Steam users: right-click Grunn ->
+         Manage -> Browse local files to find yours. -->
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Grunn\Grunn</GameDir>
     <Managed>$(GameDir)\Grunn_Data\Managed</Managed>
     <PluginsDir>$(GameDir)\BepInEx\plugins\Grunnchipelago</PluginsDir>
   </PropertyGroup>
+
+  <!-- SINGLE SOURCE OF VERSION TRUTH: apworld/grunn/archipelago.json.
+       The mod version is read from the apworld manifest at build time and written into a
+       generated ModVersion.g.cs, so bumping "world_version" there is the ONLY edit needed
+       to release - the plugin, the assembly and the apworld can never drift apart. -->
+  <Target Name="GenerateModVersion" BeforeTargets="BeforeCompile">
+    <PropertyGroup>
+      <ManifestFile>$(MSBuildProjectDirectory)\..\apworld\grunn\archipelago.json</ManifestFile>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(ManifestFile)')"
+           Text="Manifest not found: $(ManifestFile). The mod version is read from it." />
+    <PropertyGroup>
+      <ManifestText>$([System.IO.File]::ReadAllText('$(ManifestFile)'))</ManifestText>
+      <WorldVersion>$([System.Text.RegularExpressions.Regex]::Match($(ManifestText), '"world_version"\s*:\s*"([0-9]+\.[0-9]+\.[0-9]+)"').Groups[1].Value)</WorldVersion>
+      <GeneratedVersionFile>$(IntermediateOutputPath)ModVersion.g.cs</GeneratedVersionFile>
+    </PropertyGroup>
+    <Error Condition="'$(WorldVersion)' == ''"
+           Text="Could not read a 'world_version' of the form X.Y.Z from $(ManifestFile)." />
+    <PropertyGroup>
+      <Version>$(WorldVersion)</Version>
+      <AssemblyVersion>$(WorldVersion).0</AssemblyVersion>
+      <FileVersion>$(WorldVersion).0</FileVersion>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(GeneratedVersionFile)" Overwrite="true" WriteOnlyWhenDifferent="true"
+                      Lines="// &lt;auto-generated /&gt; Written by the GenerateModVersion target;namespace Grunnchipelago.Client;{;    internal static partial class BuildInfo;    {;        /// &lt;summary&gt;world_version from apworld/grunn/archipelago.json.&lt;/summary&gt;;        public const string ModVersion = &quot;$(WorldVersion)&quot;%3B;    };}" />
+    <ItemGroup>
+      <Compile Include="$(GeneratedVersionFile)" />
+    </ItemGroup>
+    <Message Importance="high" Text="[Grunnchipelago] Mod version $(WorldVersion) (from the apworld manifest)" />
+  </Target>
 
   <!-- Game / BepInEx assemblies: reference only, never copied (provided at runtime). -->
   <ItemGroup>

@@ -1,8 +1,7 @@
 """Player options for the Grunn apworld.
 
-Defaults match design/apworld_design.md section 7 exactly. Trap/buff quantities
-are marked "a calibrer" (to be tuned) once the real location/item counts and the
-mod behaviour are validated on-device.
+Defaults follow design/apworld_design.md section 7, adjusted where playtesting proved
+them wrong.
 """
 
 from dataclasses import dataclass
@@ -101,7 +100,7 @@ class PersistentShortcuts(Toggle):
 
 class TrapPercentage(Range):
     """
-    Percentage of filler items that are replaced by traps. (a calibrer)
+    Percentage of filler items that are replaced by traps.
     """
 
     display_name = "Trap Percentage"
@@ -113,7 +112,7 @@ class TrapPercentage(Range):
 class BuffCount(Range):
     """
     How many copies of each progressive buff (Move Speed / Cutter Range / Cutting
-    Rate) are added to the item pool. (a calibrer)
+    Rate) are added to the item pool.
     """
 
     display_name = "Buff Count (per buff)"

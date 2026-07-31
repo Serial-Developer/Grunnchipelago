@@ -324,8 +324,9 @@ ENDING_RULES: dict[str, Rule] = {
     "GoodEnd": _end_good,
     # code Dog.Attack: the angry fisherman's dog attacks. Reaching the cabin approach is
     # enough (dying is free).
-    # TODO playtest: confirm the Dog ending still triggers when the player HOLDS Bone in
-    # inventory (giving the bone is optional) - critical for the all_endings goal.
+    # Holding the Bone does NOT prevent it: the AP Bone is never injected into the
+    # inventory (it spawns as a world pickup near the start), so the dog stays lethal
+    # until the player chooses to feed it.
     "Dog": lambda s, w: _reach(s, w, c.CABANE_PECHEUR),
     # code Interaction.GoPicnic: place Blanket + Sandwich at the picnic (Jardin 100 %).
     "Picnic": lambda s, w: _reach(s, w, c.PICNIC) and s.has_all(("Blanket", "Sandwich"), w.player),

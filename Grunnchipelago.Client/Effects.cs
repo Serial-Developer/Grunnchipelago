@@ -18,7 +18,7 @@ namespace Grunnchipelago.Client
     /// </summary>
     public static class Effects
     {
-        // --- Buff tiers (a calibrer) -------------------------------------------------
+        // --- Buff tiers ---------------------------------------------------------------
         private const float MoveSpeedPerTier = 0.15f;    // +15 % move speed per boost
         private const float CutterRangePerTier = 0.25f;  // +25 % cutter scale per boost
         private const float CuttingRatePerTier = 0.25f;  // +25 % swing speed per boost

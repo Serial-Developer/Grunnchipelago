@@ -15,9 +15,11 @@ namespace Grunnchipelago.Client
     [BepInPlugin("grunnchipelago.client", "Grunnchipelago Client", ModVersion)]
     public class Plugin : BaseUnityPlugin
     {
-        /// <summary>Mod version - shown under the main-menu title and used as the
-        /// BepInEx plugin version, so both can never drift apart.</summary>
-        public const string ModVersion = "0.1.0";
+        /// <summary>Mod version - shown under the main-menu title and used as the BepInEx
+        /// plugin version. NOT declared here: it is generated at build time from
+        /// <c>apworld/grunn/archipelago.json</c> ("world_version"), the single place a
+        /// release is bumped. See the GenerateModVersion target in the .csproj.</summary>
+        public const string ModVersion = BuildInfo.ModVersion;
 
         /// <summary>Set of the running plugin, used by the Harmony patches.</summary>
         public static ApClient Ap { get; private set; }
