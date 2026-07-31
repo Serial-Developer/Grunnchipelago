@@ -1,7 +1,7 @@
 """Access rules for the Grunn apworld.
 
 Every rule is traceable to a source line, cited in-comment as:
-  - regions_v3: design/regions_v3.md connection / equivalence / "zone Hell" section
+  - regions.md: design/regions.md connection / equivalence / "zone Hell" section
   - dump: dump/zone_logic.md pickup zone
   - code: analysis/decompiled/*.cs (endings from TriggerEnding; AtticKey from Owner.cs)
   - FLAG: an assumption to review.
@@ -31,24 +31,24 @@ def _reach(state: CollectionState, world: "GrunnWorld", region: str) -> bool:
 
 
 def can_cut_grass(state: CollectionState, world: "GrunnWorld") -> bool:
-    # regions_v3: "Couper l'herbe : Shears OU MagicSword"
+    # regions.md: "Couper l'herbe : Shears OU MagicSword"
     return state.has_any(("Shears", "MagicSword"), world.player)
 
 
 def has_plank(state: CollectionState, world: "GrunnWorld") -> bool:
-    # regions_v3: "Planche : Plank OU OldPlank"
+    # regions.md: "Planche : Plank OU OldPlank"
     return state.has_any(("Plank", "OldPlank"), world.player)
 
 
 def can_water(state: CollectionState, world: "GrunnWorld") -> bool:
-    # regions_v3: "Arroser : WateringCan OU (Coin + acces Eglise)"
+    # regions.md: "Arroser : WateringCan OU (Coin + acces Eglise)"
     return state.has("WateringCan", world.player) or (
         state.has("Coin", world.player) and _reach(state, world, c.EGLISE)
     )
 
 
 def can_get_bone(state: CollectionState, world: "GrunnWorld") -> bool:
-    # regions_v3: "Os : Hammer OU MagicSword OU Trowel OU via le Manoir".
+    # regions.md: "Os : Hammer OU MagicSword OU Trowel OU via le Manoir".
     # VERIFIED, unchanged [J 2026-07-28, in-game]: the bone lies FREE only on the manor
     # hallway table (dump: BigHouse_Hallway/hallwayTable0/bone0); the four other sources
     # are SKELETONS that must be smashed with one of the three tools. The dump does NOT
@@ -63,7 +63,7 @@ def can_get_bone(state: CollectionState, world: "GrunnWorld") -> bool:
 
 def can_afford(state: CollectionState, world: "GrunnWorld", price: int) -> bool:
     # coinsanity: money = received "Gulden" items; else tonte (grass) is renewable income
-    # covering every shop cost. regions_v3: "Economie".
+    # covering every shop cost. regions.md: "Economie".
     if world.options.coinsanity.value:
         return state.has("Gulden", world.player, price)
     return can_cut_grass(state, world)
@@ -116,7 +116,7 @@ def can_advance_days(state: CollectionState, world: "GrunnWorld") -> bool:
 def can_reach_hell(state: CollectionState, world: "GrunnWorld") -> bool:
     """Access to the endgame 'Hell' scenario (crypt then burning manor).
 
-    regions_v3 "Sequence finale - zone Hell" (V): reach the church + open the interior
+    regions.md "Sequence finale - zone Hell" (V): reach the church + open the interior
     door with ChurchKey + place the FlowerGem on the pupitre + deposit the 4 idols.
     (The after-midnight time window is logically free.)
     """
@@ -175,9 +175,9 @@ OBTAIN_RULES: dict[str, Rule] = {
     "Lighter": lambda s, w: _reach(s, w, c.EXTERIEUR) or _reach(s, w, c.PARC) or _reach(s, w, c.GAS_STATION),
     # dump: HooibaalSchuur shop (5)
     "Cd": lambda s, w: _reach(s, w, c.HOOIBAAL) and can_afford(s, w, c.PRICE_CD),
-    # regions_v3 I.1: break the garden gnome + enter the gas station (which fires the
+    # regions.md I.1: break the garden gnome + enter the gas station (which fires the
     # jumpscare), then a portal in the Jardin yields the idol.
-    # HAMMER ONLY [J 2026-07-27, confirmed in code]: regions_v3 claimed
+    # HAMMER ONLY [J 2026-07-27, confirmed in code]: regions.md claimed
     # Hammer|MagicSword|Trowel, but Gnome.GetHit (Gnome.cs:182) opens with
     # `if (curEquipmentData.handRightItem != Item.Hammer || curState == Hide) return;`
     # and GameManager.DestroyGnome() has that method as its ONLY caller. Neither the
@@ -210,7 +210,7 @@ OBTAIN_RULES: dict[str, Rule] = {
     ) and can_get_bone(s, w),
     # dump: StartGarden (paddle0)
     "Paddle": lambda s, w: _reach(s, w, c.JARDIN),
-    # regions_v3: THE first key, pickup bridgeKey0 on the road at spawn (before Jardin).
+    # regions.md: THE first key, pickup bridgeKey0 on the road at spawn (before Jardin).
     "BridgeKey": lambda s, w: True,
     # dump: BigHouseOffice (strangeKey0_old, free) OR StartGarden magpie. The magpie pickup
     # is strangeKey0_demo, child of magpieDeadByWorm0 = the canonical magpie key drop
@@ -219,14 +219,14 @@ OBTAIN_RULES: dict[str, Rule] = {
     # (garden_30) [J 2026-07-21].
     "StrangeKey": lambda s, w: _reach(s, w, c.MANOIR)
     or (_reach(s, w, c.JARDIN) and s.has("Worm", w.player) and garden_30(s, w)),
-    # regions_v3 I.4: cross the maze gap + Compass (-> maze heart) + hit the TallMan
+    # regions.md I.4: cross the maze gap + Compass (-> maze heart) + hit the TallMan
     # (MagicSword|Hammer). MagicSword itself needs Hell, so Hammer is the real route.
     "TallIdol": lambda s, w: _reach(s, w, c.LABYRINTHE_COEUR) and s.has_any(("MagicSword", "Hammer"), w.player),
-    # regions_v3 I.3: ToyBoat given to the Ferry kid (reaching Ferry already needs ToyBoat).
+    # regions.md I.3: ToyBoat given to the Ferry kid (reaching Ferry already needs ToyBoat).
     "ShortIdol": lambda s, w: _reach(s, w, c.FERRY),
-    # regions_v3 I.2: play the Trumpet near the moving grasses in the Jardin.
+    # regions.md I.2: play the Trumpet near the moving grasses in the Jardin.
     "ShyIdol": lambda s, w: _reach(s, w, c.JARDIN) and s.has("Trumpet", w.player),
-    # regions_v3 II: water all strange flowers across the 4 macro-zones.
+    # regions.md II: water all strange flowers across the 4 macro-zones.
     "FlowerGem": lambda s, w: _reach(s, w, c.JARDIN) and _reach(s, w, c.PARC)
     and _reach(s, w, c.EGLISE) and _reach(s, w, c.EXTERIEUR) and can_water(s, w),
     # dump: HooibaalSchuur shop (4)
@@ -237,12 +237,12 @@ OBTAIN_RULES: dict[str, Rule] = {
     "Popcorn": lambda s, w: _reach(s, w, c.MANOIR) and s.has_all(("Corn", "Butter"), w.player),
     # dump: BigHouseFridge
     "Butter": lambda s, w: _reach(s, w, c.MANOIR),
-    # regions_v3 Hell: soul fragments scattered in the Hell-version manor.
+    # regions.md Hell: soul fragments scattered in the Hell-version manor.
     "SoulFragment1": lambda s, w: _reach(s, w, c.HELL),
-    # regions_v3 Hell: the bottle/jar-shelf fragment (BottleRoom) needs Hammer.
+    # regions.md Hell: the bottle/jar-shelf fragment (BottleRoom) needs Hammer.
     "SoulFragment2": lambda s, w: _reach(s, w, c.HELL) and s.has("Hammer", w.player),
     "SoulFragment3": lambda s, w: _reach(s, w, c.HELL),
-    # regions_v3 Hell: attic cardboard box; the attic door needs AtticKey (Door.cs:684;
+    # regions.md Hell: attic cardboard box; the attic door needs AtticKey (Door.cs:684;
     # dump v0.3 door table: AtticKey unlocks bigHouseAtticDoor0).
     "MagicSword": lambda s, w: _reach(s, w, c.HELL) and s.has("AtticKey", w.player),
     # dump: RummikubSpace; needs Lighter (code: LitRummikubHooibaal)
@@ -255,7 +255,7 @@ OBTAIN_RULES: dict[str, Rule] = {
     # code Owner.cs/EndConversation: the Owner gives AtticKey inside the Hell manor.
     "AtticKey": lambda s, w: _reach(s, w, c.HELL),
     # dump: BigHouseHallway (Manoir hall, reached via the disc chain). Opens the church
-    # interior door (crypt). regions_v3 2026-07-12 key correction.
+    # interior door (crypt). regions.md 2026-07-12 key correction.
     "ChurchKey": lambda s, w: _reach(s, w, c.MANOIR),
     # dump: GlassHouse
     "SpecialSeed": lambda s, w: _reach(s, w, c.GLASS_HOUSE),
@@ -263,9 +263,9 @@ OBTAIN_RULES: dict[str, Rule] = {
     "KidTrumpet": lambda s, w: _reach(s, w, c.PASSAGE_GNOMES),
     # dump: HedgeMaze
     "KidCymbals": lambda s, w: _reach(s, w, c.LABYRINTHE),
-    # regions_v3 fanfare: trade an Eggball to the person behind the gas station.
+    # regions.md fanfare: trade an Eggball to the person behind the gas station.
     "KidTriangle": lambda s, w: _reach(s, w, c.GAS_STATION) and s.has("Eggball", w.player),
-    # regions_v3 fanfare: Park food truck, 5 gulden (Saturday daytime = free logically).
+    # regions.md fanfare: Park food truck, 5 gulden (Saturday daytime = free logically).
     "Eggball": lambda s, w: _reach(s, w, c.PARC) and can_afford(s, w, c.PRICE_EGGBALL),
     # dump: StartGarden. Full chain confirmed [J 2026-07-27]: plant the SpecialSeed in the
     # pot (in the start garden, reachable from the start), water it EVERY DAY, and the
@@ -313,13 +313,13 @@ ENDING_RULES: dict[str, Rule] = {
     "SacredFlowers": lambda s, w: _reach(s, w, c.EGLISE) and can_cut_grass(s, w),
     # code PlayerControllerNew: drown underwater (water bodies past the garden).
     "Drown": lambda s, w: _reach(s, w, c.EXTERIEUR),
-    # regions_v3 (2026-07-12): Darkness closes in outside after midnight -> free.
+    # regions.md (2026-07-12): Darkness closes in outside after midnight -> free.
     "Darkness": lambda s, w: _reach(s, w, c.JARDIN),
     # code DemonAnimation: small demon reaches you in the final hallway.
     "LongHallway": lambda s, w: _reach(s, w, c.COULOIR_FINAL),
     # code GameManager.InspectStrangeSymbol: in the maze heart (needs Compass).
     "HedgeMaze": lambda s, w: _reach(s, w, c.LABYRINTHE_COEUR),
-    # regions_v3 (2026-07-12): World End = reach Hell then die (dying is free).
+    # regions.md (2026-07-12): World End = reach Hell then die (dying is free).
     "WorldEnd": lambda s, w: _reach(s, w, c.HELL),
     "GoodEnd": _end_good,
     # code Dog.Attack: the angry fisherman's dog attacks. Reaching the cabin approach is

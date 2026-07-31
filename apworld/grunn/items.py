@@ -81,7 +81,7 @@ POOL_SHELVED_ITEMS = {"OldKey"}
 # marked progression (so fill and all-state reachability count them). GardenKey is the
 # one exception: it only gates the Jardin->Eglise portal, and the Eglise is always
 # reachable via the Exterieur, so it is never strictly required -> "useful".
-# (design/apworld_design.md section 4 + regions_v3.md 2026-07-12 corrections)
+# (design/apworld_design.md section 4 + regions.md 2026-07-12 corrections)
 PROGRESSION_ITEMS = {
     # traversal / equivalence helpers
     "Shears", "MagicSword", "WateringCan", "Coin", "Plank", "OldPlank",

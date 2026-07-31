@@ -40,3 +40,6 @@ Thumbs.db
 # Prompts / notes de session de travail (CC) - purement internes, jamais publies.
 # Les fichiers restent en local ; ils ne doivent pas partir sur le remote.
 design/prompt_cc_*.md
+
+# Sorties regenerables du generateur de regions (la reference est design/regions.md)
+design/regions_auto.*

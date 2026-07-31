@@ -1,5 +1,5 @@
-// build_regions_v2.mjs — Graphe de régions AP v2
-// Amélioration clé vs v1 : les portails contrôlés par un ContentHider sont des
+// build_regions.mjs — Proposition AUTOMATIQUE du graphe de régions (sorties : design/regions_auto.*)
+// Principe : les portails contrôlés par un ContentHider sont des
 // arêtes CONDITIONNELLES. Elles sont exclues du calcul des composantes et
 // émises comme connexions inter-régions avec leur règle d'accès dérivée par
 // négation De Morgan des hideConditions (sémantique vérifiée dans
@@ -163,7 +163,7 @@ const out = {
     { from: 'EXEMPLE: StartGarden (extérieur)', to: 'EXEMPLE: Road', via: 'portail du jardin', rule: 'GardenKey', status: 'À VALIDER' }
   ]
 };
-writeFileSync(`${DIR}/design/regions_v2.json`, JSON.stringify(out, null, 2), 'utf8');
+writeFileSync(`${DIR}/design/regions_auto.json`, JSON.stringify(out, null, 2), 'utf8');
 
 const L = [];
 L.push('# Grunn — Graphe de régions AP v2');
@@ -195,10 +195,10 @@ for (const t of travel) {
 L.push('');
 L.push('## À compléter manuellement : adjacences à pied entre régions');
 L.push('');
-L.push('Remplir `connectionsManuelles` dans regions_v2.json (jardin<->route, route<->station, etc.).');
-writeFileSync(`${DIR}/design/regions_v2.md`, L.join('\n'), 'utf8');
+L.push('Remplir `connectionsManuelles` dans regions_auto.json (jardin<->route, route<->station, etc.).');
+writeFileSync(`${DIR}/design/regions_auto.md`, L.join('\n'), 'utf8');
 
 console.log(`Régions : ${regions.length} (multi-zones : ${regions.filter(r => r.zones.length > 1).length})`);
 console.log(`Arêtes libres : ${freeEdges.length} | conditionnelles : ${conditionalEdges.length}`);
 console.log(`Voyages : ${travel.length}`);
-console.log('-> design/regions_v2.md + design/regions_v2.json');
+console.log('-> design/regions_auto.md + design/regions_auto.json');

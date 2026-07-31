@@ -24,7 +24,7 @@ Only the person generating the seed needs `grunn.apworld`. Every player needs th
 | `apworld/grunn/` | **Canonical apworld source** (the world package). Edit here, not in the AP checkout. |
 | `Grunnchipelago.Client/` | **The BepInEx client mod** (C#) that players install into Grunn. |
 | `Grunnchipelago.Dumper/` | Standalone runtime dumper that produced the scene dump. Not needed to play. |
-| `design/` | Design docs: `apworld_design.md`, `regions_v3.md`, and `ids.json` (item/location IDs — source of truth). |
+| `design/` | Design docs: `apworld_design.md`, `regions.md`, and `ids.json` (item/location IDs — source of truth). |
 | `dump/` | Scene dump (`grunnchipelago_dump.json`), the derived `zone_logic.*`, and the scripts that build them. |
 | `scripts/` | `sync_apworld.py`, `build_apworld.py`, `serve.py`, `send_deathlink.py`. |
 | `players/` | Template and example YAMLs. |
@@ -69,7 +69,7 @@ Issues and pull requests are welcome.
 Two conventions worth keeping if you touch the world:
 
 - **Traceability.** Every rule in `rules.py` / `regions.py` carries a comment pointing at its
-  source (`regions_v3:`, `dump:` or `code:`). Nothing in the logic is guesswork, and it should
+  source (`regions.md:`, `dump:` or `code:`). Nothing in the logic is guesswork, and it should
   stay that way.
 - **IDs are permanent.** Never renumber anything in `design/ids.json`, including entries that
   were removed — their ids stay reserved so old seeds keep resolving.

@@ -2,7 +2,7 @@
 
 Grunn (Sokpop Collective, 2024) modelled as looping in-game weeks with 11 endings.
 This world randomizes the ~54 key items and offers polaroid / ghost / gulden checks.
-See design/apworld_design.md and design/regions_v3.md for the full design.
+See design/apworld_design.md and design/regions.md for the full design.
 """
 
 from __future__ import annotations

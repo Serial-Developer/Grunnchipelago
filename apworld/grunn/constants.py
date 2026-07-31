@@ -7,9 +7,9 @@ Keeping region names in one import-free module avoids circular imports between
 
 GAME_NAME = "Grunn"
 
-# --- Regions (map-level, derived from design/regions_v3.md) ---------------------
+# --- Regions (map-level, derived from design/regions.md) ---------------------
 # One map region can fold several technical scene zones together when the game
-# connects them freely (e.g. Intratuin is folded into Jardin). See regions_v3.md
+# connects them freely (e.g. Intratuin is folded into Jardin). See regions.md
 # "Régions (nom carte -> zones techniques)".
 MENU = "Menu"                       # origin region = spawn (Route/bus); holds Obtain BridgeKey
 JARDIN = "Jardin"                   # StartGarden + Intratuin (+ player shed content)
@@ -59,7 +59,7 @@ GOAL_TRUE = 1
 GOAL_ALL = 2
 
 # --- Shop prices in gulden (used by coinsanity economy) -------------------------
-# Sources: design/regions_v3.md "Économie" + dump shop costs.
+# Sources: design/regions.md "Économie" + dump shop costs.
 PRICE_BUS = 10
 PRICE_CD = 5
 PRICE_COMPASS = 4

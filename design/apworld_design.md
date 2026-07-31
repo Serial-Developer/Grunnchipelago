@@ -1,7 +1,7 @@
 # Grunnchipelago — Document de design de l'APWorld
 
 Synthèse des décisions de design (Jonath, juillet 2026).
-Références : `regions_v3.md` (graphe/logique), `zone_logic.md` (données exhaustives),
+Références : `regions.md` (graphe/logique), `zone_logic.md` (données exhaustives),
 `analysis/decompiled/` (code du jeu).
 
 ## 1. Vue d'ensemble
@@ -110,7 +110,7 @@ les anciens noms pour qu'une seed antérieure au 2026-07-27 reste jouable (`Game
   chaque seed a son propre monde (fins, polaroids, runs, raccourcis à zéro).
   Les réglages restent partagés (`settingsPath` distinct).
 
-## 6. Logique (voir regions_v3.md pour le graphe complet)
+## 6. Logique (voir regions.md pour le graphe complet)
 
 ### Équivalences
 - Couper l'herbe : `Shears | MagicSword`
@@ -169,7 +169,7 @@ les anciens noms pour qu'une seed antérieure au 2026-07-27 reste jouable (`Game
 
 1. Génération des IDs items/locations depuis les données (script -> items/locations apworld)
 2. Scaffold du mod client (BepInEx + MultiClient.Net + hooks) 
-3. Scaffold de l'apworld (regions.py généré depuis regions_v3 + zone_logic)
+3. Scaffold de l'apworld (regions.py généré depuis regions.md + zone_logic)
 4. Test bout en bout solo, puis calibrage buffs/traps
 5. Post de présentation Discord AP (#future-game-design)
 

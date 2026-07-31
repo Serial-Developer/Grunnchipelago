@@ -1,6 +1,6 @@
 """Region graph for the Grunn apworld.
 
-Each connection mirrors one line of design/regions_v3.md "Connexions et regles
+Each connection mirrors one line of design/regions.md "Connexions et regles
 d'acces" (cited in-comment). Scenario/time states (InRedWorld, after-midnight window,
 final day, day indices) are logically FREE per design section 6.
 """
@@ -32,26 +32,26 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     p = world.player
 
     # --- Start & main axis ------------------------------------------------------
-    # regions_v3: Spawn (Route, bus) -> Jardin : BridgeKey (the bus blocks every other
+    # regions.md: Spawn (Route, bus) -> Jardin : BridgeKey (the bus blocks every other
     # exit). BridgeKey is picked up at spawn, so its own location sits in Menu.
     # dump v0.3 door table: BridgeKey unlocks Hide_Road/highBridgeDoor0 (the high bridge).
     link(c.MENU, c.JARDIN, lambda s: s.has("BridgeKey", p))
-    # regions_v3: Jardin -> Cour derriere maison (libre)
+    # regions.md: Jardin -> Cour derriere maison (libre)
     link(c.JARDIN, c.COUR)
-    # regions_v3: Jardin -> Exterieur (pont) : Plank OU OldPlank
+    # regions.md: Jardin -> Exterieur (pont) : Plank OU OldPlank
     link(c.JARDIN, c.EXTERIEUR, lambda s: r.has_plank(s, world))
-    # regions_v3: Cour -> Exterieur (haie) : Shears OU MagicSword
+    # regions.md: Cour -> Exterieur (haie) : Shears OU MagicSword
     link(c.COUR, c.EXTERIEUR, lambda s: r.can_cut_grass(s, world))
-    # regions_v3: Cour -> Buanderie (libre)
+    # regions.md: Cour -> Buanderie (libre)
     link(c.COUR, c.BUANDERIE)
-    # regions_v3 (2026-07-12 key correction): Jardin -> Eglise (portail) : GardenKey.
+    # regions.md (2026-07-12 key correction): Jardin -> Eglise (portail) : GardenKey.
     # dump v0.3 door table: GardenKey unlocks gardenGate0.
     link(c.JARDIN, c.EGLISE, lambda s: s.has("GardenKey", p))
-    # regions_v3: Exterieur -> Eglise (libre, portail cote Exterieur)
+    # regions.md: Exterieur -> Eglise (libre, portail cote Exterieur)
     link(c.EXTERIEUR, c.EGLISE)
-    # regions_v3: Parc <-> Exterieur : Lighter
+    # regions.md: Parc <-> Exterieur : Lighter
     link(c.EXTERIEUR, c.PARC, lambda s: s.has("Lighter", p))
-    # regions_v3: Eglise <-> Parc (barque) : Paddle
+    # regions.md: Eglise <-> Parc (barque) : Paddle
     link(c.EGLISE, c.PARC, lambda s: s.has("Paddle", p))
     # Eglise -> Porte cassee (PillarSpace) : la porte doit etre REPAREE avec la poignee.
     # Le 20 % de l'Eglise n'ouvre PAS le PillarSpace [J 2026-07-21, corrige en playtest] :
@@ -64,13 +64,13 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     link(c.EGLISE, c.PILLAR_SPACE, lambda s: s.has("Doorknob", p))
     # dump: Road <-> PillarSpace via the repaired doorknob door (Doorknob)
     link(c.EXTERIEUR, c.PILLAR_SPACE, lambda s: s.has("Doorknob", p))
-    # regions_v3: Exterieur -> Champ de mais (libre, confirme 2026-07-12)
+    # regions.md: Exterieur -> Champ de mais (libre, confirme 2026-07-12)
     link(c.EXTERIEUR, c.CHAMP_MAIS)
-    # regions_v3: Exterieur -> Bunker (libre, confirme 2026-07-12)
+    # regions.md: Exterieur -> Bunker (libre, confirme 2026-07-12)
     link(c.EXTERIEUR, c.BUNKER)
 
     # --- Endgame: Hell (crypt sequence) -----------------------------------------
-    # regions_v3 "zone Hell" (V): from the church, open the interior door with ChurchKey,
+    # regions.md "zone Hell" (V): from the church, open the interior door with ChurchKey,
     # place the FlowerGem, and deposit the 4 idols. (After-midnight window is free.)
     # dump v0.3 door table: ChurchKey unlocks portal_ChurchHallwayToChurchBigHall0 door.
     link(
@@ -80,17 +80,17 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     )
 
     # --- House & disc chain -----------------------------------------------------
-    # regions_v3: Exterieur -> Station essence (libre au debut ; Hammer apres fermeture)
+    # regions.md: Exterieur -> Station essence (libre au debut ; Hammer apres fermeture)
     link(c.EXTERIEUR, c.GAS_STATION)
-    # regions_v3: Station -> Bureau station : OfficeKey.
+    # regions.md: Station -> Bureau station : OfficeKey.
     # dump v0.3 door table: OfficeKey unlocks Hide_gasStation/smallDoor1 (1).
     link(c.GAS_STATION, c.GAS_OFFICE, lambda s: s.has("OfficeKey", p))
-    # regions_v3: Bureau station (+ Cd + PC) -> Zone de la pomme OU Void
+    # regions.md: Bureau station (+ Cd + PC) -> Zone de la pomme OU Void
     link(c.GAS_OFFICE, c.APPLE_SPACE, lambda s: s.has("Cd", p))
     link(c.GAS_OFFICE, c.VOID, lambda s: s.has("Cd", p))
-    # regions_v3: Void -> Bureau du manoir (traversee)
+    # regions.md: Void -> Bureau du manoir (traversee)
     link(c.VOID, c.MANOIR)
-    # regions_v3: Bureau du manoir (+ Cd) -> Serre du disque (SpecialSeed)
+    # regions.md: Bureau du manoir (+ Cd) -> Serre du disque (SpecialSeed)
     link(c.MANOIR, c.GLASS_HOUSE, lambda s: s.has("Cd", p))
 
     # --- Shed, toilets, end of week ---------------------------------------------
@@ -101,37 +101,37 @@ def connect_all_regions(world: "GrunnWorld") -> None:
         link(c.JARDIN, c.CABANE_JOUEUR, lambda s: s.has("AbandonedKey", p))
     else:
         link(c.JARDIN, c.CABANE_JOUEUR)
-    # regions_v3: Toilettes : ToiletKey (in the shed).
+    # regions.md: Toilettes : ToiletKey (in the shed).
     # dump v0.3 door table: ToiletKey unlocks portal_StartGardenToToilet0/toiletBuilding_door0.
     link(c.JARDIN, c.TOILET, lambda s: s.has("ToiletKey", p))
-    # regions_v3: Toilettes -> Tente : donner ToiletPaper (before day 1 noon; time free)
+    # regions.md: Toilettes -> Tente : donner ToiletPaper (before day 1 noon; time free)
     link(c.TOILET, c.TENTE, lambda s: s.has("ToiletPaper", p))
-    # regions_v3: Cabane joueur -> Couloir final : IsFinalDay + soir. Confirme libre,
+    # regions.md: Cabane joueur -> Couloir final : IsFinalDay + soir. Confirme libre,
     # aucun item, juste attendre le dimanche soir [J 2026-07-13]. The edge starts at the
-    # hut (faithful to regions_v3) so lock_player_hut gates the Sunday hallway too.
+    # hut (faithful to regions.md) so lock_player_hut gates the Sunday hallway too.
     link(c.CABANE_JOUEUR, c.COULOIR_FINAL)
     # dump: LongHallway <-> SmallChapelOutside <-> MagicPond (free)
     link(c.COULOIR_FINAL, c.MAGIC_POND)
 
     # --- Zone completions (100 % portals) ---------------------------------------
-    # regions_v3: Jardin 100 % -> Picnic
+    # regions.md: Jardin 100 % -> Picnic
     link(c.JARDIN, c.PICNIC, lambda s: r.complete_zone(s, world, c.JARDIN, full=True))
-    # regions_v3: Eglise 100 % -> Plage
+    # regions.md: Eglise 100 % -> Plage
     link(c.EGLISE, c.PLAGE, lambda s: r.complete_zone(s, world, c.EGLISE, full=True))
-    # regions_v3: Parc 100 % -> Boulangerie
+    # regions.md: Parc 100 % -> Boulangerie
     link(c.PARC, c.BOULANGERIE, lambda s: r.complete_zone(s, world, c.PARC, full=True))
 
     # --- Special zones ----------------------------------------------------------
-    # regions_v3: Jardin -> Labyrinthe : (Plank OU OldPlank) OU (Coin + acces Eglise)
+    # regions.md: Jardin -> Labyrinthe : (Plank OU OldPlank) OU (Coin + acces Eglise)
     link(
         c.JARDIN,
         c.LABYRINTHE,
         lambda s: r.has_plank(s, world)
         or (s.has("Coin", p) and s.can_reach_region(c.EGLISE, p)),
     )
-    # regions_v3: Labyrinthe -> Coeur : Compass
+    # regions.md: Labyrinthe -> Coeur : Compass
     link(c.LABYRINTHE, c.LABYRINTHE_COEUR, lambda s: s.has("Compass", p))
-    # regions_v3: Parc -> Jardin botte de foin : 20 % du Parc + Lighter
+    # regions.md: Parc -> Jardin botte de foin : 20 % du Parc + Lighter
     link(
         c.PARC,
         c.HOOIBAAL,
@@ -153,11 +153,11 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     # (toRummikub0 = out, toPath = return, both preventTypes=[]). The return is implicit
     # via AP's origin-return assumption, so only the outbound edge is modelled.
     link(c.EXTERIEUR, c.ZONE_VELO)
-    # regions_v3: Embarcadere Ferry libre a pied ; traversee = ToyBoat.
+    # regions.md: Embarcadere Ferry libre a pied ; traversee = ToyBoat.
     # PAS de contrainte de jour : aucun check du Ferry n'est jour-2 [J 2026-07-27,
     # in-game] - ils sont disponibles tous les jours.
     link(c.EXTERIEUR, c.FERRY, lambda s: s.has("ToyBoat", p))
-    # regions_v3: fisherman cabin approach is free; ENTERING (interior) needs Bone for the
+    # regions.md: fisherman cabin approach is free; ENTERING (interior) needs Bone for the
     # dog (else the dog kills the player -> Dog ending).
     link(c.COUR, c.CABANE_PECHEUR)
     link(c.EXTERIEUR, c.CABANE_PECHEUR)
