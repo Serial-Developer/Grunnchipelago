@@ -184,7 +184,17 @@ namespace Grunnchipelago.Client
 
         /// <summary>Dev helper (active under VerboseLogs, in a safe state): trigger traps
         /// by key to test them without a seed containing them. F8 is taken by the dumper.
-        /// F6 = Speed, F7 = Size, F9 = Inverted Controls, F10 = random Regrow trap.</summary>
+        /// F6 = Speed, F7 = Size, F9 = Inverted Controls, F10 = next world trap (cycles
+        /// through the five one-shot traps in order, so each can be tested deliberately -
+        /// the name is logged on every press).</summary>
+        private static readonly string[] WorldTraps =
+        {
+            GameIds.TrapGardenReset, GameIds.TrapChurchReset, GameIds.TrapParkReset,
+            GameIds.TrapNight, GameIds.TrapSacredFlower,
+        };
+
+        private int worldTrapCursor;
+
         private void HandleDebugTrapKeys()
         {
             if (Input.GetKeyDown(KeyCode.F6)) DebugTrap(GameIds.TrapSpeed);
@@ -192,12 +202,8 @@ namespace Grunnchipelago.Client
             if (Input.GetKeyDown(KeyCode.F9)) DebugTrap(GameIds.TrapInvertedControls);
             if (Input.GetKeyDown(KeyCode.F10))
             {
-                string[] regrows =
-                {
-                    GameIds.TrapRewaterFlowers, GameIds.TrapRegrowHedge,
-                    GameIds.TrapReturnTrash, GameIds.TrapRegrowMolehills,
-                };
-                DebugTrap(regrows[UnityEngine.Random.Range(0, regrows.Length)]);
+                DebugTrap(WorldTraps[worldTrapCursor]);
+                worldTrapCursor = (worldTrapCursor + 1) % WorldTraps.Length;
             }
         }
 

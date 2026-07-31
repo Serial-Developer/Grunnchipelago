@@ -25,7 +25,7 @@ Chosen by the `goal` option:
 
 ## Notable options
 
-- `keep_shears` / `exclude_garden_key` keep those items in their vanilla spot for smoother
+- `keep_vanilla_shears` / `exclude_bridge_key` keep those items in their vanilla spot for smoother
   early game (Garden Key excluded by default).
 - `coinsanity` turns money into shuffled `Gulden` items and the 15 placed coins into checks.
 - `death_link` is strict: any death sends a DeathLink, any received DeathLink triggers your

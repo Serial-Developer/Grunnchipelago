@@ -35,11 +35,14 @@ class Goal(Choice):
     default = 1  # true_ending
 
 
-class KeepShears(Toggle):
+class KeepVanillaShears(Toggle):
     """
-    If enabled, the Shears (secateurs) stay in their vanilla location instead of
-    being shuffled into the multiworld. Improves early-game accessibility, since
+    If enabled, the Shears (secateurs) stay in their VANILLA location - the player hut -
+    instead of being shuffled into the multiworld. Improves early-game accessibility, since
     cutting grass is the renewable source of income.
+
+    Note: with lock_player_hut on (the default), the hut itself is locked, so the vanilla
+    shears still sit behind the Abandoned Key.
     """
 
     display_name = "Keep Shears"
@@ -119,12 +122,23 @@ class BuffCount(Range):
     default = 3
 
 
-class LockPlayerHut(Toggle):
+class LockPlayerHut(DefaultOnToggle):
     """
-    EXPERIMENTAL. The player hut door is locked and requires the Abandoned Key (an
-    orphan key in vanilla: the v0.3 door table shows it unlocks nothing - it most
-    likely opened this very hut originally). Gates the Shears and Toilet Key vanilla
-    spots and the Sunday-evening hallway behind the key.
+    Enabled by default. The player hut door is locked and requires the Abandoned Key (an
+    orphan key in vanilla: the v0.3 door table shows it unlocks nothing - it most likely
+    opened this very hut originally).
+
+    IMPORTANT - what the key really gates: the only usable BED is inside the hut (dump:
+    Hide_PlayerSchuur/interior/bed0; the game's only other bed is in the endgame
+    AtticRoom), so the key also gates SLEEPING, i.e. reaching day 2+. The logic models
+    this via rules.can_advance_days: the Mist ending (day 3), the Bus ending
+    (dayIndex >= 2), the Ferry crossing (day 2) and Calm Ghost #3 (redCar, day 2) all
+    require the key when this option is on [J 2026-07-27, playtest]. It also gates the
+    vanilla Shears / Toilet Key spots and the Sunday-evening hallway.
+
+    The Abandoned Key therefore becomes an early, high-value progression item - especially
+    interesting in multiworld, where it can come from another player's world. Turn this off
+    for a looser run where the hut (and sleeping) is free from the start.
     """
 
     display_name = "Lock Player Hut"
@@ -141,10 +155,47 @@ class DeathLink(Toggle):
     display_name = "Death Link"
 
 
+class ChoreChecks(DefaultOnToggle):
+    """
+    If enabled (default), finishing a maintenance job sends a check: trimming every hedge,
+    cutting all the grass, clearing every molehill, watering every flower and picking up all
+    the litter IN THE START GARDEN, plus trimming the 8 potted plants scattered around the
+    world.
+
+    The five garden jobs normally pay 2 gulden each the first time they are completed; with
+    this option on, that money is replaced by five "Golden Gulden" items (worth 2 gulden
+    each) shuffled into the multiworld, so the economy is unchanged - you simply receive the
+    coins instead of earning them on the spot. Trimming the potted plants pays nothing in
+    vanilla, so it adds no coin.
+
+    Independent of Coinsanity: these checks exist either way.
+    """
+
+    display_name = "Chore Checks"
+
+
+class ExcludeBadEndings(DefaultOnToggle):
+    """
+    Enabled by default. Removes the checks of the "bad" endings - the 8 endings that KILL
+    you, i.e. exactly the ones that fire a DeathLink: Mist, SacredFlowers, Drown, Darkness,
+    LongHallway, HedgeMaze, WorldEnd and Dog.
+
+    Only Bus, Picnic and the good/true ending keep an ending check, so you are never forced
+    to die - and, under DeathLink, to kill everyone else - just to collect a check. Turn it
+    off to put those 8 checks back in the pool. The endings themselves are still reachable in game, they simply stop
+    being locations.
+
+    Ignored when the goal is "all_endings": that goal requires meeting every ending, so
+    removing their checks would make no sense.
+    """
+
+    display_name = "Exclude Bad Endings"
+
+
 @dataclass
 class GrunnOptions(PerGameCommonOptions):
     goal: Goal
-    keep_shears: KeepShears
+    keep_vanilla_shears: KeepVanillaShears
     exclude_bridge_key: ExcludeBridgeKey
     polaroid_checks: PolaroidChecks
     ghost_checks: GhostChecks
@@ -154,15 +205,19 @@ class GrunnOptions(PerGameCommonOptions):
     trap_percentage: TrapPercentage
     buff_count: BuffCount
     death_link: DeathLink
+    chore_checks: ChoreChecks
+    exclude_bad_endings: ExcludeBadEndings
 
 
 grunn_option_groups = [
     OptionGroup(
         "Goal & Pools",
-        [Goal, KeepShears, ExcludeBridgeKey, PolaroidChecks, GhostChecks, Coinsanity],
+        [Goal, KeepVanillaShears, ExcludeBridgeKey, PolaroidChecks, GhostChecks, ChoreChecks,
+         Coinsanity],
     ),
     OptionGroup(
         "Extras & Tuning",
-        [PersistentShortcuts, LockPlayerHut, TrapPercentage, BuffCount, DeathLink],
+        [PersistentShortcuts, LockPlayerHut, TrapPercentage, BuffCount, DeathLink,
+         ExcludeBadEndings],
     ),
 ]

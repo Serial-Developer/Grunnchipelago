@@ -11,9 +11,10 @@ namespace Grunnchipelago.Client
     /// full received-items list (so re-injection after a run and reconnects are always
     /// consistent), and the resulting multipliers are (re)applied every frame by Tick().
     ///
-    /// Timed traps (Speed / Size / Inverted Controls) last 1 in-game hour
+    /// Timed traps (Speed / Size / Inverted Controls) last 2 in-game hours
     /// (TimeController.currentHour) and expire on day change / run reset.
-    /// Regrow traps are one-shot save-data edits (see ApplyRegrowTrap).
+    /// The other five are one-shot: three ZONE RESETS (see ApplyZoneReset), the Night Trap
+    /// (TimeFeatures.JumpToTrapNight) and the Sacred Flower Trap (ApplySacredFlowerTrap).
     /// </summary>
     public static class Effects
     {
@@ -67,22 +68,35 @@ namespace Grunnchipelago.Client
             int hour = TimeController.currentHour;
             var timed = new TimedTrap { active = true, startDay = day, startHour = hour };
 
+            // Each world-altering trap is matched on BOTH its current name and its
+            // pre-2026-07-27 name: the ids never changed, so a seed rolled before the
+            // rename still sends the old string for the same effect (GameIds).
             switch (name)
             {
                 case GameIds.TrapSpeed: speedTrap = timed; break;
                 case GameIds.TrapSize: sizeTrap = timed; break;
                 case GameIds.TrapInvertedControls: invertedTrap = timed; break;
-                // Regrow Grass Trap is NO LONGER generated (apworld: the grass is
-                // DOTS-rendered and only rebuilt when the world loads, so it could not
-                // grow back mid-run - the counter dropped with no way to recover, which
-                // could block zone-completion checks). Ignored if an old seed sends it.
-                case GameIds.TrapRegrowGrass:
-                    Plugin.Log?.LogInfo("[Grunnchipelago] Regrow Grass Trap ignore (non implementable en cours de run).");
-                    return;
-                case GameIds.TrapRewaterFlowers: ApplyRegrowTrap(Element.Flowers); break;
-                case GameIds.TrapRegrowHedge: ApplyRegrowTrap(Element.Hedge); break;
-                case GameIds.TrapReturnTrash: ApplyRegrowTrap(Element.Trash); break;
-                case GameIds.TrapRegrowMolehills: ApplyRegrowTrap(Element.Molehills); break;
+
+                case GameIds.TrapGardenReset:
+                case GameIds.TrapLegacyRegrowHedge:
+                    ApplyZoneReset(Area.StartGarden, "Garden Reset Trap");
+                    break;
+                case GameIds.TrapChurchReset:
+                case GameIds.TrapLegacyRegrowMolehills:
+                    ApplyZoneReset(Area.Church, "Church Reset Trap");
+                    break;
+                case GameIds.TrapParkReset:
+                case GameIds.TrapLegacyRegrowGrass:
+                    ApplyZoneReset(Area.Park, "Park Reset Trap");
+                    break;
+                case GameIds.TrapNight:
+                case GameIds.TrapLegacyReturnTrash:
+                    TimeFeatures.JumpToTrapNight();
+                    break;
+                case GameIds.TrapSacredFlower:
+                case GameIds.TrapLegacyRewaterFlowers:
+                    ApplySacredFlowerTrap();
+                    break;
                 default: return;
             }
             try { UIManager.instance?.AddPopup(name + "!"); } catch (Exception) { }
@@ -200,55 +214,208 @@ namespace Grunnchipelago.Client
             return $" ({left / 60}h{left % 60:00})";
         }
 
-        // --- Regrow traps ----------------------------------------------------------------
-        // design/apworld_design.md section 4: reset ONE element of ONE zone - clear the
-        // matching entries of the global position list + zero the per-area counter
-        // (SaveManager.AreaProgress, SaveManager.cs:30). The zone is picked randomly among
-        // the ones where the element has progression. World visuals refresh on reload -
-        // that reload behaviour is the priority playtest item.
+        // --- Zone reset traps -------------------------------------------------------------
+        // REDESIGNED 2026-07-27 (demande Jonath). The four "regrow one element in a random
+        // zone" traps became three FULL ZONE RESETS, one per maintainable zone (Garden /
+        // Church / Park): the zone drops back to 0 % and every maintenance job has to be
+        // redone - grass, molehills, hedge, flowers to water and litter. Grass is now
+        // included; see ResetGrassInArea for how it is rebuilt live.
+        //
+        // NOT reset on purpose: progressDataCheck.cutAllGrassInStartGardenArea, the flag
+        // that gates the one-off gulden bonus for finishing the grass (GameManager.cs:3131).
+        // Clearing it would pay the bonus again on every re-clean - free money, and under
+        // coinsanity gulden is progression currency.
 
         private enum Element { Grass, Flowers, Hedge, Trash, Molehills }
 
-        private static void ApplyRegrowTrap(Element element)
+        /// <summary>All five maintenance elements. Jonath's spec lists them per zone
+        /// (garden: the five; church: grass/molehills/flowers; park: grass/molehills/
+        /// flowers/trash), but an element a zone does not have has a counter of 0 already,
+        /// so resetting all five everywhere is the SAME thing - and it is the only way to
+        /// guarantee the "back to 0 %" part, since GetAreaCompletedPercentage sums every
+        /// counter (SaveManager.cs:2381).</summary>
+        private static readonly Element[] AllElements =
+            { Element.Grass, Element.Molehills, Element.Hedge, Element.Flowers, Element.Trash };
+
+        /// <summary>Reset one whole zone: every element back to its initial state, counters
+        /// to 0, so the zone reads 0 % and must be cleaned all over again.</summary>
+        private static void ApplyZoneReset(Area area, string label)
         {
             var pd = SaveManager.progressDataCheck;
             if (pd?.areaProgress == null || GameManager.instance == null) return;
 
-            // Eligible zones: Area enum (Area.cs) StartGarden=0, Church=1, Park=2.
-            var eligible = new List<int>();
-            for (int i = 0; i < 3 && i < pd.areaProgress.Length; i++)
-                if (CounterOf(pd.areaProgress[i], element) > 0)
-                    eligible.Add(i);
-            if (eligible.Count == 0)
+            int index = (int)area;
+            if (index < 0 || index >= pd.areaProgress.Length) return;
+
+            // A zone that has EVER been completed is hard-coded to 100 % by
+            // GetAreaCompletedPercentage (SaveManager.cs:2394-2416) whatever the counters
+            // say, so the reset has to clear that flag too - otherwise it is purely
+            // cosmetic. Consequence to know: the 100 % portal of that zone (Picnic /
+            // Plage / Boulangerie, ContentHider condition Maintained<Zone>Area) closes
+            // again until the zone is re-maintained. Re-cleaning re-opens it
+            // (GameManager.cs:6110-6141), so nothing is permanently lost.
+            switch (area)
             {
-                Plugin.Log?.LogInfo("[Grunnchipelago] Regrow trap fizzled (no progression anywhere).");
-                return;
+                case Area.StartGarden: pd.maintainedGardenArea = false; break;
+                case Area.Church: pd.maintainedChurchArea = false; break;
+                case Area.Park: pd.maintainedParkArea = false; break;
             }
 
-            int area = eligible[UnityEngine.Random.Range(0, eligible.Count)];
-            SetCounter(pd.areaProgress[area], element, 0);
+            int restored = 0;
+            bool grass = false;
+            foreach (Element element in AllElements)
+            {
+                if (element == Element.Grass)
+                {
+                    grass = ResetGrassInArea(area);
+                    continue;
+                }
+                SetCounter(pd.areaProgress[index], element, 0);
 
-            // Drop the stored positions that fall inside that zone's macro bounds
-            // (PolygonTommie fields on GameManager, as used by the scene dumper).
-            List<SerializableVector3> list = ListOf(pd, element);
-            PolygonTommie bounds = BoundsOf(area);
-            if (list != null && bounds != null)
-                list.RemoveAll(v => bounds.ContainsPoint(v.UnityVector));
+                // Drop the stored positions that fall inside that zone's macro bounds
+                // (PolygonTommie fields on GameManager, as used by the scene dumper).
+                List<SerializableVector3> list = ListOf(pd, element);
+                PolygonTommie bounds = BoundsOf(index);
+                if (list != null && bounds != null)
+                    list.RemoveAll(v => bounds.ContainsPoint(v.UnityVector));
+
+                // Restore the objects IN WORLD right away (session 2, retour Jonath: the
+                // counter dropped but nothing grew back, so the zone could never reach
+                // 100 % again that run). Each ResetState re-reads the (now cleared) save
+                // positions via its own CheckForLoadOperation, exactly like ResetWorld
+                // does on a run reset - GameManager.cs:3918-4023.
+                restored += RestoreObjects(element, area);
+            }
 
             SaveManager.Save(SaveManager.curSlotIndex);
-            // Restore the objects IN WORLD right away (session 2, retour Jonath: the
-            // counter dropped but nothing grew back, so the zone could never reach
-            // 100 % again that run). Each ResetState re-reads the (now cleared) save
-            // positions via its own CheckForLoadOperation, exactly like ResetWorld
-            // does on a run reset - GameManager.cs:3918-4023.
-            int restored = RestoreObjects(element, (Area)area);
+            try { UIManager.instance?.UpdateAreaPercentageString(); } catch (Exception) { }
             Plugin.Log?.LogInfo(
-                $"[Grunnchipelago] Regrow trap: {element} reset in area {(Area)area} ({restored} objets restaures).");
+                $"[Grunnchipelago] {label}: zone {area} remise a zero ({restored} objets restaures"
+                + (grass ? ", herbe reconstruite" : "") + ").");
+        }
+
+        /// <summary>Regrow the grass of ONE area, live.
+        ///
+        /// The grass is DOTS-rendered, so it cannot be restored object by object like the
+        /// rest - but the game rebuilds it wholesale in <c>GameManager.ResetWorld</c>
+        /// (GameManager.cs:4064): ClearEntities() destroys every entity, GrassManager.Reset()
+        /// recreates the whole grass at its initial grow level, and CornManager.Reset()
+        /// puts back the corn that ClearEntities also wiped. Then the CUT state is replayed
+        /// from the save: PerformLoadOperations (GameManager.cs:874) reloads
+        /// grassCutPosition/Radius and GrassSystem re-cuts those spots (GrassSystem.cs:483-572)
+        /// WITHOUT re-saving them or playing any sound.
+        ///
+        /// So: drop this area's cut positions from the save, zero the grass counter of ALL
+        /// three areas (the replay re-increments them from scratch - GrassSystem calls
+        /// CutGrass with _throughLoadOperation, GameManager.cs:3098), rebuild, replay.
+        /// The other zones come back exactly as they were; this one is uncut again.</summary>
+        private static bool ResetGrassInArea(Area area)
+        {
+            var pd = SaveManager.progressDataCheck;
+            if (pd?.grassCutPosition == null || pd.grassCutRadius == null) return false;
+            if (GrassManager.instance == null) return false;
+
+            try
+            {
+                // The two lists are PARALLEL (SaveManager.SaveCutPosition, SaveManager.cs:2129):
+                // an entry must be dropped from both at the same index.
+                PolygonTommie bounds = BoundsOf((int)area);
+                if (bounds != null)
+                {
+                    for (int i = pd.grassCutPosition.Count - 1; i >= 0; i--)
+                    {
+                        if (!bounds.ContainsPoint(pd.grassCutPosition[i].UnityVector)) continue;
+                        pd.grassCutPosition.RemoveAt(i);
+                        if (i < pd.grassCutRadius.Count) pd.grassCutRadius.RemoveAt(i);
+                    }
+                }
+
+                for (int i = 0; i < 3 && i < pd.areaProgress.Length; i++)
+                    pd.areaProgress[i].grassCutCur = 0;
+                SaveManager.Save(SaveManager.curSlotIndex);
+
+                GrassManager.instance.ClearEntities();
+                GrassManager.instance.Reset();
+                CornManager.instance?.Reset();
+
+                // Re-arm the replay. PerformLoadOperations only flips loadOperationCutGrass
+                // to true when the list is EMPTY, so drive it explicitly.
+                GameManager.performedLoadOperations = false;
+                GameManager.PerformLoadOperations();
+                GameManager.loadOperationCutGrass = pd.grassCutPosition.Count == 0;
+                return true;
+            }
+            catch (Exception e)
+            {
+                Plugin.Log?.LogWarning("[Grunnchipelago] Reset de l'herbe echoue : " + e.Message);
+                return false;
+            }
+        }
+
+        /// <summary>Sacred Flower Trap: cut 4 graveyard flowers, sound included.
+        ///
+        /// Calling the real <c>Flower.Cut()</c> (Flower.cs:580) does everything vanilla does:
+        /// graveyardFlowerCutCur++, the graveyardFlowerCut sound, and the thresholds
+        /// (>= 4 warning, >= 5 ActivateSpookyWorld -> the SacredFlowers ending). That is
+        /// exactly the behaviour Jonath asked for: a player who had already cut one flower
+        /// reaches 5 and gets the ending immediately; a player at 0 lands on 4 and triggers
+        /// it the moment they cut a single flower themselves.
+        /// If fewer than 4 uncut graveyard flowers are left in the world, the counter is
+        /// topped up so the trap always "costs" 4.</summary>
+        private static void ApplySacredFlowerTrap()
+        {
+            var pd = SaveManager.progressDataCheck;
+            if (pd == null) return;
+            const int Flowers = 4;
+
+            int cut = 0;
+            if (GameManager.allFlowers != null)
+            {
+                foreach (Flower flower in GameManager.allFlowers)
+                {
+                    if (cut >= Flowers) break;
+                    if (flower == null || !flower.isGraveyardFlower) continue;
+                    if (!flower.canBeCut || flower.contentObject == null
+                        || !flower.contentObject.activeInHierarchy) continue;
+                    flower.Cut();
+                    cut++;
+                }
+            }
+
+            // Not enough flowers standing: charge the rest to the counter, mirroring what
+            // Flower.Cut would have done (counter + thresholds), and play the sound once.
+            for (int i = cut; i < Flowers; i++)
+            {
+                pd.graveyardFlowerCutCur++;
+                bool inAlteredWorld = pd.inRedWorld || pd.inGoodEnding || pd.inSpookyWorld;
+                if (inAlteredWorld) continue;
+                if (pd.graveyardFlowerCutCur >= 4) GameManager.TriggerGraveyardWarning1();
+                if (pd.graveyardFlowerCutCur >= 5) GameManager.ActivateSpookyWorld();
+            }
+            if (cut < Flowers) PlayGraveyardFlowerCutSound();
+
+            SaveManager.Save(SaveManager.curSlotIndex);
+            Plugin.Log?.LogInfo(
+                $"[Grunnchipelago] Sacred Flower Trap: {cut} fleurs coupees en monde, "
+                + $"compteur = {pd.graveyardFlowerCutCur}.");
+        }
+
+        private static void PlayGraveyardFlowerCutSound()
+        {
+            try
+            {
+                Vector3 at = PlayerControllerNew.Transform != null
+                    ? PlayerControllerNew.Transform.position : Vector3.zero;
+                AudioManager.instance?.PlaySoundAtPosition(
+                    at,
+                    BasicFunctions.PickRandomAudioClipFromArray(AudioManager.instance.graveyardFlowerCut),
+                    0.9f, 1.1f, 0.375f, 0.4f);
+            }
+            catch (Exception) { }
         }
 
         /// <summary>Bring back the world objects of one element in one area. Grass is
-        /// absent on purpose: it is rendered by the DOTS GrassSystem and only rebuilt
-        /// through the world-load replay, never live.</summary>
+        /// absent on purpose: it is DOTS-rendered and goes through ResetGrassInArea.</summary>
         private static int RestoreObjects(Element element, Area area)
         {
             int count = 0;

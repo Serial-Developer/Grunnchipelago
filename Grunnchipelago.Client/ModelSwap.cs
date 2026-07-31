@@ -44,15 +44,94 @@ namespace Grunnchipelago.Client
         private static readonly Color BuffTint = new Color(0.35f, 1f, 0.4f);
         private const float BuffModelScale = 1.25f;
 
+        /// <summary>Retour Jonath (coinsanity, 2026-07-21): "Gulden" is not a KeyItem and
+        /// not a buff, so a check CONTAINING money fell through to the AP card - tinted
+        /// RED because coinsanity makes Gulden progression (items.py:95). With 36 Gulden
+        /// in the pool that is red cards everywhere, unreadable. Money now shows the real
+        /// coin. Slight boost + lift: a coin is small and often replaces a big polaroid
+        /// card on a post (tune GuldenModelScale if it reads too small/large).</summary>
+        private const string GuldenItemName = "Gulden";
+        private const float GuldenModelScale = 1.5f;
+
+        /// <summary>Placed gulden lie flat on the ground: their CONTENT model is lifted
+        /// very slightly so it reads without floating (retour Jonath 2026-07-21).</summary>
+        private const float GuldenContentLift = 0.1f;
+
+        /// <summary>The chore coin (demande Jonath 2026-07-30): same coin mesh, tinted a
+        /// warm GOLD and a touch bigger, so "worth 2 gulden" reads at a glance without a
+        /// second model. Deliberately gold rather than yellow - it must not be mistaken for
+        /// the yellow AP filler card.</summary>
+        private static readonly Color GoldenGuldenTint = new Color(1f, 0.78f, 0.25f);
+        /// <summary>+15 % over a plain gulden (was +25 %, too much - retour Jonath 2026-07-31):
+        /// enough to read as "worth more" without looking like a different object.</summary>
+        private const float GoldenGuldenScaleBoost = 1.15f;
+
+        /// <summary>AP CROWNS (demande Jonath 2026-07-28) - the multiworld models.
+        ///
+        /// Idea from Jonath: assemble SOUL FRAGMENTS into a ring shaped like the Archipelago
+        /// logo (a five-petal flower). The fragment is already harvested in the library (it
+        /// is the buff model), so a crown is just N copies laid out on a circle under one
+        /// holder, archived like any other source.
+        ///
+        /// All three crowns carry the SAME SIX petals, laid out like the logo [J 2026-07-30];
+        /// only the COLOURING tells them apart:
+        ///   - Filler      : dull grey
+        ///   - Useful      : green
+        ///   - Progression : multicoloured (the logo's own six hues, one per petal)
+        /// Every constant below is meant to be tuned from Jonath's in-game captures.</summary>
+        private const int CrownPetalCount = 6;
+
+        /// <summary>Progression wears the logo's six hues, one per petal - read off the
+        /// Archipelago logo Jonath supplied (yellow, red, green, blue-violet, peach,
+        /// orchid). Order matters only for looks.</summary>
+        private static readonly Color[] LogoPetalColors =
+        {
+            new Color(0.92f, 0.89f, 0.51f),   // yellow
+            new Color(0.78f, 0.40f, 0.45f),   // red
+            new Color(0.44f, 0.75f, 0.47f),   // green
+            new Color(0.44f, 0.47f, 0.75f),   // blue-violet
+            new Color(0.84f, 0.60f, 0.44f),   // peach
+            new Color(0.78f, 0.55f, 0.78f),   // orchid
+        };
+
+        /// <summary>Useful = green, Filler = dull grey [J 2026-07-30]. Progression is not
+        /// here: it is multicoloured, handled petal by petal.</summary>
+        private static readonly Color UsefulCrownColor = new Color(0.30f, 0.85f, 0.35f);
+        private static readonly Color FillerCrownColor = new Color(0.55f, 0.55f, 0.55f);
+
+        /// <summary>Ring radius, as a multiple of one petal's width.
+        /// 0.62 was the first guess and the petals overlapped into one solid blob (capture
+        /// Jonath 2026-07-30); 0.80 spreads them just enough to read as six distinct pieces
+        /// - the "slightly exploded" look Jonath asked for - while still holding together as
+        /// one flower. Push higher only if they should read as separate objects.</summary>
+        private const float CrownRadiusFactor = 0.80f;
+
+        /// <summary>Degrees each petal leans OUTWARD from the ring axis - the logo's petals
+        /// fan out rather than standing straight.</summary>
+        private const float CrownPetalTilt = 20f;
+
+        /// <summary>true = the ring stands upright and reads face-on (default, like the logo);
+        /// false = it lies flat and only reads from above. Flip to compare in game.</summary>
+        private const bool CrownUpright = true;
+
+        /// <summary>Crowns are assembled from several meshes, so they need their own scale
+        /// (ApModelScale was calibrated on a single flat polaroid card).</summary>
+        private const float ApCrownScale = 1.1f;
+
         private static bool applied;
         private static readonly Dictionary<KeyItem, GameObject> library = new Dictionary<KeyItem, GameObject>();
-        private static GameObject apModelSource;   // polaroid visual (provisional)
+        private static readonly Dictionary<ApKind, GameObject> apCrowns = new Dictionary<ApKind, GameObject>();
+        private static GameObject guldenModel;     // harvested from a placed gulden pickup
+        private static GameObject apModelSource;   // polaroid visual (fallback when no crown)
         private static Transform archiveRoot;      // inactive vault of pristine copies
 
-        /// <summary>One-shot per session, once connected + scout done + world loaded.</summary>
+        /// <summary>One-shot per session, once connected + scout done + world loaded.
+        /// After that pass it keeps running a light watcher that shows/hides the worm
+        /// plate's clone with the game's own placedApple flag (see wormHolders).</summary>
         public static void Tick(ApClient ap)
         {
-            if (applied || !ap.Connected || !ap.ScoutReady) return;
+            if (!ap.Connected || !ap.ScoutReady) return;
+            if (applied) { TickWormHolders(); return; }
             if (GameManager.instance == null || GameManager.allItemPickups == null
                 || GameManager.allItemPickups.Count < 50) return;
             // Session 2, 2.1: polaroids are swapped too - wait for their registry
@@ -60,6 +139,7 @@ namespace Grunnchipelago.Client
             if (GameManager.allPolaroids == null || GameManager.allPolaroids.Count == 0) return;
 
             BuildLibrary();
+            wormHolders.Clear();
             int swapped = 0, apModels = 0, uncovered = 0;
             foreach (ItemPickup pickup in GameManager.allItemPickups)
             {
@@ -75,10 +155,12 @@ namespace Grunnchipelago.Client
                 if (result == 1) polaroidSwapped++;
                 else if (result == 2) polaroidAp++;
             }
+            SwapMagicPondFish(ap);
             applied = true;
             Plugin.Log?.LogInfo($"[Grunnchipelago] Model swap: {swapped} item models, " +
                                 $"{apModels} AP models, {uncovered} left vanilla (no visual); " +
                                 $"polaroids: {polaroidSwapped} item models, {polaroidAp} AP models.");
+            LogAudioBudget();
         }
 
         // ---------- library (feature #1.1) ----------
@@ -86,9 +168,23 @@ namespace Grunnchipelago.Client
         private static void BuildLibrary()
         {
             library.Clear();
+            guldenModel = null;
             foreach (ItemPickup pickup in GameManager.allItemPickups)
             {
-                if (pickup == null || pickup.isGulden) continue;
+                if (pickup == null) continue;
+                if (pickup.isGulden)
+                {
+                    // Gulden pickups are never swap TARGETS (Apply returns 0 for them),
+                    // but one of them is the model SOURCE for money-carrying checks.
+                    if (guldenModel == null)
+                    {
+                        GameObject coin = pickup.visualsObject != null
+                            ? pickup.visualsObject : pickup.gameObject;
+                        if (coin.GetComponentsInChildren<Renderer>(true).Length > 0)
+                            guldenModel = Archive(coin);
+                    }
+                    continue;
+                }
                 if (pickup.keyItemObtain == null || pickup.keyItemObtain.Count == 0) continue;
                 KeyItem key = pickup.keyItemObtain[0];
                 // Some pickups have no designated visualsObject (suspected: flowerGem0,
@@ -128,18 +224,40 @@ namespace Grunnchipelago.Client
                 Plugin.Log?.LogInfo($"[Grunnchipelago] Modele PrettyFlower recolte sur la fleur ({meshes} renderers).");
             }
 
-            // GoldFishAlive has no placed pickup, but the LIVING fish visual exists in
-            // the scene, hidden until revealed (MagicPond_FishAlive_Content / the
-            // fishbowl's FishAliveContainer). Harvest it so the alive fish no longer
-            // wears the dead-fish model (retour Jonath). Fall back to the dead fish
-            // only if neither living visual is found.
+            // GoldFishAlive has no placed pickup; its LIVING visual is a scene object kept
+            // hidden until revealed. Source order fixed by Jonath in-game (2026-07-21):
+            // take the fish shown IN THE FISHBOWL once placed - dump
+            // fishbowl0/FishAlive_ContentHider0 -> objectRef "FishAliveContainer".
+            // The MagicPond content was tried first before and archived EMPTY: the probe
+            // was grabbable but showed NOTHING. Hence FindRenderableByName - a source
+            // without a single Renderer is useless (the general path above already
+            // enforces that; this special case used to skip the check).
             if (!library.ContainsKey(KeyItem.GoldFishAlive))
             {
-                GameObject alive = FindInactiveByName("MagicPond_FishAlive_Content")
-                                   ?? FindInactiveByName("FishAliveContainer");
-                if (alive != null) library[KeyItem.GoldFishAlive] = Archive(alive);
+                GameObject alive = FindRenderableByName("FishAliveContainer")
+                                   ?? FindRenderableByName("MagicPond_FishAlive_Content");
+                if (alive != null)
+                {
+                    // Harvest the object that actually CARRIES the mesh, not the container.
+                    // The fish sits at a big LOCAL OFFSET inside the bowl container, and
+                    // Archive only zeroes the ROOT's position: that offset survived and the
+                    // clone floated ~11 m above the pickup - grabbable (collider on the
+                    // ground) but off-screen. Measured by the probe: model centre y=21.25
+                    // for a pickup at y=10.4 [J 2026-07-22].
+                    Renderer[] fishMeshes = alive.GetComponentsInChildren<Renderer>(true);
+                    if (fishMeshes.Length == 1 && fishMeshes[0] != null
+                        && fishMeshes[0].gameObject != alive)
+                        alive = fishMeshes[0].gameObject;
+                    library[KeyItem.GoldFishAlive] = Archive(alive);
+                    Plugin.Log?.LogInfo($"[Grunnchipelago] Modele GoldFishAlive recolte sur "
+                        + $"'{alive.name}' ({alive.GetComponentsInChildren<Renderer>(true).Length} renderers).");
+                }
                 else if (library.ContainsKey(KeyItem.GoldFishDead))
+                {
                     library[KeyItem.GoldFishAlive] = library[KeyItem.GoldFishDead];
+                    Plugin.Log?.LogWarning("[Grunnchipelago] Modele GoldFishAlive : aucun visuel "
+                        + "vivant avec mesh trouve - repli sur le poisson MORT.");
+                }
             }
 
             // KidTriangle borrows another kid instrument (retour Jonath iter 8).
@@ -180,12 +298,154 @@ namespace Grunnchipelago.Client
                         && !library.ContainsKey(k))
                         library[k] = genericKey;
 
-            // Provisional AP-model source: a polaroid ("photo from another world") -
-            // archived too, or the polaroid swaps (which now hide the WHOLE polaroid
-            // render tree) would blank our own card source.
+            // Fallback AP-model source: a polaroid ("photo from another world") - archived
+            // too, or the polaroid swaps (which now hide the WHOLE polaroid render tree)
+            // would blank our own card source. Used only when no crown could be built.
             if (apModelSource == null && GameManager.allPolaroids != null)
                 foreach (Polaroid polaroid in GameManager.allPolaroids)
                     if (polaroid != null) { apModelSource = Archive(polaroid.gameObject); break; }
+
+            BuildApCrowns();
+        }
+
+
+        /// <summary>Assemble the three AP crowns out of soul fragments (demande Jonath
+        /// 2026-07-28). Silently skipped when no fragment was harvested - SwapForScout then
+        /// falls back to the tinted polaroid card, exactly as before.</summary>
+        private static void BuildApCrowns()
+        {
+            if (apCrowns.Count > 0) return;
+            if (!TryGetBuffModel(out GameObject petal) || petal == null)
+            {
+                Plugin.Log?.LogWarning("[Grunnchipelago] Couronnes AP : aucun fragment d'ame "
+                    + "recolte - repli sur la carte AP (polaroid).");
+                return;
+            }
+
+            // Ring radius from the petal's own MEASURED width - never a guessed constant:
+            // the fragment's baked scale differs from run to run (it is harvested wherever
+            // the scene happens to hold it).
+            float petalWidth = WorldSize(petal).x;
+            if (petalWidth <= 0.001f) petalWidth = 0.25f;   // degenerate mesh: sane default
+            float radius = petalWidth * CrownRadiusFactor;
+
+            foreach (ApKind kind in new[] { ApKind.Progression, ApKind.Useful, ApKind.Filler })
+            {
+                GameObject crown = BuildCrown(petal, CrownPetalCount, radius, kind);
+                if (crown == null) continue;
+                apCrowns[kind] = crown;
+                // Measured final size: what Jonath needs to calibrate ApCrownScale from a
+                // capture rather than by trial and error.
+                Vector3 size = WorldSize(crown) * ApCrownScale;
+                Plugin.Log?.LogInfo($"[Grunnchipelago] Couronne AP {kind} : {CrownPetalCount} petales, "
+                    + $"taille rendue ~{size.x:0.00} x {size.y:0.00} x {size.z:0.00} m.");
+            }
+            Plugin.Log?.LogInfo($"[Grunnchipelago] Couronnes AP construites ({apCrowns.Count}/3), "
+                + $"petale {petalWidth:0.000} m, rayon {radius:0.000} m, "
+                + $"orientation {(CrownUpright ? "verticale (lecture de face)" : "a plat")}.");
+        }
+
+        /// <summary>One crown: <paramref name="count"/> petals evenly spread on a circle,
+        /// each leaning outward by CrownPetalTilt - the Archipelago logo's fanned-out flower.
+        ///
+        /// The ring stands UPRIGHT (petals in the XY plane, spun around Z): a logo is meant
+        /// to be read face-on as the player walks up to the pickup. Laid flat it would only
+        /// read from directly above. Flip CrownUpright to compare in game.</summary>
+        private static GameObject BuildCrown(GameObject petal, int count, float radius, ApKind kind)
+        {
+            if (count <= 0 || archiveRoot == null) return null;
+            var crown = new GameObject($"grunnchipelago_ap_crown_{kind}");
+            crown.transform.SetParent(archiveRoot, false);   // inactive vault: no Awake fires
+            crown.transform.localPosition = Vector3.zero;
+            crown.transform.localRotation = Quaternion.identity;
+            crown.transform.localScale = Vector3.one;
+
+            for (int i = 0; i < count; i++)
+            {
+                float angle = 360f / count * i;
+                Quaternion around = CrownUpright
+                    ? Quaternion.Euler(0f, 0f, angle)    // upright ring, read face-on
+                    : Quaternion.Euler(0f, angle, 0f);   // flat ring, read from above
+                Vector3 offset = CrownUpright
+                    ? new Vector3(0f, radius, 0f)
+                    : new Vector3(0f, 0f, radius);
+                GameObject leaf = UnityEngine.Object.Instantiate(petal, crown.transform);
+                leaf.name = "petal" + i;
+                leaf.transform.localPosition = around * offset;
+                leaf.transform.localRotation = around * Quaternion.Euler(
+                    CrownUpright ? 0f : CrownPetalTilt, CrownUpright ? CrownPetalTilt : 0f, 0f);
+                // Colour is baked PETAL BY PETAL here, not passed to SwapVisual, because
+                // progression needs SIX different hues on one model - a single tint could
+                // never express that.
+                Paint(leaf, kind == ApKind.Progression
+                    ? LogoPetalColors[i % LogoPetalColors.Length]
+                    : (kind == ApKind.Useful ? UsefulCrownColor : FillerCrownColor));
+
+                // The soul fragment carries a real Light. Six per crown, on every swapped
+                // check, is a lot of real-time lights for nothing: keep the halo on the
+                // FIRST petal only. Same reasoning as dropping the AudioSources.
+                if (i > 0)
+                    foreach (Light light in leaf.GetComponentsInChildren<Light>(true))
+                        if (light != null) UnityEngine.Object.DestroyImmediate(light);
+            }
+            return crown;
+        }
+
+        /// <summary>Paint one petal. Same channels as SwapVisual (colour + _BaseColor +
+        /// emission + the fragment's own Light), so a crown reads at night like the tinted
+        /// models do. Filler stays MATT on purpose: dull grey should not glow.</summary>
+        private static void Paint(GameObject model, Color color)
+        {
+            bool matt = color == FillerCrownColor;
+            foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>(true))
+            {
+                Material material = renderer.material;
+                material.color = color;
+                if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
+                if (material.HasProperty("_EmissionColor"))
+                {
+                    if (matt)
+                    {
+                        material.DisableKeyword("_EMISSION");
+                        material.SetColor("_EmissionColor", Color.black);
+                    }
+                    else
+                    {
+                        material.EnableKeyword("_EMISSION");
+                        material.SetColor("_EmissionColor", color * 1.5f);
+                    }
+                }
+            }
+            foreach (Light light in model.GetComponentsInChildren<Light>(true))
+            {
+                light.color = color;
+                if (matt) light.intensity *= 0.35f;   // dull filler keeps a faint halo only
+            }
+        }
+
+        /// <summary>Bounding size of a model in WORLD units, read from the shared meshes and
+        /// the baked scale. Renderer.bounds is unusable here: the archive is inactive, so it
+        /// is never rendered and its world bounds stay stale.</summary>
+        private static Vector3 WorldSize(GameObject model)
+        {
+            Vector3 size = Vector3.zero;
+            foreach (MeshFilter filter in model.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (filter == null || filter.sharedMesh == null) continue;
+                Vector3 s = filter.sharedMesh.bounds.size;
+                Vector3 lossy = filter.transform.lossyScale;
+                size = Vector3.Max(size, new Vector3(
+                    Mathf.Abs(s.x * lossy.x), Mathf.Abs(s.y * lossy.y), Mathf.Abs(s.z * lossy.z)));
+            }
+            foreach (SkinnedMeshRenderer skinned in model.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                if (skinned == null || skinned.sharedMesh == null) continue;
+                Vector3 s = skinned.sharedMesh.bounds.size;
+                Vector3 lossy = skinned.transform.lossyScale;
+                size = Vector3.Max(size, new Vector3(
+                    Mathf.Abs(s.x * lossy.x), Mathf.Abs(s.y * lossy.y), Mathf.Abs(s.z * lossy.z)));
+            }
+            return size;
         }
 
         /// <summary>Copy a scene visual into an INACTIVE off-world vault (no Awake ever
@@ -236,27 +496,154 @@ namespace Grunnchipelago.Client
                 renderer.enabled = true;
         }
 
+        /// <summary>Magic Pond fish revival (retour Jonath 2026-07-27): the "Obtain
+        /// GoldFishAlive" check now fires when the DEAD fish is PLACED (MagicPondPlaceFishPatch),
+        /// and the revived-fish content must show the CHECK's model, not the vanilla alive
+        /// fish. The content (MagicPond_FishAlive_Content) is not an ItemPickup nor a
+        /// Polaroid, so it is swapped here explicitly. It starts inactive (hidden until the
+        /// dead fish is placed); the clone follows its parent's active state, so swapping it
+        /// now is fine.</summary>
+        private static void SwapMagicPondFish(ApClient ap)
+        {
+            GameObject content = FindInactiveByName("MagicPond_FishAlive_Content");
+            if (content == null) return;
+            long loc = ap.ObtainLocationIdFor(KeyItem.GoldFishAlive);
+            if (loc <= 0 || !ap.TryGetScout(loc, out ScoutedItemInfo scout) || scout == null) return;
+
+            // The clone is parented at localPosition ZERO (SwapVisual), so it lands on the
+            // object we hand over - and MagicPond_FishAlive_Content is a CONTAINER whose
+            // fish mesh sits at a local offset (dump: the hider is at x=6500 while the pond
+            // interactions are at x=6503.83). Handing the container over therefore dropped
+            // the model several metres off the water [J 2026-07-27, capture]. Same root
+            // cause as the GoldFishAlive HARVEST bug of 2026-07-21, mirrored: target the
+            // object that actually CARRIES the mesh, so the model replaces the fish exactly
+            // where the fish renders.
+            GameObject target = FindMeshHolder(content) ?? content;
+
+            // vanillaItem = GoldFishAlive: if the check really holds the alive fish, keep it.
+            int r = SwapForScout(target, scout, loc, ap, KeyItem.GoldFishAlive);
+            if (r != 1 && r != 2) return;   // untouched (r=0) -> leave the vanilla fish alone
+
+            if (target != content)
+            {
+                // Hide the REST of the container's vanilla visuals: SwapVisual only disables
+                // the renderers under the object it received. Done after the swap so a
+                // no-op swap never leaves an invisible fish.
+                foreach (Renderer renderer in content.GetComponentsInChildren<Renderer>(true))
+                    renderer.enabled = false;
+                float gap = Vector3.Distance(content.transform.position, target.transform.position);
+                Plugin.Log?.LogInfo(
+                    $"[Grunnchipelago] Magic Pond : conteneur @{content.transform.position}, "
+                    + $"mesh @{target.transform.position} (ecart {gap:0.00} m) - modele pose sur le mesh.");
+            }
+            Plugin.Log?.LogInfo($"[Grunnchipelago] Magic Pond : poisson vivant -> modele du check ({scout.ItemName}).");
+        }
+
+        /// <summary>First descendant that actually carries a Renderer (the object itself if
+        /// it does). Null when the subtree has no mesh at all.</summary>
+        private static GameObject FindMeshHolder(GameObject root)
+        {
+            if (root == null) return null;
+            Renderer found = root.GetComponentInChildren<Renderer>(true);
+            return found != null ? found.gameObject : null;
+        }
+
+        // ---------- event-gated pickup: the worm plate ----------
+
+        /// <summary>Clone holders of the worm pickup, shown ONLY while the apple is on the
+        /// plate.
+        ///
+        /// The worm is swapped like any other pickup, but its clone must not be visible
+        /// before the world event. Renderer/activeInHierarchy heuristics DO NOT WORK here
+        /// (retour Jonath 2026-07-21, bug reproduit) : the pickup's startState is Show, so
+        /// ItemPickup.SetVisuals force-activates visualsObject (ItemPickup.cs SetVisuals),
+        /// and area streaming re-activates it too - both read as "revealed" while the plate
+        /// is still empty. The vanilla worm is hidden by a SEPARATE object
+        /// (dump: ContentHiders/wormHider0 -> objectRef "wormLine"), not by visualsObject.
+        ///
+        /// So we gate on the GAME'S OWN condition instead: ProgressData.placedApple, set by
+        /// GameManager.PlaceApple (GameManager.cs:4690-4695) - the exact flag behind the
+        /// interaction's NotPlacedApple preventType (dump: Main/Interactions/worm0).
+        /// It lives in PER-RUN ProgressData, so the spot re-hides by itself every run.</summary>
+        private static readonly List<GameObject> wormHolders = new List<GameObject>();
+
+        private static void TickWormHolders()
+        {
+            if (wormHolders.Count == 0) return;
+            bool placed;
+            try
+            {
+                placed = SaveManager.progressDataCheck != null
+                         && SaveManager.progressDataCheck.placedApple;
+            }
+            catch (Exception) { return; }
+
+            for (int i = wormHolders.Count - 1; i >= 0; i--)
+            {
+                GameObject holder = wormHolders[i];
+                if (holder == null) { wormHolders.RemoveAt(i); continue; }
+                if (holder.activeSelf != placed) holder.SetActive(placed);
+            }
+        }
+
         // ---------- per-pickup swap ----------
 
         /// <summary>0 = untouched, 1 = item model, 2 = AP model, 3 = no visual to swap.</summary>
         private static int Apply(ItemPickup pickup, ApClient ap)
         {
-            if (pickup == null || pickup.isGulden || pickup.isRepeatablePickup) return 0;
+            if (pickup == null || pickup.isRepeatablePickup) return 0;
+            if (pickup.gameObject.name.StartsWith("grunnchipelago", StringComparison.Ordinal))
+                return 0;   // bone gift really contains a bone
+
+            // Placed gulden (retour Jonath 2026-07-21): under coinsanity they ARE checks
+            // and can hold anything (this seed: Gulden #2 = MagicSword, #8 = SoulFragment1,
+            // #14 = PurifiedStone), so they now show their real content like any pickup.
+            // Their location is not an "Obtain X" - it is resolved by frozen scene path.
+            // Coinsanity OFF: a gulden is plain money, not a check -> stays vanilla.
+            if (pickup.isGulden)
+            {
+                if (!ap.Coinsanity) return 0;
+                int guldenIndex = ScenePaths.GuldenIndex(pickup);
+                if (guldenIndex < 0) return 0;
+                long guldenLoc = ap.LocationIdByName(GameIds.GuldenLocationNames[guldenIndex]);
+                if (guldenLoc <= 0 || !ap.TryGetScout(guldenLoc, out ScoutedItemInfo guldenScout)
+                    || guldenScout == null) return 0;
+                // Really contains money: the vanilla coin is already truthful.
+                if (guldenScout.ItemName == GuldenItemName
+                    && guldenScout.IsReceiverRelatedToActivePlayer) return 0;
+                // Coins sit flat on the ground: lift the content model slightly so it reads.
+                return SwapForScout(pickup.visualsObject, guldenScout, guldenLoc, ap, null,
+                    GuldenContentLift);
+            }
+
             // Pretty flower: swapped again since iter 8 - Jonath wants the content
             // model there, and the growth animation works WITH the normalisation:
             // while the parent scale is ~0 the clone is invisible (SafeRatio caps the
             // ratio), and at full growth (scale 1) it lands at natural world size.
             if (pickup.keyItemObtain == null || pickup.keyItemObtain.Count == 0) return 0;
-            if (pickup.gameObject.name.StartsWith("grunnchipelago", StringComparison.Ordinal))
-                return 0;   // bone gift really contains a bone
 
             KeyItem vanilla = pickup.keyItemObtain[0];
-            // Session 2 retour Jonath: the worm pickups reveal through a WORLD EVENT
-            // (apple placed on the plate - worm0's interaction has preventTypes
-            // ObjectInactive/NotPlacedApple, dump:5334). The vanilla mesh sits in a
-            // child object kept inactive until then, but our clone under visualsObject
-            // rendered immediately and betrayed the spot: leave worm pickups vanilla.
-            if (vanilla == KeyItem.Worm) return 0;
+            // The worm plate reveals through a WORLD EVENT (place the apple). Swap it like
+            // any other pickup, but start the clone HIDDEN and let TickWormHolders drive it
+            // from the game's own placedApple flag - see wormHolders for why renderer-based
+            // detection cannot work here.
+            if (vanilla == KeyItem.Worm)
+            {
+                long wormLoc = ap.ObtainLocationIdFor(vanilla);
+                if (wormLoc <= 0 || !ap.TryGetScout(wormLoc, out ScoutedItemInfo wormScout)
+                    || wormScout == null || pickup.visualsObject == null) return 0;
+                int wormResult = SwapForScout(pickup.visualsObject, wormScout, wormLoc, ap, vanilla);
+                Transform wormHolder =
+                    pickup.visualsObject.transform.Find("grunnchipelago_model");
+                if (wormHolder != null)
+                {
+                    wormHolder.gameObject.SetActive(false);   // rien avant la pomme
+                    wormHolders.Add(wormHolder.gameObject);
+                    Plugin.Log?.LogInfo($"[Grunnchipelago] Worm -> {wormScout.ItemName} : modele "
+                        + "pose, masque jusqu'a la pose de la pomme (placedApple).");
+                }
+                return wormResult;
+            }
             long locationId = ap.ObtainLocationIdFor(vanilla);
             if (locationId <= 0 || !ap.TryGetScout(locationId, out ScoutedItemInfo scout) || scout == null)
                 return 0;
@@ -271,7 +658,7 @@ namespace Grunnchipelago.Client
         /// them); anything else -> AP card by classification (feature #2).
         /// 0 = untouched, 1 = item model, 2 = AP/buff model, 3 = no visual.</summary>
         private static int SwapForScout(GameObject visualsObject, ScoutedItemInfo scout,
-            long locationId, ApClient ap, KeyItem? vanillaItem)
+            long locationId, ApClient ap, KeyItem? vanillaItem, float itemLift = 0f)
         {
             if (visualsObject == null) return 3;
 
@@ -283,10 +670,29 @@ namespace Grunnchipelago.Client
                         return 0;   // vanilla model already truthful
                     if (library.TryGetValue(contained, out GameObject model))
                     {
-                        SwapVisual(visualsObject, model, null, 1f, 0f);
+                        SwapVisual(visualsObject, model, null, 1f, itemLift);
                         return 1;
                     }
                     // Grunn item without a harvested model -> AP card fallback.
+                }
+                else if (scout.ItemName == GameIds.ItemGoldenGulden
+                         && (scout.Flags & ItemFlags.Trap) == 0 && guldenModel != null)
+                {
+                    // The chore coin (2026-07-30): the real coin, tinted GOLD so it reads as
+                    // "worth more" without needing a second model. Slightly larger than a
+                    // plain gulden for the same reason.
+                    SwapVisual(visualsObject, guldenModel, GoldenGuldenTint,
+                               GuldenModelScale * GoldenGuldenScaleBoost, ApModelLift);
+                    return 1;
+                }
+                else if (scout.ItemName == GuldenItemName && (scout.Flags & ItemFlags.Trap) == 0
+                         && guldenModel != null)
+                {
+                    // Money shows the real coin instead of the red progression card
+                    // (retour Jonath, coinsanity). Trap-flagged checks are excluded here
+                    // so a disguised trap can never leak through the coin look.
+                    SwapVisual(visualsObject, guldenModel, null, GuldenModelScale, ApModelLift);
+                    return 1;
                 }
                 else if ((IsBuffName(scout.ItemName) || (scout.Flags & ItemFlags.Trap) != 0)
                          && TryGetBuffModel(out GameObject fragment))
@@ -296,8 +702,18 @@ namespace Grunnchipelago.Client
                 }
             }
 
-            if (apModelSource == null) return 3;
+            // Multiworld item: the AP CROWN of its class (demande Jonath 2026-07-28) -
+            // 5/4/3 soul fragments in a ring, tinted. Falls back to the old tinted polaroid
+            // card if no fragment could be harvested this session.
             ApKind kind = KindFor(scout.Flags, locationId, ap.SeedString);
+            if (apCrowns.TryGetValue(kind, out GameObject crown) && crown != null)
+            {
+                // tint = null: the crown is ALREADY painted, petal by petal (see Paint).
+                // Passing a tint here would flatten progression's six hues into one.
+                SwapVisual(visualsObject, crown, null, ApCrownScale, ApModelLift);
+                return 2;
+            }
+            if (apModelSource == null) return 3;
             SwapVisual(visualsObject, apModelSource, TintFor(kind), ApModelScale, ApModelLift);
             return 2;
         }
@@ -469,6 +885,20 @@ namespace Grunnchipelago.Client
             return null;
         }
 
+        /// <summary>FindInactiveByName, but only accepts an object that actually carries a
+        /// mesh, and KEEPS SCANNING when a same-named object is an empty container.
+        /// An empty source archives to an invisible model - precisely what made the fish
+        /// probe grabbable but invisible (retour Jonath 2026-07-21).</summary>
+        private static GameObject FindRenderableByName(string name)
+        {
+            foreach (Transform t in Resources.FindObjectsOfTypeAll<Transform>())
+            {
+                if (t == null || t.name != name || !t.gameObject.scene.IsValid()) continue;
+                if (t.GetComponentsInChildren<Renderer>(true).Length > 0) return t.gameObject;
+            }
+            return null;
+        }
+
         /// <summary>0-safe component ratio (a growing/zero-scaled parent must not
         /// produce NaN/Infinity - it stays invisible anyway while its scale is 0).</summary>
         private static float SafeRatio(float a, float b)
@@ -478,6 +908,35 @@ namespace Grunnchipelago.Client
 
         /// <summary>Remove every script and collider from a never-activated clone.
         /// Two passes + try/catch cover [RequireComponent] dependency chains.</summary>
+        /// <summary>Total AudioSource dropped from clones this session - diagnostic for the
+        /// "many sounds no longer play" report [J 2026-07-30].</summary>
+        private static int strippedAudioSources;
+
+        /// <summary>MEASURE, don't guess: after the swap pass, report how many AudioSources
+        /// our clones carried and how many are live in the scene, against Unity's real-voice
+        /// budget. If the live count sits at (or above) the cap, sounds ARE being dropped by
+        /// priority and the cause is confirmed rather than assumed.</summary>
+        private static void LogAudioBudget()
+        {
+            try
+            {
+                AudioSource[] all = UnityEngine.Object.FindObjectsOfType<AudioSource>();
+                int playing = 0;
+                foreach (AudioSource source in all)
+                    if (source != null && source.isPlaying) playing++;
+                int realVoices = AudioSettings.GetConfiguration().numRealVoices;
+                Plugin.Log?.LogInfo(
+                    $"[Grunnchipelago] Budget audio : {strippedAudioSources} AudioSource retirees "
+                    + $"des clones ; scene = {all.Length} sources dont {playing} en lecture ; "
+                    + $"budget Unity = {realVoices} voix reelles"
+                    + (playing >= realVoices ? " -> SATURE, des sons sont ecartes." : "."));
+            }
+            catch (Exception e)
+            {
+                Plugin.Log?.LogWarning("[Grunnchipelago] Budget audio indisponible : " + e.Message);
+            }
+        }
+
         private static void StripNonVisuals(GameObject root)
         {
             for (int pass = 0; pass < 2; pass++)
@@ -490,6 +949,19 @@ namespace Grunnchipelago.Client
             {
                 if (collider == null) continue;
                 try { UnityEngine.Object.DestroyImmediate(collider); } catch (Exception) { }
+            }
+            // AudioSource is NOT a MonoBehaviour, so the loop above never removed it - and
+            // SwapVisual then reactivates the clone ("nothing to awake" was wrong: Lights
+            // AND AudioSources survive). A playOnAwake/loop source on a harvested model was
+            // therefore duplicated onto every swapped check, and a crown multiplies that by
+            // its SIX petals. Unity only mixes a limited number of real voices (32 by
+            // default): past that, new sounds are dropped by priority - exactly the "many
+            // sounds are not played" symptom. A decorative clone must be SILENT.
+            foreach (AudioSource source in root.GetComponentsInChildren<AudioSource>(true))
+            {
+                if (source == null) continue;
+                try { UnityEngine.Object.DestroyImmediate(source); strippedAudioSources++; }
+                catch (Exception) { }
             }
         }
     }

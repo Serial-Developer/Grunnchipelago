@@ -93,11 +93,72 @@ namespace Grunnchipelago.Client
         public const string TrapSpeed = "Speed Trap";
         public const string TrapSize = "Size Trap";
         public const string TrapInvertedControls = "Inverted Controls Trap";
-        public const string TrapRegrowGrass = "Regrow Grass Trap";
-        public const string TrapRewaterFlowers = "Rewater Flowers Trap";
-        public const string TrapRegrowHedge = "Regrow Hedge Trap";
-        public const string TrapReturnTrash = "Return Trash Trap";
-        public const string TrapRegrowMolehills = "Regrow Molehills Trap";
+
+        // The 5 world-altering traps were REDESIGNED and RENAMED on 2026-07-27 (demande
+        // Jonath): the four "regrow one element in a random zone" traps became three
+        // full ZONE RESETS plus a night trap, and the flower trap became the sacred-flower
+        // trap. Their ids in ids.json are UNCHANGED (478660304..308) - only the names moved.
+        public const string TrapParkReset = "Park Reset Trap";        // id 478660304
+        public const string TrapSacredFlower = "Sacred Flower Trap";  // id 478660305
+        public const string TrapGardenReset = "Garden Reset Trap";    // id 478660306
+        public const string TrapNight = "Night Trap";                 // id 478660307
+        public const string TrapChurchReset = "Church Reset Trap";    // id 478660308
+
+        // Pre-rename names, still accepted so a seed generated BEFORE 2026-07-27 keeps
+        // working (its datapackage carries the old names for the same ids). They map to
+        // the NEW behaviour of the same id - a trap is a trap, and the alternative would
+        // be a silently inert item mid-run.
+        public const string TrapLegacyRegrowGrass = "Regrow Grass Trap";        // -> Park Reset
+        public const string TrapLegacyRewaterFlowers = "Rewater Flowers Trap";  // -> Sacred Flower
+        public const string TrapLegacyRegrowHedge = "Regrow Hedge Trap";        // -> Garden Reset
+        public const string TrapLegacyReturnTrash = "Return Trash Trap";        // -> Night
+        public const string TrapLegacyRegrowMolehills = "Regrow Molehills Trap";// -> Church Reset
+
+        // --- Time features (demande Jonath 2026-07-27) ---------------------------------
+        // Frozen scene paths from dump/grunnchipelago_dump_v03.json (interactions of type
+        // Wait1Hour). The three PARK benches skip 3 hours instead of 1; the church bench
+        // nearest the church door jumps straight to night.
+        public static readonly HashSet<string> ParkBenchPaths = new HashSet<string>
+        {
+            "Main/Areas/Park/Container/Hide_Park/Props/bench0 (4)/bench_waitInteraction0",
+            "Main/Areas/Park/Container/Hide_Park/Props/bench0 (5)/bench_waitInteraction0",
+            "Main/Areas/Park/Container/Hide_Park/Props/bench0 (6)/bench_waitInteraction0",
+        };
+
+        // bench0 (3) at (10.59, 10.0, 1.28): the closest Wait1Hour bench to the church door
+        // (~34 m from churchSideDoorKnock0, interaction type ChurchDoor) - the other church
+        // bench is ~66 m away. Choice confirmed by Jonath 2026-07-27.
+        public const string ChurchNightBenchPath =
+            "Main/Areas/ChurchArea/Container/Hide_ChurchMid/Props/bench0 (3)/bench_waitInteraction0";
+
+        // --- "Deed" location names (ids.json block 478661500+, category "deed") ---------
+        // Rewarded ACTIONS rather than pickups (demande Jonath 2026-07-28). Names must match
+        // ids.json EXACTLY - they are resolved by name through the session datapackage.
+        public const string DeedPizzaBox = "Deed: Throw Away PizzaBox";
+        public const string DeedPrettyFlower = "Deed: Place PrettyFlower in Vase";
+        public const string DeedSchoolBand = "Deed: Complete the School Band";
+        public const string DeedFishbowl = "Deed: Place GoldFishAlive in Fishbowl";
+        public const string DeedWormHill = "Deed: Return Worm to the Worm Hill";
+        public const string DeedSnailMedal = "Deed: Award Medal to the Snail";
+        public const string DeedSeveredHand = "Deed: Return SeveredHand";
+
+        // --- "Chore" location names (ids.json block 478661600+, category "chore") -------
+        // The five START-GARDEN maintenance jobs. Vanilla paid 2 gulden the first time each
+        // was finished in the garden; those payouts are checks now (demande Jonath
+        // 2026-07-30) and the pool holds five "Golden Gulden" worth 2 each in exchange.
+        public const string ChoreHedges = "Chore: Trim Every Hedge (Garden)";
+        public const string ChoreGrass = "Chore: Cut All the Grass (Garden)";
+        public const string ChoreMolehills = "Chore: Clear Every Molehill (Garden)";
+        public const string ChoreFlowers = "Chore: Water Every Flower (Garden)";
+        public const string ChoreLitter = "Chore: Pick Up All the Litter (Garden)";
+        /// <summary>The 8 potted plants. Unlike the five above, vanilla pays NO gulden for
+        /// this one (achievement only), so it adds no Golden Gulden to the pool.</summary>
+        public const string ChorePottedPlants = "Chore: Trim Every Potted Plant";
+
+        /// <summary>The chore coin: worth TWO gulden, exactly what the jobs used to pay
+        /// (GameManager.areaCompleteGuldenAdd).</summary>
+        public const string ItemGoldenGulden = "Golden Gulden";
+        public const int GoldenGuldenValue = 2;
 
         // slot_data keys (fill_slot_data in worlds/grunn/__init__.py).
         public const string SlotGoal = "goal";                       // 0 good / 1 true / 2 all
@@ -107,6 +168,8 @@ namespace Grunnchipelago.Client
         public const string SlotPolaroidChecks = "polaroid_checks";
         public const string SlotGhostChecks = "ghost_checks";
         public const string SlotLockPlayerHut = "lock_player_hut";
+        public const string SlotChoreChecks = "chore_checks";
+        public const string SlotExcludeBadEndings = "exclude_bad_endings";
 
         // Full gulden location names (ids.json), indexed like GuldenIndexByPath. Used for
         // check labels and the verbose pickup diagnostic popup.

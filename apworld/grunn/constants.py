@@ -66,3 +66,12 @@ PRICE_COMPASS = 4
 PRICE_OFFICE_KEY = 2
 PRICE_MEDAL = 10
 PRICE_EGGBALL = 5
+
+# --- "Bad" endings: the ones that KILL the player -------------------------------
+# Exactly the DeathLink set (decision Jonath 2026-07-13, mirrored in the client's
+# GameIds.DeathLinkEndings): every ending EXCEPT Bus, Picnic and GoodEnd. The
+# exclude_bad_endings option removes their checks (locations.py).
+DEATH_ENDINGS = (
+    "Mist", "SacredFlowers", "Drown", "Darkness",
+    "LongHallway", "HedgeMaze", "WorldEnd", "Dog",
+)

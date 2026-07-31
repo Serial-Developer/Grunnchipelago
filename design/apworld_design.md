@@ -59,12 +59,31 @@ progression selon les règles finales.
 - **Cadence de découpe** (progressif) — idem
 - Extensible plus tard (portée d'interaction, etc.)
 
-### Traps
-- **Debuff vitesse / taille** — durée 1h in-game (TimeController.currentHour)
-- **Contrôles inversés** — 1h in-game — patch MouseLookNew/InputManager
-- **Regrow** — remet à zéro UN élément d'UNE zone (herbe, arrosage, haie, détritus,
-  taupes) — vidage ciblé des listes de positions (grassCutPosition, etc.) +
-  décrément AreaProgress ; comportement du rechargement à tester en pratique
+### Traps (8, refonte 2026-07-27 — demande Jonath)
+Temporisés — 2 h in-game (`TimeController.currentHour`), expirent au changement de jour :
+- **Speed Trap** / **Size Trap** — debuff vitesse (×0.5) / taille (×0.45)
+- **Inverted Controls Trap** — patch MouseLookNew/InputManager
+
+One-shot (les 4 anciens « regrow un élément dans une zone au hasard » ont été refondus) :
+- **Garden Reset Trap** — le jardin de départ retombe à **0 %** : herbe, taupinières,
+  haie, fleurs à arroser et déchets tous restaurés
+- **Church Reset Trap** — idem Église (herbe, taupinières, fleurs)
+- **Park Reset Trap** — idem Parc (herbe, taupinières, fleurs, déchets)
+- **Night Trap** — met directement l'heure à **03h00**
+- **Sacred Flower Trap** — coupe **4 fleurs sacrées** (son compris). Conséquence voulue :
+  ≥ 1 fleur déjà coupée ⇒ seuil de 5 atteint ⇒ **fin « fleurs sacrées » déclenchée** ;
+  sinon la toute prochaine fleur coupée par le joueur la déclenche (seuil vanilla).
+
+> **L'herbe est bien incluse dans les resets de zone.** Elle est rendue par le système
+> DOTS `GrassSystem`, mais le jeu la reconstruit **à chaud** dans `GameManager.ResetWorld`
+> (GameManager.cs:4064) : `GrassManager.ClearEntities()` + `Reset()` + `CornManager.Reset()`,
+> puis les coupes du save sont rejouées via `performedLoadOperations` /
+> `PerformLoadOperations` (GameManager.cs:874) et `GrassSystem` (GrassSystem.cs:483-572),
+> sans ré-écriture ni son. Le client emprunte exactement ce chemin
+> (`Effects.ResetGrassInArea`), d'où le retrait de `UNIMPLEMENTED_ITEMS`.
+
+⚠️ Les **ids** (478660301..308) n'ont pas changé au renommage ; le client accepte aussi
+les anciens noms pour qu'une seed antérieure au 2026-07-27 reste jouable (`GameIds`).
 
 ### Fillers
 - Gulden (si coinsanity) ; sinon petits bonus économiques ou buffs mineurs
@@ -158,9 +177,16 @@ progression selon les règles finales.
 
 > Statuts (CC, 2026-07-14) : #3 Bone spawn ✅ livré (d6c897f) ; #4 popup ✅ livré
 > (d6c897f) ; #5 sync polaroids ✅ livré (d6c897f) ; #1 modèles concrets ✅ livré
-> (mécanique complète, bibliothèque depuis les visualsObject de scène +
-> approximations GoldFishAlive→Dead, AtticKey→OldKey ; non couvert : KidTriangle
-> → modèle AP) ; #2 modèles AP ✅ mécanique livrée (classification + traps déguisés
+> (mécanique complète, bibliothèque depuis les visualsObject de scène).
+> ⚠️ Mise à jour 2026-07-21 — les « approximations » notées ici en 2026-07-14 sont
+> PÉRIMÉES, les itérations suivantes ont récolté les vrais modèles :
+> **GoldFishAlive** = visuel du poisson VIVANT de la scène
+> (`MagicPond_FishAlive_Content` / `FishAliveContainer`), le poisson mort n'est plus
+> qu'un *fallback* ; **KidTriangle** = triangle tenu en main par l'homme hirsute
+> (`scruffyMan_triangleStick0`), donc plus « non couvert » ; **clés orphelines**
+> (AbandonedKey / OldKey / AtticKey, sans pickup posé) = *fallback générique* vers le
+> premier modèle de clé récolté, les clés de Grunn se ressemblant toutes.
+> ; #2 modèles AP ✅ mécanique livrée (classification + traps déguisés
 > déterministes + items d'autres joueurs), direction artistique PROVISOIRE
 > (polaroid teinté rouge/bleu/gris) — Jonath tranche la DA finale.
 
@@ -171,10 +197,16 @@ progression selon les règles finales.
   nécessaire) tout polaroid dont le check AP n'est pas encore envoyé, pour que l'objet
   réapparaisse en monde. + AUDIT général : tout autre check gaté par un état GlobalData
   déjà acquis (fantômes ? gulden ?) doit être resynchronisé de la même façon.
-- **Bone près du spawn (feature #3)** : l'item Bone reçu n'est PAS injecté en inventaire ;
-  le mod fait apparaître un pickup monde à côté du point de départ (hors du bus). Le
-  joueur le prend seulement au besoin -> préserve la fin Dog (all_endings). Ce pickup
-  spécial ne renvoie pas de check.
+- **Items « cadeaux » près du spawn (feature #3)** : certains items reçus ne sont **jamais
+  injectés en inventaire** ; le mod fait apparaître un pickup monde à côté du panneau des
+  roses, au point de départ. Le joueur le prend seulement au besoin. Ces pickups spéciaux
+  n'envoient **aucun check** et, la possession étant per-run, ils **réapparaissent à chaque
+  nouvelle run**. Trois items, chacun pour la même raison — les posséder tue un contenu :
+  | Item | Ce que la possession tuait |
+  |---|---|
+  | **Bone** | fin **Dog** (le chien ne tue plus) |
+  | **Compass** | labyrinthe sans boussole et fin **HedgeMaze** |
+  | **StrangeKey** | fin **LongHallway** : la porte de l'OrbRoom se déverrouille sur simple possession (`Door.PlayerHasUnlockItem`, Door.cs:910) et l'assaillant n'est armé que tant qu'elle est verrouillée (Door.cs:770) [J 2026-07-27] |
 - **Texte du popup de ramassage (feature #4, partie légère)** : le popup vanilla affiche
   l'objet VU, pas l'objet reçu (ex. pagaie ramassée, triangle obtenu, message « pagaie »).
   Fix : supprimer le popup vanilla au ramassage intercepté et afficher le vrai contenu

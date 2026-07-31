@@ -65,6 +65,15 @@ namespace Grunnchipelago.Client
         public bool Coinsanity { get; private set; }
         public bool PersistentShortcuts { get; private set; }
         public bool DeathLinkEnabled { get; private set; }
+        /// <summary>exclude_bad_endings: the 8 death endings have NO check in this seed
+        /// (demande Jonath 2026-07-30). Purely cosmetic client-side - SendByName already
+        /// degrades gracefully on a missing location - but it keeps the log honest.</summary>
+        public bool ExcludeBadEndings { get; private set; }
+
+        /// <summary>chore_checks: the maintenance jobs are checks in this seed. Read for
+        /// log clarity, and to keep the vanilla gulden payout when the option is OFF.</summary>
+        public bool ChoreChecks { get; private set; } = true;
+
         public bool PolaroidChecks { get; private set; } = true;
         public bool GhostChecks { get; private set; } = true;
         public bool LockPlayerHut { get; private set; }
@@ -78,6 +87,15 @@ namespace Grunnchipelago.Client
         /// made the no-compass maze - and the HedgeMaze ending - unreachable. A world
         /// pickup spawns next to the bone gift instead.</summary>
         public bool CompassOwnedFromAp { get; private set; }
+
+        /// <summary>Same treatment for StrangeKey [J 2026-07-27, in-game]: OWNING it makes
+        /// the final-hallway assailant - and the LongHallway ending - impossible. Door.Trigger
+        /// only arms the small demon while the door is still LOCKED (Door.cs:770-773), but the
+        /// same call unlocks it as soon as PlayerHasUnlockItem() is true, and that tests mere
+        /// POSSESSION (ObtainedKeyItem, Door.cs:910-923). Injected, the key silently killed
+        /// the ending for the whole game. A world pickup next to the other two gifts instead,
+        /// so the player takes the key only when they want the door open.</summary>
+        public bool StrangeKeyOwnedFromAp { get; private set; }
 
         /// <summary>Set after login: the local save must drop uncollected-check polaroids.</summary>
         public bool NeedsPolaroidSync { get; set; }
@@ -203,6 +221,8 @@ namespace Grunnchipelago.Client
             if (data.TryGetValue(GameIds.SlotDeathLink, out var d)) DeathLinkEnabled = Convert.ToInt64(d) != 0;
             if (data.TryGetValue(GameIds.SlotPolaroidChecks, out var pol)) PolaroidChecks = Convert.ToInt64(pol) != 0;
             if (data.TryGetValue(GameIds.SlotGhostChecks, out var gh)) GhostChecks = Convert.ToInt64(gh) != 0;
+            if (data.TryGetValue(GameIds.SlotChoreChecks, out var ch)) ChoreChecks = Convert.ToInt64(ch) != 0;
+            if (data.TryGetValue(GameIds.SlotExcludeBadEndings, out var bad)) ExcludeBadEndings = Convert.ToInt64(bad) != 0;
             if (data.TryGetValue(GameIds.SlotLockPlayerHut, out var hut)) LockPlayerHut = Convert.ToInt64(hut) != 0;
         }
 
@@ -476,6 +496,11 @@ namespace Grunnchipelago.Client
         /// <summary>Key items AND tools both map to "Obtain &lt;KeyItem&gt;".</summary>
         public void SendKeyItemCheck(KeyItem keyItem) => SendByName("Obtain " + keyItem);
 
+        /// <summary>"Deed" checks (2026-07-28): rewarded ACTIONS rather than pickups - see
+        /// GameIds.Deed* and DeedPatches. SendByName degrades gracefully on a seed rolled
+        /// before these locations existed (logs "pas une location", sends nothing).</summary>
+        public void SendDeedCheck(string location) => SendByName(location);
+
         public void SendToolCheck(Item tool)
         {
             if (GameIds.ToolToKeyItem.TryGetValue(tool, out KeyItem keyItem))
@@ -578,12 +603,32 @@ namespace Grunnchipelago.Client
                 AnnounceScoutedContent(id);
         }
 
+        /// <summary>Coinsanity (retour Jonath 2026-07-21) - has this placed gulden's check
+        /// been sent? Gulden are stored in PER-RUN ProgressData (coinGrabPosition), so
+        /// vanilla respawns them on every new run: correct for money, wrong for a CHECK
+        /// that is already collected. Their visibility follows the same randomizer rule
+        /// as every other location: CHECK STATE, never the vanilla per-run state.</summary>
+        public bool GuldenCheckSent(int index)
+        {
+            if (!Connected || session == null) return false;
+            if (index < 0 || index >= GameIds.GuldenLocationNames.Length) return false;
+            long id = GameIds.GuldenBaseId + index;
+            lock (sentLocations) return sentLocations.Contains(id);
+        }
+
         // ---------- Endings & goal ----------
 
         public void OnEndingTriggered(EndingType ending)
         {
             if (!Connected) return;
-            if (ending != EndingType.DemoEnding)
+            // exclude_bad_endings removed this ending's location from the seed - say so
+            // plainly instead of logging "pas une location". Ignored on the all_endings
+            // goal, where the apworld keeps every ending check.
+            bool excluded = ExcludeBadEndings && goal != GameIds.GoalAllEndings
+                            && GameIds.DeathLinkEndings.Contains(ending);
+            if (excluded)
+                Info($"[Grunnchipelago] Silencieux : Ending: {ending} (option exclude_bad_endings)");
+            if (ending != EndingType.DemoEnding && !excluded)
             {
                 // The unlocked reward shows on the ending screen itself (panel 1.3,
                 // every re-watch included); the only popup left is "Envoye" for another
@@ -759,6 +804,16 @@ namespace Grunnchipelago.Client
                     Info("[Grunnchipelago] Compass received - world pickup will spawn near the start.");
                     return;
                 }
+                // StrangeKey too [J 2026-07-27]: owning it unlocks the orb-room door on the
+                // first interaction, and the small demon is only armed while that door is
+                // still locked - so the LongHallway ending died on receipt (see the property).
+                if (keyItem == KeyItem.StrangeKey)
+                {
+                    StrangeKeyOwnedFromAp = true;
+                    if (realtime && !historical) QueuePopup("Une clé étrange attend près du panneau des roses...");
+                    Info("[Grunnchipelago] StrangeKey received - world pickup will spawn near the start.");
+                    return;
+                }
                 try
                 {
                     GrantGuard = true;
@@ -770,6 +825,19 @@ namespace Grunnchipelago.Client
                 }
                 catch (Exception e) { log.LogError($"[Grunnchipelago] grant {keyItem} failed: {e.Message}"); }
                 finally { GrantGuard = false; }
+            }
+            else if (name == GameIds.ItemGoldenGulden)
+            {
+                // The chore coin: worth 2 gulden, exactly what the five garden jobs used to
+                // pay (GameManager.areaCompleteGuldenAdd). Same lifecycle as Gulden - the
+                // historical ones already sit in the save, and under coinsanity
+                // ReinjectInventory restores the whole purse per run.
+                if (realtime && !historical)
+                {
+                    GameManager.AddGulden(GameIds.GoldenGuldenValue, false);
+                    QueuePopup($"Objet obtenu : {GameIds.GoldenGuldenValue} Gulden (piece doree)");
+                    Info($"[Grunnchipelago] Granted {GameIds.GoldenGuldenValue} Gulden (Golden Gulden).");
+                }
             }
             else if (name == "Gulden")
             {
@@ -822,6 +890,7 @@ namespace Grunnchipelago.Client
                         case GameIds.BuffCuttingRate: rate++; break;
                         case "Bone": BoneOwnedFromAp = true; break;
                         case "Compass": CompassOwnedFromAp = true; break;
+                        case "StrangeKey": StrangeKeyOwnedFromAp = true; break;
                     }
                 }
             }
@@ -847,6 +916,9 @@ namespace Grunnchipelago.Client
             foreach (ItemInfo item in all)
             {
                 if (item.ItemName == "Gulden") gulden++;
+                // The chore coin counts for TWO - restore the purse at its real value, or a
+                // run reset would quietly shrink the coinsanity economy.
+                else if (item.ItemName == GameIds.ItemGoldenGulden) gulden += GameIds.GoldenGuldenValue;
                 else if (Enum.TryParse<KeyItem>(item.ItemName, out _))
                     GrantItem(item, realtime: false, historical: true);
                 // traps never re-fire on re-injection; buffs are recomputed below

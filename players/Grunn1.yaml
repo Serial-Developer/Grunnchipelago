@@ -1,4 +1,4 @@
-﻿# Profil de playtest local (slot "Grunn1") - fichier versionné, les seeds
+# Profil de playtest local (slot "Grunn1") - fichier versionné, les seeds
 # précédentes avaient été générées avec un YAML temporaire perdu.
 # Génération : voir scripts/generate_seed (ou la commande dans le README).
 name: Grunn1
@@ -10,7 +10,7 @@ Grunn:
   accessibility: full
 
   goal: all_endings
-  keep_shears: true
+  keep_vanilla_shears: true
   exclude_bridge_key: true
   polaroid_checks: true
   ghost_checks: true
@@ -20,3 +20,7 @@ Grunn:
   trap_percentage: 20
   buff_count: 3
   death_link: true
+
+  # 2026-07-30 : retire les checks des 8 fins qui TUENT (= le set DeathLink).
+  # Ignoree si goal = all_endings.
+  exclude_bad_endings: false

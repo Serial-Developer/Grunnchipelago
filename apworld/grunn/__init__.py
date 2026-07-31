@@ -52,6 +52,12 @@ class GrunnWorld(World):
     }
 
     # --- Generation steps -------------------------------------------------------
+    # NOTE (2026-07-31): declaring AbandonedKey via multiworld.early_items was TRIED and
+    # REVERTED - it made things worse (20/20 failures instead of 6/20). Archipelago logged
+    # "Ran out of early locations for early items": early_items needs locations reachable
+    # with an EMPTY state, and Grunn has almost none - every region sits behind BridgeKey,
+    # which is itself locked onto its own location. The fix has to widen the early sphere,
+    # not reserve a spot inside it.
     def create_regions(self) -> None:
         regions.create_and_connect_regions(self)
         locations.create_all_locations(self)
@@ -72,7 +78,7 @@ class GrunnWorld(World):
         # Options the client mod needs. (design/apworld_design.md section 1 + 7)
         return self.options.as_dict(
             "goal",
-            "keep_shears",
+            "keep_vanilla_shears",
             "exclude_bridge_key",
             "polaroid_checks",
             "ghost_checks",
@@ -80,4 +86,6 @@ class GrunnWorld(World):
             "persistent_shortcuts",
             "lock_player_hut",
             "death_link",
+            "chore_checks",
+            "exclude_bad_endings",
         )

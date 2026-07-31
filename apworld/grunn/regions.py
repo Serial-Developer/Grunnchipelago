@@ -53,8 +53,15 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     link(c.EXTERIEUR, c.PARC, lambda s: s.has("Lighter", p))
     # regions_v3: Eglise <-> Parc (barque) : Paddle
     link(c.EGLISE, c.PARC, lambda s: s.has("Paddle", p))
-    # regions_v3: Eglise -> Porte cassee (PillarSpace) : 20 % de l'Eglise
-    link(c.EGLISE, c.PILLAR_SPACE, lambda s: r.complete_zone(s, world, c.EGLISE, full=False))
+    # Eglise -> Porte cassee (PillarSpace) : la porte doit etre REPAREE avec la poignee.
+    # Le 20 % de l'Eglise n'ouvre PAS le PillarSpace [J 2026-07-21, corrige en playtest] :
+    # dump portal_ChurchToPillarSpace0/churchToPillarSpaceDoor0 a preventTypes
+    # NotRepairedMissingDoorknobDoor, et la reparation exige de POSSEDER le Doorknob
+    # (missingDoorknobDoorRepairInteraction0, preventTypes KeyItemNotObtained /
+    # keyItemObtainedRef Doorknob). Le 20 % ne fait que faire apparaitre la poignee dans
+    # l'herbe - et ce n'est meme pas la seule source (fouiller le trou de la branche,
+    # doorknobBranchHoleInteraction0, est libre), donc "Obtain Doorknob" reste libre.
+    link(c.EGLISE, c.PILLAR_SPACE, lambda s: s.has("Doorknob", p))
     # dump: Road <-> PillarSpace via the repaired doorknob door (Doorknob)
     link(c.EXTERIEUR, c.PILLAR_SPACE, lambda s: s.has("Doorknob", p))
     # regions_v3: Exterieur -> Champ de mais (libre, confirme 2026-07-12)
@@ -130,15 +137,25 @@ def connect_all_regions(world: "GrunnWorld") -> None:
         c.HOOIBAAL,
         lambda s: r.complete_zone(s, world, c.PARC, full=False) and s.has("Lighter", p),
     )
-    # regions_v3 (2026-07-12): Passage des Gnomes <-> Parc/Jardin :
-    # DestroyedAllJumpscareGnomes = Hammer only.
+    # Passage des Gnomes (RoundHallway + GnomeForest) = a HUB linking StartGarden, Park and
+    # GnomeForest, all behind the jumpscare-gnome doors (DestroyedAllJumpscareGnomes =
+    # Hammer). dump portals: portal_StartGardenToRoundHallway0 <-> portal_RoundHallwayToStartGarden0
+    # and portal_ParkToRoundHallway0 <-> portal_RoundHallwayToPark0 (both carry gnomeDoor0).
+    # Must be BIDIRECTIONAL [J 2026-07-27]: the entrances alone let you ENTER the passage
+    # but never EXIT to the other side, so the third Park route (Hammer via the gnomes) was
+    # missing. With the exits, Park is reachable by Lighter (Exterieur), Paddle (Eglise boat)
+    # OR Hammer (this passage) - matching the game.
     link(c.JARDIN, c.PASSAGE_GNOMES, lambda s: s.has("Hammer", p))
+    link(c.PASSAGE_GNOMES, c.JARDIN, lambda s: s.has("Hammer", p))
     link(c.PARC, c.PASSAGE_GNOMES, lambda s: s.has("Hammer", p))
+    link(c.PASSAGE_GNOMES, c.PARC, lambda s: s.has("Hammer", p))
     # dump (2026-07-12): bike is a round trip Exterieur (OutsideVillage) <-> RummikubSpace
     # (toRummikub0 = out, toPath = return, both preventTypes=[]). The return is implicit
     # via AP's origin-return assumption, so only the outbound edge is modelled.
     link(c.EXTERIEUR, c.ZONE_VELO)
-    # regions_v3: Embarcadere Ferry libre a pied ; traversee = DayIndexIs(2) (free) + ToyBoat.
+    # regions_v3: Embarcadere Ferry libre a pied ; traversee = ToyBoat.
+    # PAS de contrainte de jour : aucun check du Ferry n'est jour-2 [J 2026-07-27,
+    # in-game] - ils sont disponibles tous les jours.
     link(c.EXTERIEUR, c.FERRY, lambda s: s.has("ToyBoat", p))
     # regions_v3: fisherman cabin approach is free; ENTERING (interior) needs Bone for the
     # dog (else the dog kills the player -> Dog ending).

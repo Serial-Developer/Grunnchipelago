@@ -8,14 +8,16 @@
     "keyitem": 54,
     "buff": 3,
     "trap": 8,
-    "filler": 1
+    "filler": 2
   },
   "locationCounts": {
     "keyitem": 54,
     "ending": 11,
     "polaroid": 35,
     "ghost": 8,
-    "gulden": 15
+    "gulden": 15,
+    "deed": 7,
+    "chore": 6
   },
   "items": {
     "GardenKey": {
@@ -258,28 +260,32 @@
       "id": 478660303,
       "category": "trap"
     },
-    "Regrow Grass Trap": {
+    "Park Reset Trap": {
       "id": 478660304,
       "category": "trap"
     },
-    "Rewater Flowers Trap": {
+    "Sacred Flower Trap": {
       "id": 478660305,
       "category": "trap"
     },
-    "Regrow Hedge Trap": {
+    "Garden Reset Trap": {
       "id": 478660306,
       "category": "trap"
     },
-    "Return Trash Trap": {
+    "Night Trap": {
       "id": 478660307,
       "category": "trap"
     },
-    "Regrow Molehills Trap": {
+    "Church Reset Trap": {
       "id": 478660308,
       "category": "trap"
     },
     "Gulden": {
       "id": 478660401,
+      "category": "filler"
+    },
+    "Golden Gulden": {
+      "id": 478660402,
       "category": "filler"
     }
   },
@@ -890,6 +896,58 @@
         "z": 1006.74
       },
       "path": "Main/Gulden/gulden_intratuin0"
+    },
+    "Deed: Throw Away PizzaBox": {
+      "id": 478661501,
+      "category": "deed"
+    },
+    "Deed: Place PrettyFlower in Vase": {
+      "id": 478661502,
+      "category": "deed"
+    },
+    "Deed: Complete the School Band": {
+      "id": 478661503,
+      "category": "deed"
+    },
+    "Deed: Place GoldFishAlive in Fishbowl": {
+      "id": 478661504,
+      "category": "deed"
+    },
+    "Deed: Return Worm to the Worm Hill": {
+      "id": 478661505,
+      "category": "deed"
+    },
+    "Deed: Award Medal to the Snail": {
+      "id": 478661506,
+      "category": "deed"
+    },
+    "Deed: Return SeveredHand": {
+      "id": 478661507,
+      "category": "deed"
+    },
+    "Chore: Trim Every Hedge (Garden)": {
+      "id": 478661601,
+      "category": "chore"
+    },
+    "Chore: Cut All the Grass (Garden)": {
+      "id": 478661602,
+      "category": "chore"
+    },
+    "Chore: Clear Every Molehill (Garden)": {
+      "id": 478661603,
+      "category": "chore"
+    },
+    "Chore: Water Every Flower (Garden)": {
+      "id": 478661604,
+      "category": "chore"
+    },
+    "Chore: Pick Up All the Litter (Garden)": {
+      "id": 478661605,
+      "category": "chore"
+    },
+    "Chore: Trim Every Potted Plant": {
+      "id": 478661606,
+      "category": "chore"
     }
   }
 }

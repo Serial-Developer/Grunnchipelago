@@ -12,7 +12,9 @@ from test.general import setup_multiworld
 
 from .bases import GrunnTestBase
 from .. import GrunnWorld
+from .. import constants
 from ..items import UNSOURCED_ITEMS
+from ..locations import UNSOURCED_LOCATIONS
 
 
 class TestDefaultTemplate(GrunnTestBase):
@@ -29,6 +31,11 @@ class TestDefaultTemplate(GrunnTestBase):
                 # unsourced items keep a reserved id but never create a location/item
                 self.assertNotIn(f"Obtain {name}", names)
                 self.assertEqual(self.get_items_by_name(name), [])
+            elif f"Obtain {name}" in UNSOURCED_LOCATIONS:
+                # keys with no reachable vanilla pickup (OldKey / AbandonedKey): the
+                # LOCATION is never created, but the item may still exist in the pool
+                # (AbandonedKey is used by lock_player_hut) [J 2026-07-27]
+                self.assertNotIn(f"Obtain {name}", names)
             else:
                 self.assertIn(f"Obtain {name}", names)
 
@@ -56,7 +63,7 @@ class TestCoinsanityAndAllPools(GrunnTestBase):
         "coinsanity": True,
         "polaroid_checks": True,
         "ghost_checks": True,
-        "keep_shears": True,
+        "keep_vanilla_shears": True,
         "exclude_bridge_key": False,
     }
 
@@ -113,7 +120,15 @@ class TestLockPlayerHut(GrunnTestBase):
     """Experimental lock_player_hut: AbandonedKey gates the hut (Shears/ToiletKey spots
     and the Sunday hallway)."""
 
-    options = {"goal": "true_ending", "lock_player_hut": True, "exclude_bridge_key": False}
+    # exclude_bad_endings is forced OFF here: it defaults to ON since 2026-07-31, and this
+    # test asserts on "Ending: LongHallway" - the Sunday hallway, one of the things the hut
+    # key really gates.
+    options = {
+        "goal": "true_ending",
+        "lock_player_hut": True,
+        "exclude_bridge_key": False,
+        "exclude_bad_endings": False,
+    }
 
     def test_hut_locations_require_abandoned_key(self) -> None:
         self.collect_all_but("AbandonedKey")
@@ -174,6 +189,80 @@ class TestMultiworldGeneration(unittest.TestCase):
 
         distribute_items_restrictive(multiworld)
         self.assertEqual(len(multiworld.get_unfilled_locations()), 0)
+
+
+class TestChoreChecksOff(GrunnTestBase):
+    """chore_checks off: no chore location, and above all NO Golden Gulden - the jobs still
+    pay their 2 vanilla gulden, so adding the coins as items would double that money."""
+
+    options = {"chore_checks": False, "coinsanity": True}
+
+    def test_no_chore_locations_and_no_golden_gulden(self) -> None:
+        names = {location.name for location in self.multiworld.get_locations(1)}
+        self.assertFalse([n for n in names if n.startswith("Chore: ")])
+        self.assertEqual(self.get_items_by_name("Golden Gulden"), [])
+
+
+class TestChoreChecksEconomy(GrunnTestBase):
+    """The chore checks must not change the coinsanity purse: the 10 gulden the garden jobs
+    stop paying come back as 5 Golden Gulden worth 2 each."""
+
+    options = {"chore_checks": True, "coinsanity": True}
+
+    def test_money_supply_is_unchanged(self) -> None:
+        from ..items import GOLDEN_GULDEN_VALUE, PAID_GARDEN_CHORES
+
+        golden = len(self.get_items_by_name("Golden Gulden"))
+        plain = len(self.get_items_by_name("Gulden"))
+        self.assertEqual(golden, PAID_GARDEN_CHORES)
+        expected = (
+            constants.PRICE_BUS + constants.PRICE_CD + constants.PRICE_COMPASS
+            + constants.PRICE_OFFICE_KEY + constants.PRICE_MEDAL + constants.PRICE_EGGBALL
+        )
+        self.assertEqual(
+            plain + golden * GOLDEN_GULDEN_VALUE, expected,
+            "the total spendable money must match the sum of every shop price",
+        )
+
+    def test_every_chore_is_a_location(self) -> None:
+        from ..locations import CHORE_LOCS
+
+        names = {location.name for location in self.multiworld.get_locations(1)}
+        for name in CHORE_LOCS:
+            self.assertIn(name, names)
+
+
+class TestExcludeBadEndings(GrunnTestBase):
+    """exclude_bad_endings drops the checks of the 8 endings that kill you (demande
+    Jonath 2026-07-30) - exactly the DeathLink set."""
+
+    options = {"goal": "true_ending", "exclude_bad_endings": True}
+
+    def test_only_survivable_endings_remain(self) -> None:
+        names = {location.name for location in self.multiworld.get_locations(1)}
+        endings = {name for name in names if name.startswith("Ending: ")}
+        self.assertEqual(
+            endings,
+            {"Ending: Bus", "Ending: Picnic", "Ending: GoodEnd"},
+            "only the endings you survive should keep a check",
+        )
+        for ending in constants.DEATH_ENDINGS:
+            self.assertNotIn(f"Ending: {ending}", names)
+
+
+class TestExcludeBadEndingsIgnoredOnAllEndings(GrunnTestBase):
+    """The option must be IGNORED on the all_endings goal: that goal requires meeting
+    every ending, so removing their checks would make no sense."""
+
+    options = {"goal": "all_endings", "exclude_bad_endings": True}
+
+    def test_every_ending_keeps_its_check(self) -> None:
+        names = {location.name for location in self.multiworld.get_locations(1)}
+        for ending in constants.DEATH_ENDINGS:
+            self.assertIn(
+                f"Ending: {ending}", names,
+                f"Ending: {ending} must stay a check on the all_endings goal",
+            )
 
 
 if __name__ == "__main__":

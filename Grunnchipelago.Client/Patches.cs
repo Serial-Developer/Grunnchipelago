@@ -87,21 +87,60 @@ namespace Grunnchipelago.Client
 
         private static System.Reflection.MethodInfo setState;
 
-        public static bool AppliesTo(ItemPickup pickup)
+        // instanceID -> frozen gulden index, resolved once: ScenePaths.GuldenIndex walks
+        // the transform path AND warns on a miss, and ResetState fires on every run reset.
+        private static readonly Dictionary<int, int> guldenIndexCache = new Dictionary<int, int>();
+
+        public static bool AppliesTo(ItemPickup pickup, ApClient ap)
         {
-            if (pickup == null || pickup.isGulden || pickup.isRepeatablePickup) return false;
+            if (pickup == null || pickup.isRepeatablePickup) return false;
             if (pickup.gameObject.name.StartsWith("grunnchipelago", System.StringComparison.Ordinal))
                 return false;   // the bone gift follows vanilla possession rules
+            // A PLACED gulden is a location only under coinsanity (retour Jonath): its
+            // check must keep it hidden across runs. Without coinsanity it is plain
+            // money and must respawn every run exactly like vanilla.
+            if (pickup.isGulden) return ap.Coinsanity && GuldenIndexOf(pickup) >= 0;
             return pickup.keyItemObtain != null && pickup.keyItemObtain.Count > 0;
+        }
+
+        private static int GuldenIndexOf(ItemPickup pickup)
+        {
+            int key = pickup.GetInstanceID();
+            if (!guldenIndexCache.TryGetValue(key, out int index))
+            {
+                index = ScenePaths.GuldenIndex(pickup);
+                guldenIndexCache[key] = index;
+            }
+            return index;
         }
 
         public static void Recompute(ItemPickup pickup, ApClient ap)
         {
             ItemPickupState state = StartStateRef(pickup);
             if (pickup.hideInDemo && SaveManager.demo) state = ItemPickupState.Hide;
-            if (ap.KeyItemCheckSent(pickup.keyItemObtain[0])) state = ItemPickupState.Hide;
+            // Gulden: hide on the CHECK (survives the run reset - the point of the fix)
+            // OR on the vanilla per-run grab, which we must not undo mid-run.
+            bool hide = pickup.isGulden
+                ? ap.GuldenCheckSent(GuldenIndexOf(pickup)) || GuldenGrabbedThisRun(pickup)
+                : ap.KeyItemCheckSent(pickup.keyItemObtain[0]);
+            if (hide) state = ItemPickupState.Hide;
             if (setState == null) setState = AccessTools.Method(typeof(ItemPickup), "SetState");
             setState.Invoke(pickup, new object[] { state });
+        }
+
+        /// <summary>Mirrors ItemPickup.CheckForLoadOperation (ItemPickup.cs:56-72): a
+        /// gulden grabbed during THIS run is recorded BY POSITION in per-run ProgressData
+        /// (coinGrabPosition, 0.25 tolerance). ResetState runs that check AFTER SetState,
+        /// so recomputing from startState without it would pop a coin the player already
+        /// took back into the world mid-run.</summary>
+        private static bool GuldenGrabbedThisRun(ItemPickup pickup)
+        {
+            var grabbed = SaveManager.progressDataCheck?.coinGrabPosition;
+            if (grabbed == null) return false;
+            Vector3 position = pickup.transform.position;
+            for (int i = 0; i < grabbed.Count; i++)
+                if (Vector3.Distance(position, grabbed[i].UnityVector) <= 0.25f) return true;
+            return false;
         }
     }
 
@@ -115,7 +154,7 @@ namespace Grunnchipelago.Client
         {
             ApClient ap = Plugin.Ap;
             if (ap == null || !ap.Connected) return true;
-            if (!PickupVisibility.AppliesTo(__instance)) return true;
+            if (!PickupVisibility.AppliesTo(__instance, ap)) return true;
             PickupVisibility.Recompute(__instance, ap);
             return false;
         }
@@ -130,7 +169,7 @@ namespace Grunnchipelago.Client
         {
             ApClient ap = Plugin.Ap;
             if (ap == null || !ap.Connected) return;
-            if (!PickupVisibility.AppliesTo(__instance)) return;
+            if (!PickupVisibility.AppliesTo(__instance, ap)) return;
             PickupVisibility.Recompute(__instance, ap);
         }
     }
@@ -189,6 +228,19 @@ namespace Grunnchipelago.Client
                 bool cleared = SaveManager.progressDataCheck != null
                                && SaveManager.progressDataCheck.destroyedTallMan;
                 __result = _c == HideCondition.KeyItemObtained ? cleared : !cleared;
+                return;
+            }
+
+            // Magic Pond revived-fish content (MagicPond_FishAlive_ContentHider0, keyItemRef
+            // GoldFishAlive) hides on POSSESSION, which strands the check once the alive fish
+            // is received from the multiworld (retour Jonath 2026-07-27). The check now fires
+            // on PLACING the dead fish (MagicPondPlaceFishPatch), and the content shows the
+            // check's model - so never hide it on possession: let the pond state alone drive
+            // it (the hider's other condition, NotFishInMagicPond, stays vanilla).
+            if (__instance.keyItemRef == KeyItem.GoldFishAlive && __instance.objectRef != null
+                && __instance.objectRef.name == "MagicPond_FishAlive_Content")
+            {
+                __result = _c == HideCondition.KeyItemObtained ? false : true;
                 return;
             }
 
@@ -293,6 +345,45 @@ namespace Grunnchipelago.Client
             if (ApClient.GrantGuard) return true;
             ap.SendToolCheck(_item);
             return false;
+        }
+    }
+
+    /// <summary>Owner.EndConversation (private, Owner.cs) - the Hell owner hands the Attic
+    /// Key at the end of his dialogue, but ONLY `if (!ObtainedKeyItem(AtticKey))`
+    /// (Owner.cs:277). When the player already received AtticKey from the multiworld, that
+    /// guard skips the whole grant, so ObtainKeyItem is never called and the "Obtain
+    /// AtticKey" check never fires - the same "possession kills the location" class as the
+    /// pickup/shop paths, but on the dialogue path [J 2026-07-22, seed #3: SoulFragment1
+    /// sat on Obtain AtticKey and was stranded]. We send the check here regardless of
+    /// possession; TrySend dedupes, so the not-owned case (ObtainKeyItem -> our prefix)
+    /// is not double-counted.</summary>
+    [HarmonyPatch(typeof(Owner), "EndConversation")]
+    public static class OwnerEndConversationPatch
+    {
+        private static void Postfix()
+        {
+            ApClient ap = Plugin.Ap;
+            if (ap == null || !ap.Connected) return;
+            ap.SendKeyItemCheck(KeyItem.AtticKey);
+        }
+    }
+
+    /// <summary>GameManager.PlaceFishInMagicPond (GameManager.cs) - the "Obtain
+    /// GoldFishAlive" check fires on PLACING the dead fish in the pond (single criterion,
+    /// retour Jonath 2026-07-27), not on retrieving it. Vanilla only granted the alive
+    /// fish on RETRIEVE (RetrieveFishFromMagicPond -> ObtainKeyItem), which was stranded
+    /// once GoldFishAlive was received from the multiworld (the revived-fish content is
+    /// hidden on possession). Placing consumes the dead fish (KeyItemUse) and sets
+    /// fishInMagicPond, so this postfix is the moment the player "does" the check.
+    /// TrySend dedupes, so a later vanilla retrieve is a no-op.</summary>
+    [HarmonyPatch(typeof(GameManager), nameof(GameManager.PlaceFishInMagicPond))]
+    public static class MagicPondPlaceFishPatch
+    {
+        private static void Postfix()
+        {
+            ApClient ap = Plugin.Ap;
+            if (ap == null || !ap.Connected) return;
+            ap.SendKeyItemCheck(KeyItem.GoldFishAlive);
         }
     }
 
@@ -458,6 +549,27 @@ namespace Grunnchipelago.Client
             if (ap == null || !ap.Connected) return true;
             return ApClient.GrantGuard || ItemPickupTriggerPatch.SpecialPickupActive;
         }
+    }
+
+    /// <summary>GameManager.RetrieveFishFromMagicPond (GameManager.cs:6085) announces the
+    /// revived fish THREE times, and one of them escapes every other guard: after
+    /// TriggerItemObtainPopup (already suppressed) and ObtainKeyItem (already intercepted),
+    /// it builds the "&lt;obtenu&gt; poisson rouge en vie" string BY HAND and calls
+    /// UIManager.AddPopup with it (line 6095) - so the player read the vanilla item name
+    /// while actually receiving their AP item [J 2026-07-27, in-game].
+    /// The check itself left at DEPOSIT time (MagicPondPlaceFishPatch) and the AP item was
+    /// announced then, so the retrieval must stay silent. Vanilla sounds are untouched.</summary>
+    [HarmonyPatch(typeof(GameManager), nameof(GameManager.RetrieveFishFromMagicPond))]
+    public static class MagicPondRetrieveFishPatch
+    {
+        private static void Prefix(out bool __state)
+        {
+            __state = ItemPickupTriggerPatch.SuppressVanillaPopup;
+            ApClient ap = Plugin.Ap;
+            if (ap != null && ap.Connected) ItemPickupTriggerPatch.SuppressVanillaPopup = true;
+        }
+
+        private static void Postfix(bool __state) => ItemPickupTriggerPatch.SuppressVanillaPopup = __state;
     }
 
     /// <summary>GameManager.AddGulden(int, bool) - GameManager.cs:4108. Suppress the money
@@ -667,12 +779,15 @@ namespace Grunnchipelago.Client
     {
         private static GameObject boneInstance;
         private static GameObject compassInstance;
+        private static GameObject strangeKeyInstance;
 
         // Next to the roses sign / pupitre (plantSign0, dump: -36.5, 10.0, -66.2), on
         // the side AWAY from the RedRoses bed (x -32..-37, z -61..-66) that kept
         // swallowing the bone (retours Jonath iters 3, 6 - "super bien positionné").
         private static readonly Vector3 BonePosition = new Vector3(-37.3f, 10.35f, -67.5f);
         private static readonly Vector3 CompassPosition = new Vector3(-38.6f, 10.35f, -66.6f);
+        // Third gift, continuing the same diagonal away from the rose bed (z < -66).
+        private static readonly Vector3 StrangeKeyPosition = new Vector3(-36.0f, 10.35f, -68.4f);
 
         public static void EnsureSpawned(ApClient ap)
         {
@@ -682,6 +797,11 @@ namespace Grunnchipelago.Client
                 boneInstance = Spawn(KeyItem.Bone, "grunnchipelago_boneGift", BonePosition);
             if (compassInstance == null && ap.CompassOwnedFromAp)
                 compassInstance = Spawn(KeyItem.Compass, "grunnchipelago_compassGift", CompassPosition);
+            // StrangeKey [J 2026-07-27]: owning it kills the LongHallway ending (the orb-room
+            // door unlocks on possession, and the small demon only arms while it is locked -
+            // Door.cs:770 vs 910). Same gift treatment as the bone and the compass.
+            if (strangeKeyInstance == null && ap.StrangeKeyOwnedFromAp)
+                strangeKeyInstance = Spawn(KeyItem.StrangeKey, "grunnchipelago_strangeKeyGift", StrangeKeyPosition);
         }
 
         private static GameObject Spawn(KeyItem item, string name, Vector3 position)
@@ -705,6 +825,20 @@ namespace Grunnchipelago.Client
 
             GameObject instance = Object.Instantiate(template.gameObject, position, Quaternion.identity);
             instance.name = name;
+            // WORLD-size normalisation. Instantiate WITHOUT a parent keeps the template's
+            // LOCAL scale but drops its parents' - so a template sitting under a shrunk
+            // parent spawns GIANT. That is exactly what happened to the StrangeKey gift
+            // [J 2026-07-30: "bien trop grosse", and its interaction prompt sat off to the
+            // side because the oversized collider moved with it]. The clone has no parent,
+            // so its local scale IS its world scale: copy the template's lossyScale and the
+            // gift renders at the size the item really has in game.
+            // (Same lesson as ModelSwap.SwapVisual - "la taille du modele depend de sa
+            // position dans le monde", retour Jonath iter 4 - never applied here until now.)
+            Vector3 templateWorldScale = template.transform.lossyScale;
+            if (templateWorldScale != instance.transform.localScale)
+                Plugin.Log?.LogInfo($"[Grunnchipelago] Gift {item}: echelle corrigee "
+                    + $"{instance.transform.localScale} -> {templateWorldScale}.");
+            instance.transform.localScale = templateWorldScale;
             ItemPickup clone = instance.GetComponent<ItemPickup>();
             clone.startState = ItemPickupState.Show;
             // The compass template is a SHOP article (Hooibaal): the gift is free.
