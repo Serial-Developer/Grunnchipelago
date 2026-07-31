@@ -36,3 +36,7 @@ Thumbs.db
 # Local spoilers / seeds
 *_Spoiler.txt
 *.archipelago
+
+# Prompts / notes de session de travail (CC) - purement internes, jamais publies.
+# Les fichiers restent en local ; ils ne doivent pas partir sur le remote.
+design/prompt_cc_*.md

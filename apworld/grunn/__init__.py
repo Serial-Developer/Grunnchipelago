@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from BaseClasses import Tutorial
 from worlds.AutoWorld import WebWorld, World
 
 from . import items, locations, regions, rules
@@ -22,6 +23,26 @@ from .options import GrunnOptions, grunn_option_groups
 class GrunnWebWorld(WebWorld):
     theme = "dirt"
     option_groups = grunn_option_groups
+
+    setup_en = Tutorial(
+        "Multiworld Setup Guide",
+        "A guide to setting up Grunn for Archipelago multiworld.",
+        "English",
+        "setup_en.md",
+        "setup/en",
+        ["Serial-Developer"],
+    )
+
+    setup_fr = Tutorial(
+        "Guide de configuration Multimonde",
+        "Un guide pour configurer Grunn en multimonde Archipelago.",
+        "Français",
+        "setup_fr.md",
+        "setup/fr",
+        ["Serial-Developer"],
+    )
+
+    tutorials = [setup_en, setup_fr]
 
 
 class GrunnWorld(World):
