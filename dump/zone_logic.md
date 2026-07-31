@@ -1,6 +1,6 @@
 # Grunn — Table de logique par zone
 
-Générée le 2026-07-11T15:47:29.996Z depuis grunnchipelago_dump.json (grunnchipelago.dumper 0.2.0).
+Générée le 2026-07-31T11:49:54.704Z depuis grunnchipelago_dump.json (grunnchipelago.dumper 0.3.0).
 Source : données de scène extraites du jeu en runtime. Rien n'est inféré hors des heuristiques signalées.
 
 ## Résumé global
@@ -1112,6 +1112,7 @@ Candidats checks : 15 (pickups 5, polaroids 4, fantômes 2, gulden 4)
 
 ### Portes verrouillées/barrées
 - Gate — locked:true barred:true — `Main/Interactions/churchGateBarred0/door0`
+- Default — locked:true barred:false — `Main/Areas/Road/Container/Hide_Road/highBridgeDoor0/door0`
 
 ### Interactions conditionnées
 - FlowerInspect [OU] KeyItemObtained(WateringCan)
@@ -1261,6 +1262,7 @@ Candidats checks : 21 (pickups 9, polaroids 9, fantômes 0, gulden 3)
 
 ### Portes verrouillées/barrées
 - Gate — locked:true barred:false — `Main/Interactions/gardenGate0/door0`
+- Default — locked:true barred:false — `*** PORTALS ***/portal_StartGardenToToilet0/toiletBuilding_door0/door0`
 - Default — locked:true barred:false — `Main/Areas/StartGardenArea/Container/Hide_HouseDetails/bigHouseDoors/frontEntrance0/entranceDoor0/bigHouseFrontEntranceDoor0 (1)/bigHouseFrontDoorOther0`
 - Default — locked:true barred:false — `Main/Areas/StartGardenArea/Container/Hide_HouseDetails/intratuinDoor0/door0`
 - Default — locked:true barred:false — `Main/Areas/StartGardenArea/Container/Hide_HouseDetails/bigHouseDoors/frontEntrance0/entranceDoor0/bigHouseFrontEntranceDoor0/bigHouseFrontDoorMain0`

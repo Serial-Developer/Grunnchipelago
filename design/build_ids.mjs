@@ -2,11 +2,15 @@
 // Sources : enums.txt (ordres d'enum stables du jeu) + dump (positions fantômes/gulden).
 // BASE_ID = 478660000 ("GRUNN" en T9 : 4-7-8-6-6, x10000) — arbitraire, modifiable
 // tant que rien n'est publié.
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const BASE = 478660000;
-const DIR = 'C:/Users/jonat/Desktop/Projets/Grunnchipelago';
-const ENUMS = 'C:/Users/jonat/Desktop/Archipelago/Jeux/Grunn/analysis/enums.txt';
+const DIR = dirname(dirname(fileURLToPath(import.meta.url))); // racine du depot
+// enums.txt est produit hors depot par le workflow d'extraction (voir design/apworld_design.md).
+// Surchargeable : GRUNN_ENUMS=/chemin/enums.txt node design/build_ids.mjs
+const ENUMS = process.env.GRUNN_ENUMS ?? "";
 
 // ---------- Parsing des enums ----------
 const enumText = readFileSync(ENUMS, 'utf8');

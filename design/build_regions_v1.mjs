@@ -3,9 +3,11 @@
 // (fusion/scission à réviser par Jonath), + interactions de voyage extraites
 // comme candidats de connexions inter-régions. Les adjacences "à pied" ne sont
 // pas dans les données de scène : elles sont listées comme À COMPLÉTER.
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 import { readFileSync, writeFileSync } from 'node:fs';
 
-const DIR = 'C:/Users/jonat/Desktop/Projets/Grunnchipelago';
+const DIR = dirname(dirname(fileURLToPath(import.meta.url))); // racine du depot
 const logic = JSON.parse(readFileSync(`${DIR}/dump/zone_logic.json`, 'utf8'));
 const dump = JSON.parse(readFileSync(`${DIR}/dump/grunnchipelago_dump.json`, 'utf8'));
 

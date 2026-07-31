@@ -115,7 +115,7 @@ namespace Grunnchipelago.Client
         public const string TrapLegacyRegrowMolehills = "Regrow Molehills Trap";// -> Church Reset
 
         // --- Time features (demande Jonath 2026-07-27) ---------------------------------
-        // Frozen scene paths from dump/grunnchipelago_dump_v03.json (interactions of type
+        // Frozen scene paths from dump/grunnchipelago_dump.json (interactions of type
         // Wait1Hour). The three PARK benches skip 3 hours instead of 1; the church bench
         // nearest the church door jumps straight to night.
         public static readonly HashSet<string> ParkBenchPaths = new HashSet<string>

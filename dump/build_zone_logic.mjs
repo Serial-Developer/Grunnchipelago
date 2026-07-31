@@ -1,8 +1,10 @@
 // build_zone_logic.mjs — Génère la table de logique par zone depuis le dump Grunn
 // Sorties : zone_logic.md (lisible) + zone_logic.json (machine)
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 import { readFileSync, writeFileSync } from 'node:fs';
 
-const DIR = 'C:/Users/jonat/Desktop/Projets/Grunnchipelago/dump';
+const DIR = dirname(fileURLToPath(import.meta.url)); // dossier dump/
 const dump = JSON.parse(readFileSync(`${DIR}/grunnchipelago_dump.json`, 'utf8'));
 
 // ---------- Résolution de zone ----------

@@ -75,7 +75,7 @@ class PolaroidChecks(DefaultOnToggle):
 
 class GhostChecks(DefaultOnToggle):
     """
-    If enabled (default), calming the 8 ghosts scattered across the world sends checks.
+    If enabled (default), calming the 7 ghosts scattered across the world sends checks.
     """
 
     display_name = "Ghost Checks"

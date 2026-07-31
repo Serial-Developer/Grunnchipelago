@@ -1,6 +1,7 @@
-# Profil de playtest local (slot "Grunn1") - fichier versionné, les seeds
-# précédentes avaient été générées avec un YAML temporaire perdu.
-# Génération : voir scripts/generate_seed (ou la commande dans le README).
+# Example playtest profile (slot "Grunn1").
+# A blank, fully commented template is available in Grunn_template.yaml.
+# Generate a seed with the Archipelago checkout: python Generate.py
+
 name: Grunn1
 game: Grunn
 description: Playtest Grunnchipelago - all_endings + death_link
