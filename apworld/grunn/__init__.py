@@ -23,6 +23,9 @@ from .options import GrunnOptions, grunn_option_groups
 class GrunnWebWorld(WebWorld):
     theme = "dirt"
     option_groups = grunn_option_groups
+    # docs/<lang>_Grunn.md - the WebHost only renders the English one for now,
+    # but the French page ships with the world and is read straight from the repo.
+    game_info_languages = ["en", "fr"]
 
     setup_en = Tutorial(
         "Multiworld Setup Guide",

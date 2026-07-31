@@ -17,9 +17,6 @@ around the world, the 7 ghosts you can calm, 7 good deeds (returning the severed
 the medal to the snail, completing the school band…), 6 maintenance chores, the endings you
 reach, and — if you turn on `coinsanity` — the 15 gulden placed in the world.
 
-The item pool also holds things that do not exist in vanilla: progressive buffs (movement speed,
-secateur range, cutting rate) and traps.
-
 Items and progress carry across runs: when the week resets, whatever the multiworld has given you
 is handed back automatically.
 
@@ -32,6 +29,41 @@ Set by the `goal` option:
 - **true_ending** (default) — the Good Ending, after restoring the owner's soul with the 3 Soul
   Fragments.
 - **all_endings** — witness all 11 endings (the demo ending is excluded).
+
+## Buffs and traps
+
+Besides the game's own items, the pool holds things Grunn never had.
+
+**Buffs** are progressive: each copy stacks with the previous ones, and they are re-applied
+automatically after a run reset or a reconnection. `buff_count` sets how many copies of each go
+into the pool.
+
+| Buff | Effect per copy |
+|---|---|
+| Move Speed Boost | +15 % movement speed |
+| Cutter Range Boost | +25 % secateur range |
+| Cutting Rate Boost | +25 % swing speed |
+
+**Traps** come in two flavours. The first three are temporary — they last **2 in-game hours** and
+also expire on a day change or a run reset:
+
+| Trap | Effect |
+|---|---|
+| Speed Trap | Halves your movement speed |
+| Size Trap | Shrinks you down |
+| Inverted Controls Trap | Inverts both the camera and your movement |
+
+The last five hit once, and hurt in ways that outlive their instant:
+
+| Trap | Effect |
+|---|---|
+| Garden Reset Trap | Wipes the Start Garden back to 0 % — every job to do again |
+| Church Reset Trap | Same, for the church grounds |
+| Park Reset Trap | Same, for the park |
+| Night Trap | Throws the clock to 03:00, inside the Darkness window — being outside then is a death ending |
+| Sacred Flower Trap | Cuts 4 graveyard flowers for you. The fifth triggers the Sacred Flowers ending, so you end up one careless cut away from dying — or dead on the spot if you had already cut one |
+
+`trap_percentage` decides how much of the filler is replaced by traps.
 
 ## Options worth knowing
 
