@@ -649,44 +649,6 @@ namespace Grunnchipelago.Client
         }
     }
 
-    /// <summary>GameManager.ToGameState (GameManager.cs:3422). Round 2 request: during an
-    /// ending NPC dialogue (Owner / OwnerSaved talking), Escape SKIPS the dialogue instead
-    /// of opening the pause menu - we fast-forward the prompt chain (the NPC's own
-    /// HandleTalking then runs EndConversation, preserving its side effects such as the
-    /// AtticKey grant) and swallow the pause. Outside dialogues, Escape pauses as usual.</summary>
-    [HarmonyPatch(typeof(GameManager), nameof(GameManager.ToGameState))]
-    public static class EscSkipsEndingDialoguePatch
-    {
-        private static bool Prefix(GameManager.GameState _to)
-        {
-            if (_to != GameManager.GameState.Paused) return true;
-            ApClient ap = Plugin.Ap;
-            if (ap == null || !ap.Connected) return true;
-
-            bool skipped = false;
-            Owner owner = GameManager.owner;
-            if (owner != null && owner.curState == Owner.State.Talk)
-            {
-                owner.curPromptIndex = owner.curPromptIndexMax;
-                owner.waitingForInput = false;
-                skipped = true;
-            }
-            OwnerSaved saved = GameManager.ownerSaved;
-            if (saved != null && saved.curState == OwnerSaved.State.Talk)
-            {
-                saved.curPromptIndex = saved.curPromptIndexMax;
-                saved.waitingForInput = false;
-                skipped = true;
-            }
-            if (skipped)
-            {
-                Plugin.Log?.LogInfo("[Grunnchipelago] Ending dialogue skipped (ESC).");
-                return false;   // Escape consumed: no pause menu
-            }
-            return true;
-        }
-    }
-
     // ---------- Helpers ----------
 
     /// <summary>GameManager.HandleNightmare (private, GameManager.cs:1454) zeroes the
@@ -789,6 +751,18 @@ namespace Grunnchipelago.Client
         // Third gift, continuing the same diagonal away from the rose bed (z < -66).
         private static readonly Vector3 StrangeKeyPosition = new Vector3(-36.0f, 10.35f, -68.4f);
 
+        /// <summary>Destroy the gifts of the PREVIOUS multiworld. They are plain clones we
+        /// spawned ourselves, so nothing else cleans them up - and they were still standing
+        /// by the rose sign after switching rooms [J 2026-08-01]. Main thread only.</summary>
+        public static void ResetForNewSession()
+        {
+            foreach (GameObject instance in new[] { boneInstance, compassInstance, strangeKeyInstance })
+                if (instance != null) Object.Destroy(instance);
+            boneInstance = null;
+            compassInstance = null;
+            strangeKeyInstance = null;
+        }
+
         public static void EnsureSpawned(ApClient ap)
         {
             if (GameManager.instance == null || GameManager.allItemPickups == null
@@ -873,23 +847,41 @@ namespace Grunnchipelago.Client
     /// only re-arm when the door lost our key requirement (world reset rebuilds doors).</summary>
     internal static class HutLock
     {
-        /// <summary>Called every frame while connected; cheap (field checks only). Arms the
-        /// lock once per world (detected by the missing key requirement); a legitimate
-        /// in-run unlock (key used, locked=false but requirement still ours) is left open.</summary>
+        private static bool reportedLock;
+
+        /// <summary>Called every frame while connected; cheap (field checks only).
+        ///
+        /// The first version armed the lock ONCE and then bailed out as soon as our key
+        /// requirement was present, treating that as proof the door was still locked. It is
+        /// not: Door.ResetState does `locked = lockedOriginal` - vanilla, i.e. UNLOCKED for
+        /// the hut - and never touches unlockItemNeeded (Door.cs, ResetState). Every run
+        /// reset, world reset or new day therefore left the door open while our requirement
+        /// sat there unenforced, and the guard read that requirement and did nothing
+        /// [J 2026-08-01: "j'ai pu ouvrir la porte sans la cle"].
+        ///
+        /// The condition now reads the only thing that actually matters: does the player own
+        /// the key. Without it, the door stays locked - whatever reset just ran. With it,
+        /// vanilla takes over and behaves exactly as any locked door does.</summary>
         public static void Tick(ApClient ap)
         {
             if (!ap.LockPlayerHut) return;
             Door door = GameManager.playerSchuurDoor;   // GameManager.cs:390
             if (door == null) return;
 
-            bool hasOurKey = door.unlockItemNeeded != null
+            bool ours = door.unlockItemNeeded != null
                 && door.unlockItemNeeded.Count > 0
                 && door.unlockItemNeeded[0] == KeyItem.AbandonedKey;
-            if (hasOurKey) return;
+            if (!ours) door.unlockItemNeeded = new List<KeyItem> { KeyItem.AbandonedKey };
 
+            if (SaveManager.ObtainedKeyItem(KeyItem.AbandonedKey)) return;   // theirs to open
+
+            if (door.locked) return;
             door.locked = true;
-            door.unlockItemNeeded = new List<KeyItem> { KeyItem.AbandonedKey };
-            Plugin.Log?.LogInfo("[Grunnchipelago] Player hut locked (AbandonedKey required).");
+            if (!reportedLock)
+            {
+                reportedLock = true;
+                Plugin.Log?.LogInfo("[Grunnchipelago] Player hut locked (AbandonedKey required).");
+            }
         }
 
         /// <summary>Re-arm after each run reset (vanilla locks re-lock every run).</summary>
@@ -903,6 +895,85 @@ namespace Grunnchipelago.Client
             if (door.unlockItemNeeded == null || door.unlockItemNeeded.Count == 0
                 || door.unlockItemNeeded[0] != KeyItem.AbandonedKey)
                 door.unlockItemNeeded = new List<KeyItem> { KeyItem.AbandonedKey };
+        }
+    }
+
+    /// <summary>The world reset armed by a profile switch is carried out here: this is the
+    /// route the game takes when entering a save, and everything is loaded by now
+    /// (GameManager.ToGame -> LoadWorldFromSave).</summary>
+    [HarmonyPatch(typeof(GameManager), nameof(GameManager.LoadWorldFromSave))]
+    public static class WorldResetOnLoadPatch
+    {
+        private static void Postfix()
+        {
+            if (Plugin.Ap == null || !Plugin.Ap.Connected) return;
+            WorldState.ResetWorldIfPending();
+        }
+    }
+
+    /// <summary>lock_player_hut, second half: the DOOR is not the only way in.
+    ///
+    /// Interaction.CheckIfCloseEnough is pure PROXIMITY - distance squared under 30, i.e.
+    /// about 5,5 m, with no line-of-sight test whatsoever (Interaction.cs:889-905). The hut
+    /// walls are thin, so standing outside puts the player well inside that radius and the
+    /// prompt fires straight through the wall [J 2026-08-01, capture: the watering can taken
+    /// from outside]. Our swapped models made it obvious - a model bigger than the one it
+    /// replaces pokes out and gives something to aim at - but the hole is in the reach test,
+    /// not in the model: shrinking the visual would only hide the problem again.
+    ///
+    /// A locked hut must therefore lock its CONTENTS too, or lock_player_hut is worth
+    /// nothing: its whole point is that the AbandonedKey gates what is inside.
+    ///
+    /// Scope: only while the door is actually locked. Open it with the key and everything
+    /// inside behaves exactly as vanilla.</summary>
+    internal static class HutContentsLock
+    {
+        private const string HutContainer = "Hide_PlayerSchuur";
+
+        // instanceID -> is this interaction inside the hut. Walking the parents every frame
+        // for every interaction in the world would not be free.
+        private static readonly Dictionary<int, bool> insideHut = new Dictionary<int, bool>();
+
+        public static bool Blocks(Interaction interaction)
+        {
+            ApClient ap = Plugin.Ap;
+            if (ap == null || !ap.Connected || !ap.LockPlayerHut) return false;
+            Door door = GameManager.playerSchuurDoor;
+            if (door == null || !door.locked) return false;
+            return interaction != null && IsInsideHut(interaction);
+        }
+
+        private static bool IsInsideHut(Interaction interaction)
+        {
+            int key = interaction.GetInstanceID();
+            if (insideHut.TryGetValue(key, out bool inside)) return inside;
+
+            inside = false;
+            for (Transform t = interaction.transform; t != null; t = t.parent)
+                if (t.name.StartsWith(HutContainer, System.StringComparison.Ordinal)) { inside = true; break; }
+            insideHut[key] = inside;
+            return inside;
+        }
+    }
+
+    /// <summary>Interaction.Prevent (Interaction.cs:907) - "true" means the interaction is
+    /// refused, and UpdateNormal turns its collider off with it.</summary>
+    [HarmonyPatch(typeof(Interaction), nameof(Interaction.Prevent))]
+    public static class HutContentsPreventPatch
+    {
+        private static void Postfix(Interaction __instance, ref bool __result)
+        {
+            if (!__result && HutContentsLock.Blocks(__instance)) __result = true;
+        }
+    }
+
+    /// <summary>Same for the other branch UpdateNormal can take (preventAndCheck).</summary>
+    [HarmonyPatch(typeof(Interaction), nameof(Interaction.PreventAndCheck))]
+    public static class HutContentsPreventAndCheckPatch
+    {
+        private static void Postfix(Interaction __instance, ref bool __result)
+        {
+            if (!__result && HutContentsLock.Blocks(__instance)) __result = true;
         }
     }
 

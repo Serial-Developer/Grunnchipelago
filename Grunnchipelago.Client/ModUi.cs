@@ -47,15 +47,44 @@ namespace Grunnchipelago.Client
             new KeyValuePair<EndingType, PolaroidType>(EndingType.Picnic, PolaroidType.EndingPicnic),
         };
 
+        /// <summary>How long the title has to hold before the credit is drawn. The real
+        /// menu stays up indefinitely, so this is invisible there.</summary>
+        private const float CreditSettleSeconds = 0.35f;
+
+        private static float titleUpSince = -1f;
+
+        /// <summary>True once the title has been continuously up for CreditSettleSeconds.</summary>
+        private static bool SettledOnTitle(bool titleUp)
+        {
+            float now = Time.realtimeSinceStartup;
+            if (!titleUp)
+            {
+                titleUpSince = -1f;
+                return false;
+            }
+            if (titleUpSince < 0f) titleUpSince = now;
+            return now - titleUpSince >= CreditSettleSeconds;
+        }
+
         public static void Tick(ApClient ap, bool statsShowAllLines)
         {
             UIManager ui = UIManager.instance;
             if (ui == null || ui.titleText == null) return;
             if (canvas == null && !CreateUi(ui)) return;
 
-            // Mod credit: title screen only, following the vanilla title's fade.
-            bool showCredit = GameManager.CurGameState == GameManager.GameState.Title
-                              && ui.titleText.enabled && ui.titleText.gameObject.activeInHierarchy;
+            // Mod credit: title screen only. Two conditions on top of "the title is up":
+            //
+            //  - the game's OWN rule for its title UI, showUI = !BlackScreen &&
+            //    !SwitchingState (UIManager.cs:1543-1551). We never applied it, and our
+            //    canvas sits at sortingOrder 5000 - above the splash and the loading screen -
+            //    so a title state the game was busy covering still painted our credit;
+            //  - a short settle delay. The flash is over in a few frames [J 2026-08-01:
+            //    "flash tres rapidement entre l'ecran sokpop et le chargement"], so anything
+            //    that brief is a transition artefact, not a title screen.
+            bool titleUp = GameManager.CurGameState == GameManager.GameState.Title
+                           && ui.titleText.enabled && ui.titleText.gameObject.activeInHierarchy
+                           && !GameManager.BlackScreen && !GameManager.SwitchingState;
+            bool showCredit = SettledOnTitle(titleUp);
             if (titleCredit.enabled != showCredit) titleCredit.enabled = showCredit;
 
             // Stats panel: PAUSE menu only (Tab removed on request), while connected.
@@ -65,7 +94,7 @@ namespace Grunnchipelago.Client
             if (statsPanel.enabled != showStats) statsPanel.enabled = showStats;
             if (showStats) statsPanel.SetText(Effects.BuildStatsText(statsShowAllLines));
 
-            // "ESC : skip" during ending NPC dialogues (skip = EscSkipsEndingDialoguePatch).
+            // "ESC : skip" during the post-death orb sequence (skip = HandleSkipOrbDialogue).
             bool showHint = Plugin.EndingDialogueActive;
             if (escHint.enabled != showHint) escHint.enabled = showHint;
 

@@ -104,6 +104,16 @@ namespace Grunnchipelago.Client
         /// (GrabbedItem event, once the world is loaded).</summary>
         public bool NeedsVisibilityRefresh { get; set; }
 
+        /// <summary>Raised when the connection targets a DIFFERENT multiworld than the last
+        /// one. Drained by Plugin.Update on the MAIN THREAD (it destroys GameObjects): the
+        /// world objects we spawned or swapped for the previous room have to go, or they
+        /// leak across rooms [J 2026-08-01: gifts still standing, and checks of room A still
+        /// marked sent, which left the BridgeKey unobtainable in room B].</summary>
+        public bool NeedsSessionReset { get; set; }
+
+        /// <summary>ProfileKey of the last room we connected to, to spot a real change.</summary>
+        private string lastProfileKey = "";
+
         /// <summary>Set by the TriggerNewRun patch: the full inventory re-injection is
         /// DEFERRED to the next safe state instead of running during the run-reset /
         /// scripted bus intro (playtest round 2 freeze bug).</summary>
@@ -162,10 +172,18 @@ namespace Grunnchipelago.Client
 
         // ---------- Connection ----------
 
+        /// <summary>Why the last attempt failed, for the connection panel. Empty while an
+        /// attempt is in flight or after a success: the UI would otherwise have no way to
+        /// tell "still trying" from "wrong slot", since Connect runs off-thread and only
+        /// ever wrote to the log [J 2026-08-01: bad credentials left "Connexion..." up for
+        /// good].</summary>
+        public volatile string LastConnectError = "";
+
         public void Connect(string host, int port, string slot, string password)
         {
             if (connecting || Connected) return;
             connecting = true;
+            LastConnectError = "";
             slotName = slot;
             log.LogInfo($"[Grunnchipelago] Connecting to {host}:{port} as '{slot}'...");
 
@@ -176,6 +194,8 @@ namespace Grunnchipelago.Client
                     session = ArchipelagoSessionFactory.CreateSession(host, port);
                     session.Items.ItemReceived += OnItemReceived;
                     session.Socket.SocketClosed += OnSocketClosed;
+                    // Server chat / item / hint traffic, forwarded to the in-game console.
+                    session.MessageLog.OnMessageReceived += OnServerMessage;
 
                     LoginResult result = session.TryConnectAndLogin(
                         Game, slot, ItemsHandlingFlags.AllItems,
@@ -184,6 +204,10 @@ namespace Grunnchipelago.Client
                     if (result is LoginSuccessful success)
                     {
                         ReadSlotData(success.SlotData);
+                        // A new room means everything cached for the previous one is wrong.
+                        // sentLocations in particular ONLY ever grew: seeded from room A it
+                        // kept hiding A's pickups in room B.
+                        ResetSessionState(success);
                         SeedSentLocations();
                         SetupDeathLink();
                         LoadSeenItemCount();
@@ -198,11 +222,16 @@ namespace Grunnchipelago.Client
                     else
                     {
                         var failure = (LoginFailure)result;
-                        log.LogError("[Grunnchipelago] Login failed: " + string.Join("; ", failure.Errors));
+                        string reason = failure.Errors != null && failure.Errors.Length > 0
+                            ? string.Join("; ", failure.Errors)
+                            : "refus du serveur";
+                        LastConnectError = reason;
+                        log.LogError("[Grunnchipelago] Login failed: " + reason);
                     }
                 }
                 catch (Exception e)
                 {
+                    LastConnectError = e.Message;
                     log.LogError("[Grunnchipelago] Connection error: " + e.Message);
                 }
                 finally
@@ -210,6 +239,28 @@ namespace Grunnchipelago.Client
                     connecting = false;
                 }
             });
+        }
+
+        /// <summary>Every line the server logs (chat, item sends, hints, command results),
+        /// handed to the in-game console. Runs on the socket thread, so the console buffer
+        /// does its own locking.</summary>
+        private void OnServerMessage(Archipelago.MultiClient.Net.MessageLog.Messages.LogMessage message)
+        {
+            try { ConsoleUi.Push(message.ToString()); }
+            catch (Exception) { }
+        }
+
+        /// <summary>Send a line to the server exactly as the text client would: plain text
+        /// is chat, a leading "!" is a server command (!hint, !missing...).</summary>
+        public bool Say(string text)
+        {
+            if (!Connected || session == null || string.IsNullOrWhiteSpace(text)) return false;
+            try { session.Say(text); return true; }
+            catch (Exception e)
+            {
+                log.LogError("[Grunnchipelago] Say failed: " + e.Message);
+                return false;
+            }
         }
 
         private void ReadSlotData(Dictionary<string, object> data)
@@ -250,6 +301,30 @@ namespace Grunnchipelago.Client
             }
         }
 
+        /// <summary>Drop everything that belonged to the previous room. Pure data here;
+        /// anything touching GameObjects is deferred to the main thread via
+        /// NeedsSessionReset, because this runs on a background task.</summary>
+        private void ResetSessionState(LoginSuccessful success)
+        {
+            string key = success.SlotData != null ? session.RoomState.Seed + "_" + slotName : "";
+            bool differentRoom = key != lastProfileKey;
+            lastProfileKey = key;
+
+            lock (sentLocations) sentLocations.Clear();
+            lock (scouted) scouted.Clear();
+            ScoutReady = false;
+            endingsSeen.Clear();
+            while (pending.TryDequeue(out _)) { }
+            // The gift flags are latched by OnItemReceived and were never cleared: the
+            // compass earned in room A re-spawned by the rose sign in room B, right after
+            // GiftPickups had destroyed the previous instance [J 2026-08-01].
+            BoneOwnedFromAp = false;
+            CompassOwnedFromAp = false;
+            StrangeKeyOwnedFromAp = false;
+
+            if (differentRoom) NeedsSessionReset = true;
+        }
+
         private void SeedSentLocations()
         {
             try
@@ -278,17 +353,58 @@ namespace Grunnchipelago.Client
         /// consumes it once the save is available and resets the shortcut state.</summary>
         public bool NeedsShortcutReset { get; set; }
 
+        /// <summary>Seen-item counters are stored PER SEED:SLOT, not as a single entry.
+        ///
+        /// A single entry used to be overwritten on every connect, which broke the
+        /// two-multiworld case Jonath asked about [2026-08-01]: play A, switch to B, come
+        /// back to A - and A's counter was gone, so the server's replay looked brand new.
+        /// Every item of A fired again: traps re-triggered, popups by the dozen, and
+        /// NeedsShortcutReset wiped shortcuts that had been legitimately earned. The save
+        /// FILES were always fine (SaveProfile keys them by seed:slot too); it was only this
+        /// counter that could not remember more than one room.
+        ///
+        /// Format: "seed:slot=count|seed:slot=count|..." - flat, human-readable, and it
+        /// degrades to "ignore what cannot be parsed" rather than throwing.</summary>
+        private const char SeenEntrySeparator = '|';
+
+        private string SeenKey => session.RoomState.Seed + ":" + slotName;
+
+        private Dictionary<string, int> ParseSeenState()
+        {
+            var map = new Dictionary<string, int>();
+            string stored = "";
+            try { stored = LoadSeenState?.Invoke() ?? ""; }
+            catch (Exception) { return map; }
+            if (string.IsNullOrEmpty(stored)) return map;
+
+            foreach (string entry in stored.Split(SeenEntrySeparator))
+            {
+                if (string.IsNullOrEmpty(entry)) continue;
+                int eq = entry.LastIndexOf('=');
+                // Legacy single-entry format "seed:slot:count" - read it once so an
+                // existing session is not treated as brand new after the update.
+                if (eq < 0)
+                {
+                    int sep = entry.LastIndexOf(':');
+                    if (sep > 0 && int.TryParse(entry.Substring(sep + 1), out int legacy))
+                        map[entry.Substring(0, sep)] = legacy;
+                    continue;
+                }
+                if (int.TryParse(entry.Substring(eq + 1), out int count))
+                    map[entry.Substring(0, eq)] = count;
+            }
+            return map;
+        }
+
         private void LoadSeenItemCount()
         {
             seenItemCount = 0;
             try
             {
-                string stored = LoadSeenState?.Invoke() ?? "";
-                string key = session.RoomState.Seed + ":" + slotName;
-                int sep = stored.LastIndexOf(':');
-                if (sep > 0 && stored.Substring(0, sep) == key)
+                var map = ParseSeenState();
+                if (map.TryGetValue(SeenKey, out int stored))
                 {
-                    seenItemCount = int.Parse(stored.Substring(sep + 1));
+                    seenItemCount = stored;
                 }
                 else
                 {
@@ -298,12 +414,19 @@ namespace Grunnchipelago.Client
                     PersistSeenItemCount();
                 }
             }
-            catch (Exception) { seenItemCount = 0; }
+            catch (Exception) { }
         }
 
         private void PersistSeenItemCount()
         {
-            try { SaveSeenState?.Invoke(session.RoomState.Seed + ":" + slotName + ":" + seenItemCount); }
+            try
+            {
+                var map = ParseSeenState();
+                map[SeenKey] = seenItemCount;
+                var parts = new List<string>(map.Count);
+                foreach (var pair in map) parts.Add(pair.Key + "=" + pair.Value);
+                SaveSeenState?.Invoke(string.Join(SeenEntrySeparator.ToString(), parts.ToArray()));
+            }
             catch (Exception) { }
         }
 
@@ -937,7 +1060,20 @@ namespace Grunnchipelago.Client
 
         public void Disconnect()
         {
-            try { session?.Socket?.DisconnectAsync(); }
+            try
+            {
+                // Detach FIRST. The socket closes asynchronously, so without this the old
+                // session's SocketClosed could land AFTER a new connection is established
+                // and set Connected back to false - the mod would believe it is offline
+                // while it is not. Same for the message log, which would otherwise keep
+                // pushing the previous room's traffic into the console.
+                if (session != null)
+                {
+                    if (session.Socket != null) session.Socket.SocketClosed -= OnSocketClosed;
+                    if (session.MessageLog != null) session.MessageLog.OnMessageReceived -= OnServerMessage;
+                    session.Socket?.DisconnectAsync();
+                }
+            }
             catch (Exception) { }
             Connected = false;
         }

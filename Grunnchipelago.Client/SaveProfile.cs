@@ -77,9 +77,18 @@ namespace Grunnchipelago.Client
                 activePath = path;
                 ActiveKey = key;
 
-                Reload();
-
+                // BEFORE Reload: it creates the file when it is missing, so asking afterwards
+                // always answered "already there" and the label lied about which case we
+                // were in - a detail, but one we read while diagnosing.
                 bool existed = File.Exists(path + SaveManager.curSlotIndex + ".txt");
+
+                Reload();
+                // Everything the SCENE cached from the old save file, re-read from the new
+                // one - see WorldState for the full list and the rule on where a new leak
+                // belongs [J 2026-08-01].
+                WorldState.ReapplyFromSave();
+                RefreshTitleScreen();
+
                 Plugin.Log?.LogInfo($"[Grunnchipelago] Profil de sauvegarde : {file}"
                                     + (existed ? " (repris)." : " (nouveau)."));
                 Plugin.Ap?.QueuePopup(existed
@@ -96,6 +105,34 @@ namespace Grunnchipelago.Client
                 activePath = null;
                 ActiveKey = null;
                 disabled = true;
+            }
+        }
+
+        /// <summary>Make the title screen agree with the save we just switched to.
+        ///
+        /// Loading the file is not enough: the menu is BUILT from that data when the game
+        /// enters the title screen, which happened before our swap. UIManager.UpdateMenuOptions
+        /// picks "Continue" or "Start" from progressDataCheck.startedRun (UIManager.cs:1172),
+        /// and TimeController.SetCurrentTimeToTitleHour sets the scene's clock. Leaving both
+        /// stale let the player CONTINUE a run belonging to the other save - dropped in the
+        /// park with no items - and eventually broke the menu outright
+        /// [J 2026-08-01: "l'UI du menu principal a disparu", the hut lit as in save A].
+        ///
+        /// So the game's own title-entry work is replayed: reset the derived values, rebuild
+        /// the menu, re-read the title clock.</summary>
+        private static void RefreshTitleScreen()
+        {
+            try
+            {
+                GameManager.ResetValuesForTitleScreen();
+                UIManager.UpdateMenuOptions();
+                if (TimeController.instance != null)
+                    TimeController.instance.SetCurrentTimeToTitleHour();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log?.LogWarning(
+                    "[Grunnchipelago] Rafraichissement du menu apres bascule echoue : " + e.Message);
             }
         }
 

@@ -60,6 +60,18 @@ namespace Grunnchipelago.Client
         private static Vector3 origScale;
         private static bool captured;
 
+        /// <summary>Drop the timed traps of the PREVIOUS multiworld. They expire on a day and
+        /// hour recorded in the other save, which means nothing in the new one - the trap
+        /// would either never lift or lift at once [J 2026-08-01]. Called from
+        /// WorldState.ReapplyFromSave; the multipliers themselves follow the item counts,
+        /// which ApClient already clears.</summary>
+        public static void ResetForNewSession()
+        {
+            speedTrap = default(TimedTrap);
+            sizeTrap = default(TimedTrap);
+            invertedTrap = default(TimedTrap);
+        }
+
         /// <summary>Apply a received trap by item name. Runs on the main thread, in-game
         /// (the pending-items queue guarantees that).</summary>
         public static void ApplyTrap(string name)
@@ -271,6 +283,15 @@ namespace Grunnchipelago.Client
                     continue;
                 }
                 SetCounter(pd.areaProgress[index], element, 0);
+                // ...and the MAX with it. RestoreObjects below calls ResetState on every
+                // object, and ResetState -> CheckForLoadOperation -> StoreIndex raises the
+                // max by one EACH TIME (TrimBall.cs:73-78, same shape on the others).
+                // Vanilla only ever does that right after ResetRunProgress has zeroed the
+                // area (TriggerNewRun: ResetRunProgress THEN ResetWorld, GameManager.cs:3760
+                // and 3776) - we were restoring without the reset, so every trap doubled the
+                // max and the zone could never reach 100 % again. Zero it here and let the
+                // ResetState pass rebuild it exactly, as the game does.
+                SetMax(pd.areaProgress[index], element, 0);
 
                 // Drop the stored positions that fall inside that zone's macro bounds
                 // (PolygonTommie fields on GameManager, as used by the scene dumper).
@@ -486,6 +507,18 @@ namespace Grunnchipelago.Client
                 case Element.Hedge: ap.trimBallCur = value; break;
                 case Element.Trash: ap.troepjeCur = value; break;
                 case Element.Molehills: ap.molehillCur = value; break;
+            }
+        }
+
+        private static void SetMax(SaveManager.AreaProgress ap, Element e, int value)
+        {
+            switch (e)
+            {
+                case Element.Grass: ap.grassCutMax = value; break;
+                case Element.Flowers: ap.flowerMax = value; break;
+                case Element.Hedge: ap.trimBallMax = value; break;
+                case Element.Trash: ap.troepjeMax = value; break;
+                case Element.Molehills: ap.molehillMax = value; break;
             }
         }
 

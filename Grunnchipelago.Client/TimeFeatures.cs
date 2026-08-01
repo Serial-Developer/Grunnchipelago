@@ -61,21 +61,54 @@ namespace Grunnchipelago.Client
             pendingWait = WaitKind.Vanilla;
             if (interaction == null || interaction.interactionType != InteractionType.Wait1Hour) return;
 
+            // Match on the TAIL of the path ("bench0 (4)/bench_waitInteraction0"), not on the
+            // full one. The dump captures the hierarchy as it stands at dump time, but the
+            // game streams these props in and out of Hide_* containers, so the prefix is not
+            // dependable - while the bench object plus its interaction child is unique.
             string path = ScenePaths.Of(interaction.transform);
-            if (GameIds.ParkBenchPaths.Contains(path)) pendingWait = WaitKind.ParkBench;
-            else if (path == GameIds.ChurchNightBenchPath) pendingWait = WaitKind.NightBench;
+            if (EndsWithAny(path, GameIds.ParkBenchPaths)) pendingWait = WaitKind.ParkBench;
+            else if (EndsWith(path, GameIds.ChurchNightBenchPath)) pendingWait = WaitKind.NightBench;
+
+            // The benches went silent once already [J 2026-08-01: "la gouttiere fonctionne
+            // mais pas les bancs"], and a mismatched path is invisible without this: log the
+            // REAL path every time, so an unrecognised bench names itself.
         }
 
-        /// <summary>Runs right after a vanilla Wait1Hour. <paramref name="minutesBefore"/> is
+        /// <summary>Tail comparison on whole path segments, so "…/bench0 (4)/x" can never be
+        /// matched by "…/otherbench0 (4)/x".</summary>
+        private static bool EndsWith(string path, string tail)
+        {
+            if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(tail)) return false;
+            if (path == tail) return true;
+            return path.EndsWith("/" + tail, StringComparison.Ordinal)
+                   || tail.EndsWith("/" + path, StringComparison.Ordinal);
+        }
+
+        private static bool EndsWithAny(string path, System.Collections.Generic.IEnumerable<string> tails)
+        {
+            foreach (string tail in tails)
+                if (EndsWith(path, tail)) return true;
+            return false;
+        }
+
+        /// <summary>Runs right after a vanilla Wait1Hour. <paramref name="ticksBefore"/> is
         /// the clock before the call: if it did not move, vanilla refused the wait
-        /// (CanWait1Hour: night, final day, non-euclidian space...) and we refuse too.</summary>
-        public static void AfterWait(int minutesBefore)
+        /// (CanWait1Hour: night, final day, non-euclidian space...) and we refuse too.
+        ///
+        /// It compares TimeController.currentTime, NOT currentHour/currentMinute. Those two
+        /// are CACHES, refreshed only by UpdateCachedValues() from UpdateNormal()
+        /// (TimeController.cs:350/390) - so right after Skip1Hour they still hold the OLD
+        /// hour, one frame behind. Testing them made this method always conclude "vanilla
+        /// refused" and return, which is why the benches did nothing at all while the
+        /// rainpipe - which never runs this check - worked fine
+        /// [J 2026-08-01: "la gouttiere fonctionne mais pas les bancs"].</summary>
+        public static void AfterWait(long ticksBefore)
         {
             WaitKind kind = pendingWait;
             pendingWait = WaitKind.Vanilla;
             if (kind == WaitKind.Vanilla) return;
             if (TimeController.instance == null) return;
-            if (CurrentMinutes() == minutesBefore) return;   // vanilla refused it
+            if (TimeController.currentTime.Ticks == ticksBefore) return;   // vanilla refused it
 
             if (kind == WaitKind.ParkBench)
             {
@@ -160,8 +193,10 @@ namespace Grunnchipelago.Client
             catch (Exception) { }
         }
 
-        /// <summary>Clock as minutes-of-day, used to detect that time actually moved.</summary>
-        private static int CurrentMinutes() => TimeController.currentHour * 60 + TimeController.currentMinute;
+        /// <summary>Clock as minutes-of-day, read from currentTime rather than the cached
+        /// currentHour/currentMinute, which lag one frame behind (see AfterWait).</summary>
+        private static int CurrentMinutes() =>
+            TimeController.currentTime.Hour * 60 + TimeController.currentTime.Minute;
 
         /// <summary>Same situations as a vanilla bench wait, MINUS the final-day veto.
         ///
@@ -176,7 +211,10 @@ namespace Grunnchipelago.Client
             if (GameManager.curSpaceMode == GameManager.SpaceMode.NonEuclidian) return false;
             if (GameManager.BlackScreen || GameManager.SwitchingState) return false;
             if (GameManager.CurGameState != GameManager.GameState.Game) return false;
-            if (TimeController.currentHour <= 3 || TimeController.currentHour >= 24) return false;
+            // currentTime, not the cached currentHour: right after a jump the cache still
+            // holds the previous hour (see AfterWait), which would misjudge this guard.
+            int hour = TimeController.currentTime.Hour;
+            if (hour <= 3 || hour >= 24) return false;
             return true;
         }
     }
@@ -198,12 +236,9 @@ namespace Grunnchipelago.Client
     [HarmonyPatch(typeof(GameManager), nameof(GameManager.Wait1Hour))]
     public static class Wait1HourPatch
     {
-        private static void Prefix(out int __state)
-        {
-            __state = TimeController.currentHour * 60 + TimeController.currentMinute;
-        }
+        private static void Prefix(out long __state) => __state = TimeController.currentTime.Ticks;
 
-        private static void Postfix(int __state) => TimeFeatures.AfterWait(__state);
+        private static void Postfix(long __state) => TimeFeatures.AfterWait(__state);
     }
 
     /// <summary>The garden rainpipe (Main/Triggers/Rainpipe, the only one in the dump):

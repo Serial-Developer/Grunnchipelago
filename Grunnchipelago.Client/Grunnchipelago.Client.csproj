@@ -84,6 +84,11 @@
       <HintPath>$(Managed)\UnityEngine.UIModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <!-- IMGUI (OnGUI / GUILayout): the title-screen connection panel, see ConnectUi. -->
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(Managed)\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="UnityEngine.TextRenderingModule">
       <HintPath>$(Managed)\UnityEngine.TextRenderingModule.dll</HintPath>
       <Private>false</Private>

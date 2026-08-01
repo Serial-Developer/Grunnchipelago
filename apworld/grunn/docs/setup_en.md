@@ -29,27 +29,70 @@ the folder holding `Grunn.exe` and that you took the **x64** build.
 
 ## Connecting to a multiworld
 
-Open `BepInEx/config/grunnchipelago.client.cfg` and fill in the `[Connection]` section:
+Launch the game. On the **title screen**, a small **ARCHIPELAGO** panel sits on the right,
+just above the version credit. The mouse cursor is released there — on the title screen only
+— so the panel can be clicked; in game Grunn stays entirely on the keyboard, untouched.
 
-```ini
-[Connection]
-Enabled = true
-Host = archipelago.gg      ## or localhost for a local server
-Port = 38281               ## the port given by the room
-Slot = YourSlotName        ## must match the "name" in your YAML
-Password =                 ## leave empty if the room has none
-```
+| Key | Effect |
+|---|---|
+| **Tab** | next field (**Shift+Tab**: previous) |
+| **Up / Down** | move between fields |
+| **Enter** | next field, and **connect** from the last one |
+| **Esc** | drop the keyboard focus |
 
-Save, then launch the game. The mod connects on its own; the main menu title reads
-**GRUNNCHIPELAGO** when it is active. Checks are sent as you play, and received items arrive
-in your inventory.
+The fields:
+
+- **Host** — `archipelago.gg`, or `localhost` for a local server
+- **Port** — the port given by the room
+- **Slot Name** — must match the `name:` field of your YAML, exactly
+- **Password** — leave empty if the room has none
+
+While a field holds the keyboard the menu's own controls are muted, so you can type a slot
+name containing an "E" without confirming the menu behind it.
+
+There is one button, **Connect**. Pressing it while already connected simply leaves the
+current room and joins the new one, so switching multiworlds is a matter of editing the
+fields and clicking again. If the connection fails, the panel says so — with the server's own
+reason when it gives one, otherwise after about ten seconds.
+
+The panel remembers what you type, so the next launch reconnects on its own. The main menu
+title reads **GRUNNCHIPELAGO** when the mod is active. Checks are sent as you play, and
+received items arrive in your inventory.
+
+Connect **from the title screen, before loading a save** — that is when the mod picks the
+save profile matching the multiworld you are joining (see *Saves* below).
+
+If you prefer, the same settings live in `BepInEx/config/grunnchipelago.client.cfg` under
+`[Connection]`; the panel simply reads and writes that file.
 
 `Enabled = false` turns everything off and gives you the vanilla game back — no patch is
 applied at all in that state.
 
+## The in-game console
+
+Press **F1** in game to focus the Archipelago console, in the bottom-right corner. It shows
+everything the server says — items found, hints, chat, command results — and it stays faint
+while unfocused so it never gets in the way.
+
+| Key | Effect |
+|---|---|
+| **F1** | focus / unfocus |
+| **Enter** | send the line |
+| **Page Up / Page Down** | scroll the history |
+| **Home / End** | jump to the top / bottom |
+| **Mouse wheel** | scroll the history |
+
+Focused, it takes the keyboard and the mouse wheel: type a server command (`!hint`,
+`!missing`, …) or plain chat. Your character does not move and your tools do not cycle while
+you type. Escape is left to the game, which opens its pause menu with it.
+
+The view follows the newest line only while you are already at the bottom, so an arriving
+message never yanks the history out from under you mid-read.
+
 ## Options worth knowing
 
-- **QoL**: `SkipEndingDialogues` speeds through the ending NPC dialogues.
+- **QoL**: `SkipEndingDialogues` (on by default) lets Escape end the post-death orb
+  dialogue at once. Nothing else is skipped.
   `StatsShowAllLines` always displays every stat line in the Tab/Pause panel.
 - **Logging**: `VerboseLogs` logs every check, grant and trap. The mod also keeps a
   persistent, timestamped log at
@@ -58,9 +101,23 @@ applied at all in that state.
 
 ## Saves
 
-The mod uses a **dedicated save profile per seed**, named after the seed. Your vanilla save
-is never touched, and two different multiworlds never share progress. Starting a new seed
-therefore always starts from a clean slate.
+The mod keeps a **dedicated save profile per multiworld**, named after the seed and your
+slot:
+
+- **Not connected** — you play on your normal, vanilla save. Untouched, always.
+- **Connected** — the game switches to the profile of that seed and slot. Two different
+  multiworlds never share progress, and joining the same room again picks its profile back up.
+
+The switch only ever happens **on the title screen, before a world is loaded** — which is why
+you should connect there rather than mid-game. Connecting while already playing leaves the
+current save alone until you return to the menu.
+
+You can move between multiworlds without restarting the game: go back to the title screen,
+point the panel at the other room and connect. The world is rebuilt for the save you are
+joining, so nothing carries over from the previous one.
+
+Once switched, the session stays on that profile even if you disconnect. Going back to your
+vanilla save means restarting the game without connecting.
 
 ## Generating a seed
 

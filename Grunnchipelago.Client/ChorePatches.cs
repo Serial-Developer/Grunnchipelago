@@ -131,4 +131,5 @@ namespace Grunnchipelago.Client
                 Chores.Send(GameIds.ChorePottedPlants);
         }
     }
+
 }

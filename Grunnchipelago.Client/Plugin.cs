@@ -33,6 +33,7 @@ namespace Grunnchipelago.Client
         private ConfigEntry<string> cfgSlot;
         private ConfigEntry<string> cfgPassword;
         private ConfigEntry<bool> cfgVerboseLogs;
+        private ConfigEntry<string> cfgModelProbe;
         private ConfigEntry<bool> cfgSkipEndingDialogues;
         private ConfigEntry<bool> cfgStatsShowAllLines;
         private ConfigEntry<string> cfgSeenItems;
@@ -48,14 +49,22 @@ namespace Grunnchipelago.Client
             cfgPassword = Config.Bind("Connection", "Password", "", "Server password (optional).");
             cfgVerboseLogs = Config.Bind("Logging", "VerboseLogs", false,
                 "Log every check/grant/trap (dev). When false, only connection, errors and goal.");
-            cfgSkipEndingDialogues = Config.Bind("QoL", "SkipEndingDialogues", false,
-                "Ending NPC dialogues (Owner / saved Owner) display instantly and advance " +
-                "without the anti-skip delay - hammer Interact to blow through them.");
+            cfgModelProbe = Config.Bind("Debug", "ShowModelProbe", "",
+                "Comma-separated sample models to line up next to the starting bus for "
+                + "inspection, posed exactly as a real check would be. Accepts GoldenGulden, "
+                + "Gulden, Buff, Progression, Useful, Filler, or any KeyItem name "
+                + "(e.g. \"GoldenGulden,Buff,Progression\"). Purely visual, never a check. "
+                + "Empty to disable.");
+            cfgSkipEndingDialogues = Config.Bind("QoL", "SkipEndingDialogues", true,
+                "Escape ends the post-death ORB dialogue at once, instead of being ignored " +
+                "as it is in vanilla. Nothing else is ever skipped: every other NPC keeps " +
+                "its normal pace, and Escape keeps opening the pause menu.");
             cfgStatsShowAllLines = Config.Bind("QoL", "StatsShowAllLines", false,
                 "Stats panel (Tab/Pause): show every stat line. When false, only the " +
                 "stats that differ from their 100 % base are listed.");
             cfgSeenItems = Config.Bind("Progress", "SeenItems", "",
-                "Internal: '<seed>:<slot>:<count>' of already-applied items. Do not edit.");
+                "Internal: 'seed:slot=count|seed:slot=count|...' of already-applied items, "
+                + "one entry per multiworld. Do not edit.");
 
             // Persistent, timestamped mod log (BepInEx overwrites LogOutput.log each boot).
             BepInEx.Logging.Logger.Listeners.Add(new SessionFileLog(
@@ -76,8 +85,38 @@ namespace Grunnchipelago.Client
             new Harmony("grunnchipelago.client").PatchAll();
             Logger.LogInfo("[Grunnchipelago] Client loaded. Connecting when a slot is set.");
 
+            // Title-screen connection panel: it reads and writes the SAME config entries as
+            // the file, so what the player types is remembered and the auto-reconnect loop
+            // (Update, below) picks the new values up on its own.
+            ConnectUi.Load = () => (cfgHost.Value, cfgPort.Value, cfgSlot.Value, cfgPassword.Value);
+            ConnectUi.Save = (host, port, slot, password) =>
+            {
+                cfgHost.Value = host;
+                cfgPort.Value = port;
+                cfgSlot.Value = slot;
+                cfgPassword.Value = password;
+                Config.Save();
+            };
+
             if (!string.IsNullOrEmpty(cfgSlot.Value))
                 Ap.Connect(cfgHost.Value, cfgPort.Value, cfgSlot.Value, cfgPassword.Value);
+        }
+
+        private void OnGUI()
+        {
+            if (Ap == null) return;
+            ConnectUi.Draw();    // title screen: connection panel
+            ConsoleUi.Draw();    // in game: Archipelago console
+        }
+
+        /// <summary>Cursor state and the console's focus key both have to be handled outside
+        /// the IMGUI event stream: one must apply every frame, the other must work while the
+        /// console is unfocused.</summary>
+        private void TickOverlays()
+        {
+            if (Ap == null) return;
+            ConnectUi.Tick();
+            ConsoleUi.Tick();
         }
 
         // DeathLink sequence: <0 = idle, otherwise elapsed seconds.
@@ -90,13 +129,25 @@ namespace Grunnchipelago.Client
         /// to force the nightmare blend factor.</summary>
         public static bool JumpscareActive { get; private set; }
 
-        /// <summary>True while an ending NPC dialogue runs (drives the "ESC : skip" hint;
-        /// the skip itself is EscSkipsEndingDialoguePatch).</summary>
+        /// <summary>True during the post-death orb sequence (drives the "ESC : skip" hint;
+        /// the skip itself is HandleSkipOrbDialogue).</summary>
         public static bool EndingDialogueActive { get; private set; }
 
         private void Update()
         {
             if (Ap == null) return;
+            // Overlays: title-screen connection panel (cursor) and in-game console (F1).
+            TickOverlays();
+            // Switched to a DIFFERENT multiworld: wipe what belonged to the previous one.
+            // Done here because it destroys GameObjects - the login runs off-thread.
+            if (Ap.NeedsSessionReset)
+            {
+                Ap.NeedsSessionReset = false;
+                ModelSwap.ResetForNewSession();
+                GiftPickups.ResetForNewSession();
+                Ap.NeedsVisibilityRefresh = true;   // recompute pickups from the NEW check state
+                Logger.LogInfo("[Grunnchipelago] Nouveau multiworld : etat de session reinitialise.");
+            }
             // Grant pump: replay items AND the post-run re-injection are deferred until
             // the player is in a SAFE state (up, controllable, no cutscene/intro/prompt) -
             // granting during the scripted bus intro froze all inputs (playtest round 2).
@@ -104,19 +155,22 @@ namespace Grunnchipelago.Client
             Ap.TickGrants();
             // Buff multipliers + timed-trap expiry (restores vanilla when disconnected).
             Effects.Tick(Ap.Connected);
-            // "ESC : skip" hint state (skip logic: EscSkipsEndingDialoguePatch for the
-            // ending NPCs, HandleSkipOrbDialogue for the post-death orb sequence).
-            EndingDialogueActive =
-                (GameManager.owner != null && GameManager.owner.curState == Owner.State.Talk)
-                || (GameManager.ownerSaved != null && GameManager.ownerSaved.curState == OwnerSaved.State.Talk)
-                || (Ap.Connected && GameManager.CurGameState == GameManager.GameState.Ending
-                    && GameManager.curEndingState == GameManager.EndingState.Orb);
+            // "ESC : skip" hint state - the ORB SEQUENCE ONLY (skip logic:
+            // HandleSkipOrbDialogue). Neither owner belongs here [J 2026-08-01]: both are
+            // ordinary in-game NPCs whose UpdateNormal only runs in GameState.Game
+            // (Owner.cs:160, OwnerSaved.cs:144), so offering to skip them turned a plain
+            // conversation into a cutscene - and made Escape stop opening the pause menu.
+            EndingDialogueActive = Ap.Connected
+                && cfgSkipEndingDialogues.Value     // no hint for something we will not do
+                && GameManager.CurGameState == GameManager.GameState.Ending
+                && GameManager.curEndingState == GameManager.EndingState.Orb;
             // Title marker + stats panel (playtest H).
             ModUi.Tick(Ap, cfgStatsShowAllLines.Value);
             // Dev helper (VerboseLogs): trigger traps by key for testing.
-            if (ApClient.Verbose && Ap.Connected && safe) HandleDebugTrapKeys();
+            // Not while the console has the keyboard: F-keys would fire traps mid-typing.
+            if (ApClient.Verbose && Ap.Connected && safe && !ConsoleUi.Focused) HandleDebugTrapKeys();
             // Pickup model swap from the scout (features #1/#2, one-shot per session).
-            ModelSwap.Tick(Ap);
+            ModelSwap.Tick(Ap, cfgModelProbe.Value);
             if (Ap.Connected)
             {
                 // Per-seed save profile (3.1): swaps SaveManager's save-path prefix at
@@ -126,7 +180,6 @@ namespace Grunnchipelago.Client
                 // Popups queued from patch context; drained only in a safe state so
                 // ending-check rewards land at the new run, after cutscene AND bus intro.
                 if (safe) Ap.FlushPendingPopups();
-                HandleSkipEndingDialogues();
                 HandleSkipOrbDialogue();
                 BunkerFlood.Tick(Ap);
                 HutLock.Tick(Ap);
@@ -215,24 +268,6 @@ namespace Grunnchipelago.Client
             Effects.ApplyTrap(name);
         }
 
-        /// <summary>playtest D.2 - ending NPC dialogues (Owner / OwnerSaved prompt chains,
-        /// Owner.cs HandleTalking) gate each line behind full text scroll + an anti-skip
-        /// timer. While one of them talks, force the text complete and the skip timer
-        /// finished so Interact advances instantly. Scoped to the ending NPCs only.</summary>
-        private void HandleSkipEndingDialogues()
-        {
-            if (!cfgSkipEndingDialogues.Value || UIManager.instance == null) return;
-            bool endingNpcTalking =
-                (GameManager.owner != null && GameManager.owner.curState != Owner.State.Off)
-                || (GameManager.ownerSaved != null && GameManager.ownerSaved.curState != OwnerSaved.State.Off);
-            if (!endingNpcTalking) return;
-
-            UIManager ui = UIManager.instance;
-            if (ui.promptCharIndex < ui.promptCharMax) ui.promptCharIndex = ui.promptCharMax;
-            ui.skipPromptTimer.counter = ui.skipPromptTimer.duration;
-            ui.skipPromptTimer.finished = true;
-        }
-
         /// <summary>Session 2 (retour Jonath) - the post-death-ending ORB dialogue
         /// (EndingState.Orb) ignores every key but Interact in vanilla, Escape
         /// included. While it runs, Escape ends the whole sequence: jump to
@@ -245,6 +280,7 @@ namespace Grunnchipelago.Client
         /// ignores it.</summary>
         private void HandleSkipOrbDialogue()
         {
+            if (!cfgSkipEndingDialogues.Value) return;
             if (GameManager.CurGameState != GameManager.GameState.Ending
                 || GameManager.curEndingState != GameManager.EndingState.Orb) return;
             if (InputManager.quitData == null || !InputManager.quitData.pressed) return;
