@@ -71,19 +71,6 @@ namespace Grunnchipelago.Client
         /// warm GOLD and a touch bigger, so "worth 2 gulden" reads at a glance without a
         /// second model. Deliberately gold rather than yellow - it must not be mistaken for
         /// the yellow AP filler card.</summary>
-        /// <summary>CALIBRATED AGAINST THE GAME'S IMAGE, not picked as "gold" on a colour
-        /// wheel [J 2026-08-01, after five failed attempts].
-        ///
-        /// What finally settled it: forcing an Unlit/Color material - a plain, unlit, exactly
-        /// gold surface, our values guaranteed intact - still drew a glowing RED blob. So the
-        /// distortion is not in the material at all, it is DOWNSTREAM: Grunn grades and blooms
-        /// the whole image (its sky is pink, its grass teal). A bright warm colour is pushed
-        /// to red and blown out by the bloom.
-        ///
-        /// Asking for gold therefore cannot produce gold. The input has to be chosen so that
-        /// what comes OUT of the grade reads gold: pulled away from red, toward yellow, and
-        /// darkened so the bloom stops clipping it.</summary>
-        private static readonly Color GoldenGuldenTint = new Color(0.85f, 0.62f, 0.12f);
         /// <summary>+15 % over a plain gulden (was +25 %, too much - retour Jonath 2026-07-31):
         /// enough to read as "worth more" without looking like a different object.</summary>
         private const float GoldenGuldenScaleBoost = 1.15f;
@@ -178,7 +165,6 @@ namespace Grunnchipelago.Client
             // off, which is the same report seen from the other side ("les objets caches
             // dans la save 1 le sont toujours dans la save 2").
             RevertSwaps();
-            ClearProbe();
             applied = false;
             library.Clear();
             apCrowns.Clear();
@@ -196,10 +182,10 @@ namespace Grunnchipelago.Client
         /// <summary>One-shot per session, once connected + scout done + world loaded.
         /// After that pass it keeps running a light watcher that shows/hides the worm
         /// plate's clone with the game's own placedApple flag (see wormHolders).</summary>
-        public static void Tick(ApClient ap, string modelProbe = null)
+        public static void Tick(ApClient ap)
         {
             if (!ap.Connected || !ap.ScoutReady) return;
-            if (applied) { TickWormHolders(); ShowProbe(modelProbe); return; }
+            if (applied) { TickWormHolders(); return; }
             // ONLY on a world that is actually being played. The scene objects survive on the
             // title screen in whatever state the previous run left them - collected pickups
             // and polaroids deactivated - and the swap used to run right there, on connect.
@@ -239,7 +225,6 @@ namespace Grunnchipelago.Client
                                 $"{apModels} AP models, {uncovered} left vanilla (no visual); " +
                                 $"polaroids: {polaroidSwapped} item models, {polaroidAp} AP models.");
             LogAudioBudget();
-            ShowProbe(modelProbe);
         }
 
         /// <summary>MEASURE, DON'T GUESS. Right after the swap, NAME every pickup the game
@@ -304,95 +289,6 @@ namespace Grunnchipelago.Client
                 + $"~{size.x:0.##} x {size.y:0.##} x {size.z:0.##} m"
                 + (stick != null ? " + baton." : " (baton introuvable)."));
             return model;
-        }
-
-        /// <summary>DEV/QA: drop a copy of one harvested model by the starting bus so it can
-        /// be looked at from every angle, without hunting for the check that carries it
-        /// [demande Jonath 2026-08-01, pour verifier le triangle]. Driven by the
-        /// Debug/ShowModelProbe config entry: the name of a KeyItem, empty to disable.
-        /// Purely visual - no collider, no interaction, and it never touches a check.</summary>
-        private static readonly List<GameObject> probeInstances = new List<GameObject>();
-
-        /// <summary>First slot, by the starting bus; the row runs along +X.</summary>
-        private static readonly Vector3 ProbeOrigin = new Vector3(-41.5f, 10.9f, -68.0f);
-        private const float ProbeSpacing = 1.3f;
-
-        /// <summary>Line up sample models by the starting bus so they can be judged side by
-        /// side, without hunting for the check that carries each one [demande Jonath].
-        ///
-        /// Each sample goes through SwapVisual - the SAME call the real checks use, with the
-        /// same tint, scale and lift. That is the whole point: a probe built any other way
-        /// would prove nothing about what the game actually poses.
-        ///
-        /// Tokens (comma separated, config Debug/ShowModelProbe):
-        ///   GoldenGulden, Gulden, Buff, Progression, Useful, Filler, or any KeyItem name.
-        /// Purely visual: no collider, no interaction, never a check.</summary>
-        public static void ShowProbe(string spec)
-        {
-            if (probeInstances.Count > 0) return;
-            if (string.IsNullOrEmpty(spec)) return;
-
-            int index = 0;
-            foreach (string raw in spec.Split(','))
-            {
-                string token = raw.Trim();
-                if (token.Length == 0) continue;
-                Vector3 at = ProbeOrigin + new Vector3(index * ProbeSpacing, 0f, 0f);
-                if (SpawnProbe(token, at)) index++;
-            }
-        }
-
-        private static bool SpawnProbe(string token, Vector3 at)
-        {
-            var host = new GameObject("grunnchipelago_modelProbe_" + token);
-            host.transform.position = at;
-            UnityEngine.Object.DontDestroyOnLoad(host);
-
-            bool posed;
-            if (token.Equals("GoldenGulden", StringComparison.OrdinalIgnoreCase))
-                posed = guldenModel != null && SwapVisual(host, guldenModel, GoldenGuldenTint,
-                    GuldenModelScale * GoldenGuldenScaleBoost, ApModelLift,
-                    flatTint: true, referenceMaterial: true, stripLights: true);
-            else if (token.Equals("Gulden", StringComparison.OrdinalIgnoreCase))
-                posed = guldenModel != null
-                    && SwapVisual(host, guldenModel, null, GuldenModelScale, ApModelLift);
-            else if (token.Equals("Buff", StringComparison.OrdinalIgnoreCase))
-                posed = TryGetBuffModel(out GameObject fragment)
-                    && SwapVisual(host, fragment, BuffTint, BuffModelScale, ApModelLift);
-            else if (Enum.TryParse(token, true, out ApKind kind))
-                posed = apCrowns.TryGetValue(kind, out GameObject crown) && crown != null
-                    && SwapVisual(host, crown, null, ApCrownScale, ApModelLift);
-            else if (Enum.TryParse(token, true, out KeyItem item))
-                posed = library.TryGetValue(item, out GameObject model) && model != null
-                    && SwapVisual(host, model, null, 1f, 0f);
-            else
-            {
-                Plugin.Log?.LogWarning($"[Grunnchipelago] Sonde : '{token}' n'est ni un KeyItem, "
-                    + "ni GoldenGulden/Gulden/Buff/Progression/Useful/Filler.");
-                UnityEngine.Object.Destroy(host);
-                return false;
-            }
-
-            if (!posed)
-            {
-                Plugin.Log?.LogWarning($"[Grunnchipelago] Sonde : aucun modele disponible pour "
-                    + $"'{token}'.");
-                UnityEngine.Object.Destroy(host);
-                return false;
-            }
-
-            probeInstances.Add(host);
-            Vector3 size = WorldSize(host);
-            Plugin.Log?.LogInfo($"[Grunnchipelago] Sonde : {token} posee a {at}, "
-                + $"taille ~{size.x:0.##} x {size.y:0.##} x {size.z:0.##} m.");
-            return true;
-        }
-
-        private static void ClearProbe()
-        {
-            foreach (GameObject probe in probeInstances)
-                if (probe != null) UnityEngine.Object.Destroy(probe);
-            probeInstances.Clear();
         }
 
         // ---------- library (feature #1.1) ----------
@@ -607,14 +503,9 @@ namespace Grunnchipelago.Client
                 // Colour is baked PETAL BY PETAL here, not passed to SwapVisual, because
                 // progression needs SIX different hues on one model - a single tint could
                 // never express that.
-                // flat ONLY for Progression: its six hues must stay distinguishable, and
-                // multiplying them by the fragment's own gradient is what collapsed rose and
-                // orchid onto the same magenta. Useful and Filler keep the exact path Jonath
-                // validated - see the note on their colours.
                 Paint(leaf, kind == ApKind.Progression
                     ? LogoPetalColors[i % LogoPetalColors.Length]
-                    : (kind == ApKind.Useful ? UsefulCrownColor : FillerCrownColor),
-                    flat: kind == ApKind.Progression);
+                    : (kind == ApKind.Useful ? UsefulCrownColor : FillerCrownColor));
 
                 // The soul fragment carries a real Light. Six per crown, on every swapped
                 // check, is a lot of real-time lights for nothing: keep the halo on the
@@ -629,14 +520,14 @@ namespace Grunnchipelago.Client
         /// <summary>Paint one petal. Same channels as SwapVisual (colour + _BaseColor +
         /// emission + the fragment's own Light), so a crown reads at night like the tinted
         /// models do. Filler stays MATT on purpose: dull grey should not glow.</summary>
-        private static void Paint(GameObject model, Color color, bool flat = false)
+        private static void Paint(GameObject model, Color color)
         {
             bool matt = color == FillerCrownColor;   // dull filler: no glow
             // CrownEmission, not the default: emission ADDS light, and at 1.5 it pushed the
             // logo's pastel hues past saturation - orchid read as pure magenta, blue-violet
             // as cyan [J 2026-08-01, "pas exactement comme le logo"]. A gentle glow keeps
             // the hue.
-            TintModel(model, color, !matt, flat: flat, emission: CrownEmission);
+            TintModel(model, color, !matt, emission: CrownEmission);
             foreach (Light light in model.GetComponentsInChildren<Light>(true))
             {
                 light.color = color;
@@ -900,16 +791,17 @@ namespace Grunnchipelago.Client
                     // The chore coin (2026-07-30): the real coin, tinted GOLD so it reads as
                     // "worth more" without needing a second model. Slightly larger than a
                     // plain gulden for the same reason.
-                    // Coin MESH + soul-fragment MATERIAL + FLAT mode. Borrowing the material
-                    // alone was not enough: without flat, we only multiply the fragment's own
-                    // gradient by our colour, and gold x that gradient came out red. Flat
-                    // overwrites the gradient itself (min = max = the colour, base white), and
-                    // this shader - UnlitWorldGradientWobble - has NO other colour term left
-                    // to interfere. That was the flaw in the earlier flat attempt: it ran on
-                    // the coin's CustomFog variant, which does have two [J 2026-08-01].
-                    if (SwapVisual(visualsObject, guldenModel, GoldenGuldenTint,
-                                   GuldenModelScale * GoldenGuldenScaleBoost, ApModelLift,
-                                   flatTint: true, referenceMaterial: true, stripLights: true))
+                    // NOT TINTED. The chore coin is told apart by its SIZE alone.
+                    //
+                    // Seven attempts failed to make this mesh gold, and each ruled something
+                    // out: the property name, every colour property at once, the vertex
+                    // colours (there are none), a forced Unlit/Color material, the soul
+                    // fragment's material, overwriting the gradient itself, and finally the
+                    // lights (there are none either - measured, zero). Whatever paints this
+                    // mesh is not reachable from a material, and the honest end state is a
+                    // readable coin rather than a red blob [J 2026-08-01, closed].
+                    if (SwapVisual(visualsObject, guldenModel, null,
+                                   GuldenModelScale * GoldenGuldenScaleBoost, ApModelLift))
                         return 1;
                 }
                 else if (scout.ItemName == GuldenItemName && (scout.Flags & ItemFlags.Trap) == 0
@@ -1036,9 +928,7 @@ namespace Grunnchipelago.Client
         /// Player.log), killing the loop and freezing all inputs. DestroyImmediate on
         /// never-awakened components is safe and leaves no trace.</summary>
         private static bool SwapVisual(GameObject visualsObject, GameObject modelSource,
-            Color? tint, float scaleMult, float lift, bool flatTint = false,
-            float emission = DefaultEmission, bool referenceMaterial = false,
-            bool stripLights = false)
+            Color? tint, float scaleMult, float lift, float emission = DefaultEmission)
         {
             // Remember what we switch off: if the clone turns out to render nothing, the
             // vanilla visual must come back rather than leave an empty spot.
@@ -1086,25 +976,7 @@ namespace Grunnchipelago.Client
             // Session 2 iter 2 (capture de nuit): the tint also goes through the emission
             // channel so AP models stay readable in the dark - 1.5 is the bloom "glowing
             // orb" look Jonath liked, now that the cards render at their normalised size.
-            // LAST IDEA on the coin that would not turn gold [J 2026-08-01]. StripNonVisuals
-            // deliberately keeps Lights - the soul fragment's halo depends on one. But a light
-            // is not a material: no tint, no shader and no material swap can reach it, which
-            // is exactly the shape of this bug (three different materials, same red, and a
-            // wide soft halo around the coin on the Unlit/Color attempt - the signature of a
-            // light plus bloom, not of a surface). If the coin carries one, it has been
-            // painting over everything we did. The count is logged: zero means this idea is
-            // wrong too, and the trail ends here.
-            if (stripLights)
-            {
-                int lights = 0;
-                foreach (Light light in clone.GetComponentsInChildren<Light>(true))
-                    if (light != null) { UnityEngine.Object.DestroyImmediate(light); lights++; }
-                Plugin.Log?.LogInfo($"[Grunnchipelago] Piece doree : {lights} lumiere(s) "
-                    + "retiree(s) du clone.");
-            }
-            // Borrow the material that obeys BEFORE tinting, so the tint lands in it.
-            if (referenceMaterial) UseReferenceMaterial(clone);
-            if (tint.HasValue) TintModel(clone, tint.Value, true, flatTint, emission);
+            if (tint.HasValue) TintModel(clone, tint.Value, true, emission);
             // The soul fragment carries a real Light (the white-blue halo, iter 6):
             // Lights are not MonoBehaviours, StripNonVisuals leaves them - tint them
             // with the model so a green buff glows GREEN.
@@ -1172,89 +1044,17 @@ namespace Grunnchipelago.Client
 
         // ---------- teinte (Grunn = URP + ShaderGraph) ----------
 
-        /// <summary>Paint EVERY material of a model, and say so.
+        /// <summary>Paint every material of a model.
         ///
-        /// Two defects fixed here [J 2026-08-01, le gulden dore reste gris avec une tranche
-        /// rouge] :
-        ///
-        ///  1. renderer.material only ever returns SLOT 0. The coin carries more than one
-        ///     material, so part of it kept its vanilla colour whatever we asked for.
-        ///  2. Grunn renders through URP + ShaderGraph (Unity.RenderPipelines.Universal and
-        ///     ShaderGraphLibrary in Grunn_Data/Managed). A ShaderGraph shader exposes
-        ///     ARBITRARY property names: neither Material.color (_Color) nor _BaseColor is
-        ///     guaranteed to exist, and writing a property a shader does not declare is a
-        ///     silent no-op - which looks exactly like an untinted model.
-        ///
-        /// So the conservative pass runs first (unchanged behaviour for everything already
-        /// validated in game, the AP crowns above all). Only when it matches NOTHING do we
-        /// enumerate the shader's own colour properties and paint those. Strictly additive:
-        /// nothing that works today can change.</summary>
+        /// renderer.material only ever returns SLOT 0, and the coin carries more than one -
+        /// half of it kept its vanilla colour whatever we asked for [J 2026-08-01]. Hence
+        /// renderer.materials, all slots.</summary>
         private static void TintModel(GameObject root, Color color, bool emissive,
-            bool flat = false, float emission = DefaultEmission)
+            float emission = DefaultEmission)
         {
-            NeutraliseVertexColors(root);
             foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
                 foreach (Material material in renderer.materials)   // ALL slots, not just [0]
-                    TintMaterial(material, color, emissive, flat, emission);
-        }
-
-        /// <summary>Bleach the mesh's baked VERTEX COLOURS to white on our clone.
-        ///
-        /// This is what kept the gold coin red [J 2026-08-01, three attempts]. Grunn is
-        /// low-poly and bakes its colours per vertex - the coin's rim is red and its face
-        /// grey IN THE MESH - and the shader multiplies the material colour by them. So
-        /// gold x red = red, whichever material slot we wrote to: no amount of material
-        /// tinting could ever have won. White is the identity of that multiplication, so the
-        /// colour we ask for is the colour that renders.
-        ///
-        /// Only ever applied to a clone we own, and only where colours are actually baked -
-        /// a mesh without vertex colours is left untouched.</summary>
-        /// <summary>The one material in this game we have PROOF obeys a colour: the soul
-        /// fragment's. It renders the green buff green, the Useful crown green and the Filler
-        /// crown grey - three colours Jonath validated in game.
-        ///
-        /// The coin's own material does not obey. Six attempts established it, the last one
-        /// decisively: an Unlit/Color material carrying a verified gold still drew red, which
-        /// most likely means that legacy shader is not supported under Grunn's URP setup and
-        /// was substituted at draw time. Rather than hunt for a shader the build may or may
-        /// not have kept, borrow one from the game itself - one already proven on screen.
-        ///
-        /// The MESH stays the coin's. Only the material changes, so it still reads as a coin.
-        /// </summary>
-        private static Material referenceMaterial;
-        private static bool referenceProbed;
-
-        private static Material ReferenceMaterial()
-        {
-            if (referenceProbed) return referenceMaterial;
-            referenceProbed = true;
-            if (TryGetBuffModel(out GameObject fragment) && fragment != null)
-                foreach (Renderer renderer in fragment.GetComponentsInChildren<Renderer>(true))
-                    if (renderer != null && renderer.sharedMaterial != null)
-                    {
-                        referenceMaterial = renderer.sharedMaterial;
-                        break;
-                    }
-            Plugin.Log?.LogInfo("[Grunnchipelago] Materiau de reference : "
-                + (referenceMaterial != null
-                    ? $"'{referenceMaterial.name}' / '{referenceMaterial.shader?.name}'."
-                    : "INTROUVABLE (le fragment d'ame n'a pas ete recolte)."));
-            return referenceMaterial;
-        }
-
-        /// <summary>Put the reference material on every renderer of a clone. The tint that
-        /// follows then writes into a material that answers.</summary>
-        private static bool UseReferenceMaterial(GameObject root)
-        {
-            Material reference = ReferenceMaterial();
-            if (reference == null) return false;
-            foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
-            {
-                var materials = new Material[Mathf.Max(1, renderer.sharedMaterials.Length)];
-                for (int i = 0; i < materials.Length; i++) materials[i] = new Material(reference);
-                renderer.materials = materials;
-            }
-            return true;
+                    TintMaterial(material, color, emissive, emission);
         }
 
         private static void NeutraliseVertexColors(GameObject root)
@@ -1272,37 +1072,15 @@ namespace Grunnchipelago.Client
         }
 
         private static void TintMaterial(Material material, Color color, bool emissive,
-            bool flat, float emission)
+            float emission)
         {
             if (material == null) return;
 
-            // These shaders COMBINE their colour slots - writing the same colour into all of
-            // them multiplies it by itself [J 2026-08-01, measured on the probes]:
-            // gold (1; 0,78; 0,25) came out pure red, and the AP crown's six petals turned
-            // garish. So the default stays what was validated in game: the base colour only.
-            //
-            // flat: for a model whose shader ignores the base slot and paints from its
-            // GRADIENT pair (the gulden coin, Custom RP/UnlitWorldGradientWobble). Neutralise
-            // the base to white and put the colour in both ends of the gradient - the model
-            // then renders exactly the colour asked for, at the cost of the wobble.
-            if (flat && material.HasProperty("_ColorMin") && material.HasProperty("_ColorMax"))
-            {
-                if (material.HasProperty("_Color")) material.color = Color.white;
-                if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", Color.white);
-                material.SetColor("_ColorMin", color);
-                material.SetColor("_ColorMax", color);
-                // The CustomFog variant carries two more colour terms; left at their own
-                // values they re-tint the result. White is neutral for all of them.
-                if (material.HasProperty("_HeightDetailColor"))
-                    material.SetColor("_HeightDetailColor", Color.white);
-                if (material.HasProperty("_VerticalLineColor"))
-                    material.SetColor("_VerticalLineColor", Color.white);
-            }
-            else
-            {
-                if (material.HasProperty("_Color")) material.color = color;
-                if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
-            }
+            // Only the base colour. Writing every colour slot the shader declares multiplies
+            // the colour by itself - gold came out red and the crown's petals turned garish
+            // [J 2026-08-01, measured on the probes].
+            if (material.HasProperty("_Color")) material.color = color;
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
 
             if (material.HasProperty("_EmissionColor"))
             {
@@ -1317,30 +1095,6 @@ namespace Grunnchipelago.Client
                     material.SetColor("_EmissionColor", Color.black);
                 }
             }
-        }
-
-        /// <summary>Ask the shader which colours it actually declares, and set them all.
-        /// Emission-like properties are skipped - they are driven separately, and writing
-        /// them blindly would light up models meant to stay matt.
-        ///
-        /// A gradient pair (_ColorMin/_ColorMax) collapses to a single colour this way: the
-        /// wobble stops varying and the model reads FLAT. That is the intended trade - a
-        /// gold coin that is actually gold beats a gradient that ignores us.</summary>
-        private static bool TintEveryColorProperty(Material material, Color color)
-        {
-            Shader shader = material.shader;
-            if (shader == null) return false;
-            bool matched = false;
-            int count = shader.GetPropertyCount();
-            for (int i = 0; i < count; i++)
-            {
-                if (shader.GetPropertyType(i) != UnityEngine.Rendering.ShaderPropertyType.Color) continue;
-                string name = shader.GetPropertyName(i);
-                if (name.IndexOf("Emiss", StringComparison.OrdinalIgnoreCase) >= 0) continue;
-                material.SetColor(name, color);
-                matched = true;
-            }
-            return matched;
         }
 
         /// <summary>Find a scene object by exact name, INCLUDING inactive ones

@@ -33,7 +33,6 @@ namespace Grunnchipelago.Client
         private ConfigEntry<string> cfgSlot;
         private ConfigEntry<string> cfgPassword;
         private ConfigEntry<bool> cfgVerboseLogs;
-        private ConfigEntry<string> cfgModelProbe;
         private ConfigEntry<bool> cfgSkipEndingDialogues;
         private ConfigEntry<bool> cfgStatsShowAllLines;
         private ConfigEntry<string> cfgSeenItems;
@@ -49,12 +48,6 @@ namespace Grunnchipelago.Client
             cfgPassword = Config.Bind("Connection", "Password", "", "Server password (optional).");
             cfgVerboseLogs = Config.Bind("Logging", "VerboseLogs", false,
                 "Log every check/grant/trap (dev). When false, only connection, errors and goal.");
-            cfgModelProbe = Config.Bind("Debug", "ShowModelProbe", "",
-                "Comma-separated sample models to line up next to the starting bus for "
-                + "inspection, posed exactly as a real check would be. Accepts GoldenGulden, "
-                + "Gulden, Buff, Progression, Useful, Filler, or any KeyItem name "
-                + "(e.g. \"GoldenGulden,Buff,Progression\"). Purely visual, never a check. "
-                + "Empty to disable.");
             cfgSkipEndingDialogues = Config.Bind("QoL", "SkipEndingDialogues", true,
                 "Escape ends the post-death ORB dialogue at once, instead of being ignored " +
                 "as it is in vanilla. Nothing else is ever skipped: every other NPC keeps " +
@@ -170,7 +163,7 @@ namespace Grunnchipelago.Client
             // Not while the console has the keyboard: F-keys would fire traps mid-typing.
             if (ApClient.Verbose && Ap.Connected && safe && !ConsoleUi.Focused) HandleDebugTrapKeys();
             // Pickup model swap from the scout (features #1/#2, one-shot per session).
-            ModelSwap.Tick(Ap, cfgModelProbe.Value);
+            ModelSwap.Tick(Ap);
             if (Ap.Connected)
             {
                 // Per-seed save profile (3.1): swaps SaveManager's save-path prefix at
