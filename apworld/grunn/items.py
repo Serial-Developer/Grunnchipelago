@@ -12,7 +12,7 @@ marked ``progression``. See PROGRESSION_ITEMS below for the traceable list.
 from __future__ import annotations
 
 import json
-import os
+import pkgutil
 from typing import TYPE_CHECKING
 
 from BaseClasses import Item, ItemClassification
@@ -22,9 +22,13 @@ from . import constants as c
 if TYPE_CHECKING:
     from . import GrunnWorld
 
-_IDS_PATH = os.path.join(os.path.dirname(__file__), "data", "ids.json")
-with open(_IDS_PATH, encoding="utf-8") as _f:
-    IDS = json.load(_f)
+# Read through pkgutil rather than open(): a shipped .apworld is a zip, so the file
+# has no filesystem path there (FileNotFoundError at import time, and the world fails
+# to load). pkgutil.get_data works for both the zipped and the extracted layout.
+_IDS_RAW = pkgutil.get_data(__package__, "data/ids.json")
+if _IDS_RAW is None:  # pragma: no cover - packaging error
+    raise FileNotFoundError("grunn: data/ids.json is missing from the world package")
+IDS = json.loads(_IDS_RAW.decode("utf-8"))
 
 # name -> id and name -> category ("keyitem" | "buff" | "trap" | "filler")
 ITEM_NAME_TO_ID: dict[str, int] = {name: data["id"] for name, data in IDS["items"].items()}

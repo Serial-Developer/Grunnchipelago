@@ -1,0 +1,22 @@
+﻿name: Player{number}
+description: Grunn - defaults
+game: Grunn
+requires:
+  version: 0.6.7
+
+Grunn:
+  progression_balancing: 50
+  accessibility: full
+  goal: true_ending
+  polaroid_checks: true
+  ghost_checks: true
+  chore_checks: true
+  coinsanity: false
+  exclude_bridge_key: true
+  keep_vanilla_shears: false
+  lock_player_hut: true
+  exclude_bad_endings: true
+  death_link: false
+  buff_count: 3
+  trap_percentage: 20
+  persistent_shortcuts: false
