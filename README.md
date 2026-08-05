@@ -62,6 +62,24 @@ dotnet build Grunnchipelago.Client -c Release -p:GameDir="D:\Games\Grunn"
 
 The build drops the DLL into `<GameDir>/BepInEx/plugins/Grunnchipelago/`.
 
+## Releasing
+
+`apworld/grunn/archipelago.json` holds the only version number in the project. Bumping
+`world_version` there covers everything: the apworld manifest, the BepInEx plugin metadata,
+the assembly's file properties and the version shown on the game's title screen are all
+generated from it, so they can never disagree with each other or with the release.
+
+```sh
+# 1. bump "world_version" in apworld/grunn/archipelago.json, then:
+python scripts/build_apworld.py
+dotnet build Grunnchipelago.Client -c Release
+# 2. tag the release with the same number (v<world_version>) and attach
+#    grunn.apworld, the client zip and players/Grunn_template.yaml
+```
+
+The template YAML embeds the world version too; regenerate it from the world (Archipelago's
+`Options.generate_yaml_templates`) or edit its `Grunn:` line to match.
+
 ## Contributing
 
 Issues and pull requests are welcome.

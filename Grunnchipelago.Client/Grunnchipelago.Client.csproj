@@ -39,11 +39,14 @@
            Text="Could not read a 'world_version' of the form X.Y.Z from $(ManifestFile)." />
     <PropertyGroup>
       <Version>$(WorldVersion)</Version>
-      <AssemblyVersion>$(WorldVersion).0</AssemblyVersion>
-      <FileVersion>$(WorldVersion).0</FileVersion>
     </PropertyGroup>
+    <!-- The assembly version attributes are emitted here rather than set as MSBuild
+         properties: GenerateAssemblyInfo is false, so the SDK never writes them and the
+         DLL would keep reporting 0.0.0.0 while the plugin displayed the real version.
+         Emitting them from the same WorldVersion keeps the file properties, the BepInEx
+         plugin metadata and the in-game credit in lockstep with the apworld manifest. -->
     <WriteLinesToFile File="$(GeneratedVersionFile)" Overwrite="true" WriteOnlyWhenDifferent="true"
-                      Lines="// &lt;auto-generated /&gt; Written by the GenerateModVersion target;namespace Grunnchipelago.Client;{;    internal static partial class BuildInfo;    {;        /// &lt;summary&gt;world_version from apworld/grunn/archipelago.json.&lt;/summary&gt;;        public const string ModVersion = &quot;$(WorldVersion)&quot;%3B;    };}" />
+                      Lines="// &lt;auto-generated /&gt; Written by the GenerateModVersion target;[assembly: System.Reflection.AssemblyVersion(&quot;$(WorldVersion).0&quot;)];[assembly: System.Reflection.AssemblyFileVersion(&quot;$(WorldVersion).0&quot;)];[assembly: System.Reflection.AssemblyInformationalVersion(&quot;$(WorldVersion)&quot;)];[assembly: System.Reflection.AssemblyTitle(&quot;Grunnchipelago Client&quot;)];[assembly: System.Reflection.AssemblyProduct(&quot;Grunnchipelago&quot;)];namespace Grunnchipelago.Client;{;    internal static partial class BuildInfo;    {;        /// &lt;summary&gt;world_version from apworld/grunn/archipelago.json.&lt;/summary&gt;;        public const string ModVersion = &quot;$(WorldVersion)&quot;%3B;    };}" />
     <ItemGroup>
       <Compile Include="$(GeneratedVersionFile)" />
     </ItemGroup>
