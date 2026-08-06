@@ -139,6 +139,56 @@ class TestLockPlayerHut(GrunnTestBase):
                 f"{name} must require AbandonedKey under lock_player_hut",
             )
 
+    def test_hut_gated_polaroids_require_abandoned_key(self) -> None:
+        # Player report (corgi, 2026-08-06): the hut key looked reachable through the
+        # magpie polaroid, which the game only shows once you have been INSIDE the hut
+        # (dump: polaroidMagpieNest_hider0 / NotEnteredPlayerSchuur). Under
+        # lock_player_hut that means the key gates them - never the other way round.
+        self.collect_all_but("AbandonedKey")
+        for name in ("Polaroid: MagpieNest", "Polaroid: TallManWindow"):
+            location = self.world.get_location(name)
+            self.assertFalse(
+                location.can_reach(self.multiworld.state),
+                f"{name} must require AbandonedKey under lock_player_hut",
+            )
+
+
+class TestVanillaShearsWithLockedHut(GrunnTestBase):
+    """Player report (corgi, 2026-08-06): keep_vanilla_shears + lock_player_hut.
+
+    The combination nests two vanilla placements: the Shears sit in the hut, and the hut
+    needs the Abandoned Key - so the key must never end up behind anything the hut gates
+    (that would be a self-blocking seed). The generic suite's fill test covers the seed
+    as a whole; this asserts the specific loop that was reported.
+    """
+
+    options = {
+        "keep_vanilla_shears": True,
+        "lock_player_hut": True,
+        "exclude_bridge_key": False,
+    }
+
+    def test_abandoned_key_is_never_behind_the_hut(self) -> None:
+        from Fill import distribute_items_restrictive
+
+        distribute_items_restrictive(self.multiworld)
+        hut_gated = {
+            location.name
+            for location in self.multiworld.get_locations(self.player)
+            if location.item is not None and location.item.name == "AbandonedKey"
+        }
+        # Everything but the key: whatever holds it must already be reachable.
+        state = CollectionState(self.multiworld)
+        for item in self.multiworld.itempool:
+            if item.advancement and item.name != "AbandonedKey":
+                state.collect(item, prevent_sweep=True)
+        state.sweep_for_advancements()
+        for name in hut_gated:
+            self.assertTrue(
+                self.multiworld.get_location(name, self.player).can_reach(state),
+                f"AbandonedKey placed at {name}, which needs the key itself",
+            )
+
     def test_abandoned_key_is_progression(self) -> None:
         from BaseClasses import ItemClassification
         from ..items import classification_for
