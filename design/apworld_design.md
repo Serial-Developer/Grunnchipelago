@@ -27,7 +27,7 @@ Références : `regions.md` (graphe/logique), `zone_logic.md` (données exhausti
 
 | Pool | Taille | Option YAML | Défaut | Notes |
 |---|---|---|---|---|
-| Outils | 6 | `keep_shears` (sécateurs vanilla) | off | Trowel, Shears, WateringCan, Hammer, Trumpet, MagicSword |
+| Outils | 6 | `keep_vanilla_shears` (sécateurs vanilla) | off | Trowel, Shears, WateringCan, Hammer, Trumpet, MagicSword |
 | Objets (KeyItems) | ~45 | — (toujours actif) | — | tous les KeyItems hors clés/outils/exclusions |
 | Clés | 9 | `exclude_bridge_key` | **on** | BridgeKey vanilla par défaut — LA première clé (spawn -> jardin) ; sans elle, 2 checks seulement en sphère 1 |
 | Polaroids | 34 | `polaroid_checks` | on (à confirmer) | Ending* exclus (attribués par les fins, non randomisés) |
@@ -142,7 +142,7 @@ les anciens noms pour qu'une seed antérieure au 2026-07-27 reste jouable (`Game
 | Option | Type | Défaut | Effet |
 |---|---|---|---|
 | `goal` | choix | true_ending (proposé) | good_ending / true_ending / all_endings |
-| `keep_shears` | toggle | off | sécateurs vanilla (accessibilité early) |
+| `keep_vanilla_shears` | toggle | off | sécateurs vanilla (accessibilité early) |
 | `exclude_bridge_key` | toggle | **on** | BridgeKey vanilla (première clé, spawn -> jardin) |
 | `polaroid_checks` | toggle | on | 34 polaroids de monde en checks |
 | `ghost_checks` | toggle | on | 8 fantômes en checks |
