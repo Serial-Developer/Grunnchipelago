@@ -1008,6 +1008,11 @@ namespace Grunnchipelago.Client
     internal static class ShortcutCache
     {
         private static bool bijkeuken, created, hooiGarden, maze;
+        // Braamstruik = the bramble between the park and the road, burnt with the Lighter
+        // (demande Jonath 2026-08-06). Braamstruik.ResetState hides it for good when
+        // braamstruikLit is set, and derives braamstruikDestroyed from it, so restoring
+        // the pair keeps the passage open on both sides after a run reset.
+        private static bool braamLit, braamDestroyed;
         private static readonly List<Lock> locks = new List<Lock>();
 
         /// <summary>Session 2 - the cache is monotonic and STATIC: without this reset a
@@ -1016,6 +1021,7 @@ namespace Grunnchipelago.Client
         public static void Clear()
         {
             bijkeuken = created = hooiGarden = maze = false;
+            braamLit = braamDestroyed = false;
             locks.Clear();
         }
 
@@ -1027,6 +1033,8 @@ namespace Grunnchipelago.Client
             created |= pd.createdShortcut;
             hooiGarden |= pd.parkUnlockedHooibaalGarden;
             maze |= pd.parkUnlockedMaze;
+            braamLit |= pd.braamstruikLit;
+            braamDestroyed |= pd.braamstruikDestroyed;
             if (pd.locksUnlocked != null)
                 foreach (Lock l in pd.locksUnlocked)
                     if (!locks.Contains(l)) locks.Add(l);
@@ -1044,6 +1052,8 @@ namespace Grunnchipelago.Client
             pd.createdShortcut = created;
             pd.parkUnlockedHooibaalGarden = hooiGarden;
             pd.parkUnlockedMaze = maze;
+            pd.braamstruikLit = braamLit;
+            pd.braamstruikDestroyed = braamDestroyed;
             if (locks.Count > 0) pd.locksUnlocked = new List<Lock>(locks);
         }
     }

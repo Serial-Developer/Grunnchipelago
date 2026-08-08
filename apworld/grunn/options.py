@@ -91,8 +91,10 @@ class Coinsanity(Toggle):
 
 class PersistentShortcuts(Toggle):
     """
-    If enabled, comfort shortcuts (Bijkeuken shortcut, Intratuin, park mazes, etc.)
-    are restored after each run reset. Read by the client mod; no logic impact.
+    If enabled, comfort shortcuts are restored after each run reset: the Bijkeuken
+    shortcut, the hedge cut out of the back yard, the park's hay-bale garden and maze
+    accesses, the bramble burnt between the park and the road, and any lock already
+    opened. Read by the client mod; no logic impact.
     """
 
     display_name = "Persistent Shortcuts"
