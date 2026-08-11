@@ -34,7 +34,7 @@ game: Grunn
 requires:
   version: 0.6.7 # Version of Archipelago required for this yaml to work as expected.
   game:
-    Grunn: 1.0.1 # Version of the world required for this yaml to work as expected.
+    Grunn: 1.1.0 # Version of the world required for this yaml to work as expected.
 
 Grunn:
   ################
@@ -213,6 +213,20 @@ Grunn:
     # removing their checks would make no sense.
     'false': 0
     'true': 50
+
+  mask_items:
+    # Hide what every location holds: instead of showing the item it contains, each spot
+    # displays an Archipelago model coloured by its class - progression, useful or filler.
+    # This covers Grunn's own items too, which is the point of the mode: you can tell how
+    # valuable a check is, never what it is.
+    # 
+    # Traps borrow one of the three models, picked per location and always the same one, so
+    # a relaunch never gives them away.
+    # 
+    # Purely cosmetic: it changes no logic, no item placement, and the pickup message still
+    # names what you actually got.
+    'false': 50
+    'true': 0
 
   ###########################
   # Item & Location Options #
