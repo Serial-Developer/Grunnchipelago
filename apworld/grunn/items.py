@@ -80,11 +80,34 @@ TRAPS = [n for n in TRAPS if n not in UNIMPLEMENTED_ITEMS]
 # LOCATION stays a normal check. Reversible: drop the name here to put it back.
 POOL_SHELVED_ITEMS = {"OldKey"}
 
+# AbandonedKey joins them when lock_player_hut is OFF: the option is the ONLY thing that
+# gives that key a use (v0.3 door table - no vanilla door lists it), so without it the key
+# is dead weight in the pool [J 2026-08-08]. With the option ON it is a real gate and stays.
+# Its "Obtain AbandonedKey" location is a separate matter: it was removed on 2026-07-27
+# because the key has no vanilla pickup, which made it a dead check (see
+# locations.UNSOURCED_LOCATIONS).
+
+
+def shelved_items(world: "GrunnWorld") -> set[str]:
+    """Items kept out of the pool for this slot. Their slots become filler, so the
+    item/location parity in create_all_items is preserved by create_filler."""
+    shelved = set(POOL_SHELVED_ITEMS)
+    if not world.options.lock_player_hut:
+        shelved.add("AbandonedKey")
+    return shelved
+
+
+# --- Key items downgraded to filler ---------------------------------------------
+# Popcorn is inert [J 2026-08-08]: it does nothing in game and appears in no access rule.
+# Corn and Butter DO gate its cooking (rules.py "Popcorn"), so they stay progression -
+# Popcorn itself is the end of that chain and gates nothing further.
+FILLER_KEY_ITEMS = {"Popcorn"}
+
 # --- Progression classification -------------------------------------------------
 # Items referenced by a region entrance or an "Obtain X" / ending rule in rules.py are
-# marked progression (so fill and all-state reachability count them). GardenKey is the
-# one exception: it only gates the Jardin->Eglise portal, and the Eglise is always
-# reachable via the Exterieur, so it is never strictly required -> "useful".
+# marked progression (so fill and all-state reachability count them), plus the keys that
+# open a vanilla door even when the logic has an alternative route for them (GardenKey,
+# StrangeKey - decision Jonath 2026-08-08).
 # (design/apworld_design.md section 4 + regions.md 2026-07-12 corrections)
 PROGRESSION_ITEMS = {
     # traversal / equivalence helpers
@@ -93,6 +116,13 @@ PROGRESSION_ITEMS = {
     "ToiletKey", "ToiletPaper", "Doorknob", "Trowel", "Bone",
     # the very first key: spawn -> Jardin
     "BridgeKey",
+    # Keys that open a vanilla door, promoted to progression [J 2026-08-08] even though
+    # the logic knows a way around each of them:
+    #  - GardenKey opens gardenGate0, the Jardin->Eglise portal (regions.py) - the Eglise
+    #    also has the free Exterieur entrance, so it was previously "useful";
+    #  - StrangeKey opens door_end in the LongHallway (dump v0.3 door table), the Orb Room
+    #    door, which holds no check of its own.
+    "GardenKey", "StrangeKey",
     # Hell access chain (crypt): church interior key + flower gem + the 4 idols
     "ChurchKey", "AtticKey", "FlowerGem",
     "GnomeIdol", "ShyIdol", "ShortIdol", "TallIdol",
@@ -143,8 +173,11 @@ def classification_for(world: "GrunnWorld", name: str) -> ItemClassification:
     # key items
     if name == "AbandonedKey" and world.options.lock_player_hut:
         # lock_player_hut (experimental): the mod locks the player hut behind this
-        # otherwise-orphan key (v0.3 door table: unused by any vanilla door).
+        # otherwise-orphan key (v0.3 door table: unused by any vanilla door). With the
+        # option OFF the key is not created at all (see shelved_items).
         return ItemClassification.progression
+    if name in FILLER_KEY_ITEMS:
+        return ItemClassification.filler
     if name in PROGRESSION_ITEMS:
         return ItemClassification.progression
     return ItemClassification.useful
@@ -171,7 +204,8 @@ def create_all_items(world: "GrunnWorld") -> None:
     player = world.player
     itempool: list[Item] = []
 
-    # 1) Key items, minus unsourced ones and the ones kept vanilla (placed locally).
+    # 1) Key items, minus unsourced ones, shelved ones, and the ones kept vanilla.
+    shelved = shelved_items(world)
     local_names: set[str] = set()
     if world.options.exclude_bridge_key:
         local_names.add("BridgeKey")
@@ -185,7 +219,7 @@ def create_all_items(world: "GrunnWorld") -> None:
         location.place_locked_item(create_item(world, name))
 
     for name in KEYITEMS:
-        if name in local_names or name in UNSOURCED_ITEMS or name in POOL_SHELVED_ITEMS:
+        if name in local_names or name in UNSOURCED_ITEMS or name in shelved:
             continue
         itempool.append(create_item(world, name))
 
