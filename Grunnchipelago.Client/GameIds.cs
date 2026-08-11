@@ -170,6 +170,7 @@ namespace Grunnchipelago.Client
         public const string SlotLockPlayerHut = "lock_player_hut";
         public const string SlotChoreChecks = "chore_checks";
         public const string SlotExcludeBadEndings = "exclude_bad_endings";
+        public const string SlotMaskItems = "mask_items";
 
         // Full gulden location names (ids.json), indexed like GuldenIndexByPath. Used for
         // check labels and the verbose pickup diagnostic popup.

@@ -112,4 +112,5 @@ class GrunnWorld(World):
             "death_link",
             "chore_checks",
             "exclude_bad_endings",
+            "mask_items",
         )

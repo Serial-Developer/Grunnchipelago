@@ -720,8 +720,10 @@ namespace Grunnchipelago.Client
                 long guldenLoc = ap.LocationIdByName(GameIds.GuldenLocationNames[guldenIndex]);
                 if (guldenLoc <= 0 || !ap.TryGetScout(guldenLoc, out ScoutedItemInfo guldenScout)
                     || guldenScout == null) return 0;
-                // Really contains money: the vanilla coin is already truthful.
-                if (guldenScout.ItemName == GuldenItemName
+                // Really contains money: the vanilla coin is already truthful - unless
+                // mask_items is on, where a truthful coin would leak that this spot holds
+                // filler (or progression under coinsanity) while every other spot is masked.
+                if (!ap.MaskItems && guldenScout.ItemName == GuldenItemName
                     && guldenScout.IsReceiverRelatedToActivePlayer) return 0;
                 // Coins sit flat on the ground: lift the content model slightly so it reads.
                 return SwapForScout(pickup.visualsObject, guldenScout, guldenLoc, ap, null,
@@ -774,7 +776,11 @@ namespace Grunnchipelago.Client
         {
             if (visualsObject == null) return 3;
 
-            if (scout.IsReceiverRelatedToActivePlayer)
+            // mask_items (YAML, 1.1.0): show NOTHING of what a location holds - every spot
+            // wears the AP crown of its class, our own Grunn items included. That is the
+            // whole point of the mode, so all the "show the real thing" branches below are
+            // skipped and we fall through to the crown selection.
+            if (!ap.MaskItems && scout.IsReceiverRelatedToActivePlayer)
             {
                 if (Enum.TryParse(scout.ItemName, out KeyItem contained))
                 {
@@ -824,7 +830,7 @@ namespace Grunnchipelago.Client
             // Multiworld item: the AP CROWN of its class (demande Jonath 2026-07-28) -
             // 5/4/3 soul fragments in a ring, tinted. Falls back to the old tinted polaroid
             // card if no fragment could be harvested this session.
-            ApKind kind = KindFor(scout.Flags, locationId, ap.SeedString);
+            ApKind kind = KindFor(scout.Flags, locationId, ap.SeedString, ap.MaskItems);
             if (apCrowns.TryGetValue(kind, out GameObject crown) && crown != null)
             {
                 // tint = null: the crown is ALREADY painted, petal by petal (see Paint).
@@ -891,14 +897,29 @@ namespace Grunnchipelago.Client
                 }
         }
 
-        /// <summary>Trap checks disguise as useful or progression - deterministic per
-        /// seed+location, stable across sessions (feature #2.2).</summary>
-        private static ApKind KindFor(ItemFlags flags, long locationId, string seed)
+        /// <summary>Trap checks disguise as another class - deterministic per seed+location,
+        /// so a relaunch never gives them away (feature #2.2).
+        ///
+        /// Normally a trap borrows progression or useful: filler is excluded because in the
+        /// default mode our OWN filler is money, which shows the real coin, so a filler crown
+        /// on a Grunn spot would already stand out. Under mask_items every class wears a
+        /// crown, so the trap draws from all THREE (spec 1.1.0) - a two-way choice would make
+        /// "never filler" a tell.</summary>
+        private static ApKind KindFor(ItemFlags flags, long locationId, string seed, bool masked)
         {
             if ((flags & ItemFlags.Trap) != 0)
             {
+                // Mono's string.GetHashCode is deterministic (Unity does not enable
+                // randomized hashing), so the same seed+location always yields the same
+                // disguise on the player's machine.
                 int hash = (seed + ":" + locationId).GetHashCode();
-                return (hash & 1) == 0 ? ApKind.Progression : ApKind.Useful;
+                if (!masked) return (hash & 1) == 0 ? ApKind.Progression : ApKind.Useful;
+                switch ((hash & 0x7FFFFFFF) % 3)
+                {
+                    case 0: return ApKind.Progression;
+                    case 1: return ApKind.Useful;
+                    default: return ApKind.Filler;
+                }
             }
             if ((flags & ItemFlags.Advancement) != 0) return ApKind.Progression;
             if ((flags & ItemFlags.NeverExclude) != 0) return ApKind.Useful;

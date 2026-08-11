@@ -153,6 +153,25 @@ class TestLockPlayerHut(GrunnTestBase):
             )
 
 
+class TestMaskItemsOn(GrunnTestBase):
+    """mask_items is cosmetic: the client picks the displayed model from the slot data.
+    The world must generate identically to a run without it."""
+
+    options = {"mask_items": True}
+
+    def test_option_reaches_the_client(self) -> None:
+        self.assertEqual(self.world.fill_slot_data()["mask_items"], 1)
+
+    def test_pool_is_unchanged_by_masking(self) -> None:
+        masked = sorted(item.name for item in self.multiworld.itempool)
+        plain = setup_multiworld(GrunnWorld, seed=self.multiworld.seed, options={"mask_items": False})
+        self.assertEqual(masked, sorted(item.name for item in plain.itempool))
+        self.assertEqual(
+            sorted(loc.name for loc in self.multiworld.get_locations(self.player)),
+            sorted(loc.name for loc in plain.get_locations(1)),
+        )
+
+
 class TestVanillaShearsWithLockedHut(GrunnTestBase):
     """Player report (corgi, 2026-08-06): keep_vanilla_shears + lock_player_hut.
 

@@ -70,6 +70,11 @@ namespace Grunnchipelago.Client
         /// degrades gracefully on a missing location - but it keeps the log honest.</summary>
         public bool ExcludeBadEndings { get; private set; }
 
+        /// <summary>YAML mask_items: every location shows an Archipelago model chosen from
+        /// its content's classification instead of the item's own model (ModelSwap).
+        /// Cosmetic only - logic, fill and the pickup message are untouched.</summary>
+        public bool MaskItems { get; private set; }
+
         /// <summary>chore_checks: the maintenance jobs are checks in this seed. Read for
         /// log clarity, and to keep the vanilla gulden payout when the option is OFF.</summary>
         public bool ChoreChecks { get; private set; } = true;
@@ -274,6 +279,7 @@ namespace Grunnchipelago.Client
             if (data.TryGetValue(GameIds.SlotGhostChecks, out var gh)) GhostChecks = Convert.ToInt64(gh) != 0;
             if (data.TryGetValue(GameIds.SlotChoreChecks, out var ch)) ChoreChecks = Convert.ToInt64(ch) != 0;
             if (data.TryGetValue(GameIds.SlotExcludeBadEndings, out var bad)) ExcludeBadEndings = Convert.ToInt64(bad) != 0;
+            if (data.TryGetValue(GameIds.SlotMaskItems, out var mask)) MaskItems = Convert.ToInt64(mask) != 0;
             if (data.TryGetValue(GameIds.SlotLockPlayerHut, out var hut)) LockPlayerHut = Convert.ToInt64(hut) != 0;
         }
 

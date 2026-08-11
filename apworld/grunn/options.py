@@ -145,6 +145,23 @@ class LockPlayerHut(DefaultOnToggle):
     display_name = "Lock Player Hut"
 
 
+class MaskItems(Toggle):
+    """
+    Hide what every location holds: instead of showing the item it contains, each spot
+    displays an Archipelago model coloured by its class - progression, useful or filler.
+    This covers Grunn's own items too, which is the point of the mode: you can tell how
+    valuable a check is, never what it is.
+
+    Traps borrow one of the three models, picked per location and always the same one, so
+    a relaunch never gives them away.
+
+    Purely cosmetic: it changes no logic, no item placement, and the pickup message still
+    names what you actually got.
+    """
+
+    display_name = "Mask Items With Archipelago Model"
+
+
 class DeathLink(Toggle):
     """
     Death link. Every death ending you meet (any ending except Bus, Picnic and the
@@ -208,6 +225,7 @@ class GrunnOptions(PerGameCommonOptions):
     death_link: DeathLink
     chore_checks: ChoreChecks
     exclude_bad_endings: ExcludeBadEndings
+    mask_items: MaskItems
 
 
 grunn_option_groups = [
@@ -219,6 +237,6 @@ grunn_option_groups = [
     OptionGroup(
         "Extras & Tuning",
         [PersistentShortcuts, LockPlayerHut, TrapPercentage, BuffCount, DeathLink,
-         ExcludeBadEndings],
+         ExcludeBadEndings, MaskItems],
     ),
 ]
