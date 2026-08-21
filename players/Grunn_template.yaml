@@ -157,7 +157,7 @@ Grunn:
     # AtticRoom), so the key also gates SLEEPING, i.e. reaching day 2+. The logic models
     # this via rules.can_advance_days: the Mist ending (day 3), the Bus ending
     # (dayIndex >= 2), the Ferry crossing (day 2) and Calm Ghost #3 (redCar, day 2) all
-    # require the key when this option is on [J 2026-07-27, playtest]. It also gates the
+    # require the key when this option is on [2026-07-27, playtest]. It also gates the
     # vanilla Shears / Toilet Key spots and the Sunday-evening hallway.
     # 
     # The Abandoned Key therefore becomes an early, high-value progression item - especially

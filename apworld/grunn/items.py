@@ -72,7 +72,7 @@ UNIMPLEMENTED_ITEMS: set[str] = set()
 TRAPS = [n for n in TRAPS if n not in UNIMPLEMENTED_ITEMS]
 
 # --- Items shelved from the item pool (kept obtainable in-game) ------------------
-# OldKey unlocks NOTHING [J 2026-07-27, confirmed: zero doors list it in
+# OldKey unlocks NOTHING [2026-07-27, confirmed: zero doors list it in
 # unlockItemNeeded, zero interactions use it, and the only rule mentioning it is its own
 # "Obtain OldKey" pickup - never a has("OldKey") requirement]. It is shelved from the
 # item pool while its purpose is reconsidered: the ITEM is not created (its slot becomes
@@ -82,7 +82,7 @@ POOL_SHELVED_ITEMS = {"OldKey"}
 
 # AbandonedKey joins them when lock_player_hut is OFF: the option is the ONLY thing that
 # gives that key a use (v0.3 door table - no vanilla door lists it), so without it the key
-# is dead weight in the pool [J 2026-08-08]. With the option ON it is a real gate and stays.
+# is dead weight in the pool [2026-08-08]. With the option ON it is a real gate and stays.
 # Its "Obtain AbandonedKey" location is a separate matter: it was removed on 2026-07-27
 # because the key has no vanilla pickup, which made it a dead check (see
 # locations.UNSOURCED_LOCATIONS).
@@ -98,7 +98,7 @@ def shelved_items(world: "GrunnWorld") -> set[str]:
 
 
 # --- Key items downgraded to filler ---------------------------------------------
-# Popcorn is inert [J 2026-08-08]: it does nothing in game and appears in no access rule.
+# Popcorn is inert [2026-08-08]: it does nothing in game and appears in no access rule.
 # Corn and Butter DO gate its cooking (rules.py "Popcorn"), so they stay progression -
 # Popcorn itself is the end of that chain and gates nothing further.
 FILLER_KEY_ITEMS = {"Popcorn"}
@@ -107,7 +107,7 @@ FILLER_KEY_ITEMS = {"Popcorn"}
 # Items referenced by a region entrance or an "Obtain X" / ending rule in rules.py are
 # marked progression (so fill and all-state reachability count them), plus the keys that
 # open a vanilla door even when the logic has an alternative route for them (GardenKey,
-# StrangeKey - decision Jonath 2026-08-08).
+# StrangeKey - decision 2026-08-08).
 # (design/apworld_design.md section 4 + regions.md 2026-07-12 corrections)
 PROGRESSION_ITEMS = {
     # traversal / equivalence helpers
@@ -116,7 +116,7 @@ PROGRESSION_ITEMS = {
     "ToiletKey", "ToiletPaper", "Doorknob", "Trowel", "Bone",
     # the very first key: spawn -> Jardin
     "BridgeKey",
-    # Keys that open a vanilla door, promoted to progression [J 2026-08-08] even though
+    # Keys that open a vanilla door, promoted to progression [2026-08-08] even though
     # the logic knows a way around each of them:
     #  - GardenKey opens gardenGate0, the Jardin->Eglise portal (regions.py) - the Eglise
     #    also has the free Exterieur entrance, so it was previously "useful";
@@ -135,7 +135,7 @@ PROGRESSION_ITEMS = {
     # the apple gates the worm plate (rules.py "Worm"), which gates the magpie StrangeKey
     "Apple",
     # SpecialSeed must be planted (+ watered daily to day 3) for Obtain PrettyFlower
-    # [J 2026-07-27] - it therefore gates a check and must be progression.
+    # [2026-07-27] - it therefore gates a check and must be progression.
     "SpecialSeed",
     # "Deed" checks (2026-07-28) turned eight more items into gates: each one is the item
     # you must HOLD to perform the rewarded action (rules.DEED_RULES). Without this they
@@ -190,7 +190,7 @@ def create_item(world: "GrunnWorld", name: str) -> GrunnItem:
 def get_filler_item_name(world: "GrunnWorld") -> str:
     """Infinitely repeatable filler used for item links / start inventory / pool fill.
 
-    Filler is ONLY traps and buffs (decision Jonath 2026-07-16): Gulden is never
+    Filler is ONLY traps and buffs (decision 2026-07-16): Gulden is never
     filler. Under coinsanity the money supply is added explicitly by
     create_all_items instead. Trap chance is honoured here so that
     ``create_filler`` naturally injects traps.
@@ -232,7 +232,7 @@ def create_all_items(world: "GrunnWorld") -> None:
     # 2.5) Coinsanity money supply: enough Gulden to afford every shop purchase in
     # a single run (can_afford checks the CUMULATIVE received count against each
     # price - rules.py:56, prices in constants.py). Added explicitly because
-    # Gulden is NEVER filler (decision Jonath 2026-07-16).
+    # Gulden is NEVER filler (decision 2026-07-16).
     # The 5 garden chores PAY 2 gulden each in vanilla. With chore_checks ON the client
     # turns those payouts into checks, so the money must come back through the pool as
     # "Golden Gulden" (2 gulden each) - the economy is unchanged, the coins are just

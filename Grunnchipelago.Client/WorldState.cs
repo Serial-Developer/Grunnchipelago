@@ -5,7 +5,7 @@ namespace Grunnchipelago.Client
 {
     /// <summary>
     /// SAVE-DERIVED SCENE STATE - the single place that re-applies it after a profile switch
-    /// [demande Jonath 2026-08-01, "une methode clean qui fixe tout ce qu'il y a a fixer"].
+    /// [demande 2026-08-01, "une methode clean qui fixe tout ce qu'il y a a fixer"].
     ///
     /// Grunn loads ONE scene and never reloads it. Several components read the save file
     /// exactly once, at boot, and cache what they read. Swapping SaveManager's path at the
@@ -45,7 +45,7 @@ namespace Grunnchipelago.Client
                 + $"sauvegarde ({applied}/4 volets), remise a neuf du monde armee.");
         }
 
-        /// <summary>THE root cause of nearly every switch symptom [J 2026-08-01, log].
+        /// <summary>THE root cause of nearly every switch symptom [2026-08-01, log].
         ///
         /// Grunn NEVER resets the world when you start playing. UIManager.
         /// SelectOptionThatStartsGame just flips startedRun and enters GameState.Game
@@ -74,7 +74,7 @@ namespace Grunnchipelago.Client
         /// <summary>Armed by the profile switch, honoured on the next world load.
         ///
         /// ResetWorld CANNOT run from the title screen: it threw a NullReferenceException
-        /// there every time and the whole step was skipped [J 2026-08-01, log: "Reapplication
+        /// there every time and the whole step was skipped [2026-08-01, log: "Reapplication
         /// 'monde' echouee"]. Half of it had already run when it threw, which is very likely
         /// what left the game frozen on "recommencer" afterwards. The world simply is not
         /// live at the menu.
@@ -117,7 +117,7 @@ namespace Grunnchipelago.Client
             GameManager.ResetWorld();
         }
 
-        /// <summary>The player position setter [J 2026-08-01: "je reprends a la meme position
+        /// <summary>The player position setter [2026-08-01: "je reprends a la meme position
         /// que dans la save 1"].
         ///
         /// SetPlayerPosAndRot of type Load reads playerPos/playerRot into its OWN transform in
@@ -183,7 +183,7 @@ namespace Grunnchipelago.Client
             catch (Exception e)
             {
                 // Full exception, not just Message: two of these came back with an EMPTY
-                // message and told us nothing [J 2026-08-01].
+                // message and told us nothing [2026-08-01].
                 Plugin.Log?.LogWarning($"[Grunnchipelago] Reapplication '{what}' echouee : " + e);
                 return 0;
             }

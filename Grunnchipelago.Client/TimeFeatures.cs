@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Grunnchipelago.Client
 {
     /// <summary>
-    /// Time-of-day conveniences added on top of vanilla (demande Jonath 2026-07-27).
+    /// Time-of-day conveniences added on top of vanilla (demande 2026-07-27).
     ///
     /// Vanilla only ever advances the clock by ONE hour, through
     /// <c>GameManager.Wait1Hour</c> (GameManager.cs:6276) -> <c>TimeController.Skip1Hour</c>
@@ -27,13 +27,13 @@ namespace Grunnchipelago.Client
     /// </summary>
     internal static class TimeFeatures
     {
-        /// <summary>Night target for the rainpipe and the church bench (choix Jonath).</summary>
+        /// <summary>Night target for the rainpipe and the church bench (mon choix).</summary>
         private const int NightHour = 0;
         private const int NightMinute = 5;
 
         /// <summary>On the MIST DAY there is no night to jump to - the run ends in the fog
         /// instead - so the rainpipe and the church bench aim at 11:15 to speed that up
-        /// [demande Jonath 2026-07-27]. The hour matters: HandleMist ignores everything
+        /// [demande 2026-07-27]. The hour matters: HandleMist ignores everything
         /// before 10:00 (GameManager.cs:2380), the fog peaks at mistHour = 12:00 and the
         /// ending is forced at mistHour + 2 = 14:00 (GameManager.cs:2384). 11:15 sits just
         /// inside the active window without skipping the sequence.</summary>
@@ -41,7 +41,7 @@ namespace Grunnchipelago.Client
         private const int MistDayMinute = 15;
 
         /// <summary>Night Trap target: 03:00, still inside the Darkness window
-        /// (currentHour &lt;= 3) with the most margin before 04:00 (choix Jonath).</summary>
+        /// (currentHour &lt;= 3) with the most margin before 04:00 (mon choix).</summary>
         private const int TrapNightHour = 3;
         private const int TrapNightMinute = 0;
 
@@ -69,7 +69,7 @@ namespace Grunnchipelago.Client
             if (EndsWithAny(path, GameIds.ParkBenchPaths)) pendingWait = WaitKind.ParkBench;
             else if (EndsWith(path, GameIds.ChurchNightBenchPath)) pendingWait = WaitKind.NightBench;
 
-            // The benches went silent once already [J 2026-08-01: "la gouttiere fonctionne
+            // The benches went silent once already [2026-08-01: "la gouttiere fonctionne
             // mais pas les bancs"], and a mismatched path is invisible without this: log the
             // REAL path every time, so an unrecognised bench names itself.
         }
@@ -101,7 +101,7 @@ namespace Grunnchipelago.Client
         /// hour, one frame behind. Testing them made this method always conclude "vanilla
         /// refused" and return, which is why the benches did nothing at all while the
         /// rainpipe - which never runs this check - worked fine
-        /// [J 2026-08-01: "la gouttiere fonctionne mais pas les bancs"].</summary>
+        /// [2026-08-01: "la gouttiere fonctionne mais pas les bancs"].</summary>
         public static void AfterWait(long ticksBefore)
         {
             WaitKind kind = pendingWait;

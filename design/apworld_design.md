@@ -1,6 +1,6 @@
 # Grunnchipelago - Document de design de l'APWorld
 
-Synthèse des décisions de design (Jonath, juillet 2026).
+Synthèse des décisions de design (juillet 2026).
 Références : `regions.md` (graphe/logique), `zone_logic.md` (données exhaustives),
 `analysis/decompiled/` (code du jeu).
 
@@ -59,7 +59,7 @@ progression selon les règles finales.
 - **Cadence de découpe** (progressif) - idem
 - Extensible plus tard (portée d'interaction, etc.)
 
-### Traps (8, refonte 2026-07-27 - demande Jonath)
+### Traps (8, refonte 2026-07-27 - ce que je veux)
 Temporisés - 2 h in-game (`TimeController.currentHour`), expirent au changement de jour :
 - **Speed Trap** / **Size Trap** - debuff vitesse (×0.5) / taille (×0.45)
 - **Inverted Controls Trap** - patch MouseLookNew/InputManager
@@ -103,7 +103,7 @@ les anciens noms pour qu'une seed antérieure au 2026-07-27 reste jouable (`Game
   parkUnlockedHooibaalGarden, parkUnlockedMaze, locksUnlocked.
   ⚠ `unlockedIntratuin` EXCLU (session 2) : restaurer ce flag colore l'emblème de la
   porte aux fleurs mystérieuses mais empêche le ré-arrosage de l'ouvrir.
-- Pas d'option de persistance totale (décision Jonath)
+- Pas d'option de persistance totale (décision)
 - **Profil de sauvegarde par seed** (session 2, 3.1 - `SaveProfile.cs`) : connecté, le
   mod redirige le PRÉFIXE `SaveManager.savePath` vers `grunn_ap_<seed>_<slot>`, au
   menu titre uniquement. La sauvegarde vanilla du joueur n'est jamais touchée et
@@ -149,7 +149,7 @@ les anciens noms pour qu'une seed antérieure au 2026-07-27 reste jouable (`Game
 | `coinsanity` | toggle | off | 15 gulden posés en checks + logique monétaire |
 | `persistent_shortcuts` | toggle | off | restaure les raccourcis entre les runs |
 | `trap_percentage` etc. | range | à calibrer | proportion buffs/traps/fillers |
-| `death_link` | toggle | off (convention AP) | V2 (décision Jonath, 2026-07) : les morts SONT les fins - envoi sur les 8 fins-morts (Mist, SacredFlowers, Drown, Darkness, LongHallway, HedgeMaze, WorldEnd, Dog), jamais Bus/Picnic/GoodEnd ; réception = reset de run SANS fin déclenchée ni check (anti-farm all_endings, anti-boucle) |
+| `death_link` | toggle | off (convention AP) | V2 (décision, 2026-07) : les morts SONT les fins - envoi sur les 8 fins-morts (Mist, SacredFlowers, Drown, Darkness, LongHallway, HedgeMaze, WorldEnd, Dog), jamais Bus/Picnic/GoodEnd ; réception = reset de run SANS fin déclenchée ni check (anti-farm all_endings, anti-boucle) |
 
 ## 8. Hooks techniques (référence mod client)
 
@@ -173,7 +173,7 @@ les anciens noms pour qu'une seed antérieure au 2026-07-27 reste jouable (`Game
 4. Test bout en bout solo, puis calibrage buffs/traps
 5. Post de présentation Discord AP (#future-game-design)
 
-## 10. Features Jonath - triage (2026-07-13)
+## 10. Features souhaitées - triage (2026-07-13)
 
 > Statuts (CC, 2026-07-14) : #3 Bone spawn ✅ livré (d6c897f) ; #4 popup ✅ livré
 > (d6c897f) ; #5 sync polaroids ✅ livré (d6c897f) ; #1 modèles concrets ✅ livré
@@ -188,7 +188,7 @@ les anciens noms pour qu'une seed antérieure au 2026-07-27 reste jouable (`Game
 > premier modèle de clé récolté, les clés de Grunn se ressemblant toutes.
 > ; #2 modèles AP ✅ mécanique livrée (classification + traps déguisés
 > déterministes + items d'autres joueurs), direction artistique PROVISOIRE
-> (polaroid teinté rouge/bleu/gris) - Jonath tranche la DA finale.
+> (polaroid teinté rouge/bleu/gris) - je tranche la DA finale.
 
 ### Pré-playtest (bloquants)
 - **Sync des polaroids (feature #5)** : Grunn n'a qu'un seul fichier de sauvegarde ; sur
@@ -206,7 +206,7 @@ les anciens noms pour qu'une seed antérieure au 2026-07-27 reste jouable (`Game
   |---|---|
   | **Bone** | fin **Dog** (le chien ne tue plus) |
   | **Compass** | labyrinthe sans boussole et fin **HedgeMaze** |
-  | **StrangeKey** | fin **LongHallway** : la porte de l'OrbRoom se déverrouille sur simple possession (`Door.PlayerHasUnlockItem`, Door.cs:910) et l'assaillant n'est armé que tant qu'elle est verrouillée (Door.cs:770) [J 2026-07-27] |
+  | **StrangeKey** | fin **LongHallway** : la porte de l'OrbRoom se déverrouille sur simple possession (`Door.PlayerHasUnlockItem`, Door.cs:910) et l'assaillant n'est armé que tant qu'elle est verrouillée (Door.cs:770) [2026-07-27] |
 - **Texte du popup de ramassage (feature #4, partie légère)** : le popup vanilla affiche
   l'objet VU, pas l'objet reçu (ex. pagaie ramassée, triangle obtenu, message « pagaie »).
   Fix : supprimer le popup vanilla au ramassage intercepté et afficher le vrai contenu

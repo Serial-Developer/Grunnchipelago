@@ -47,7 +47,7 @@ namespace Grunnchipelago.Client
 
         /// <summary>Set after a failed swap: the feature is disabled for the session
         /// instead of retrying every frame (the first version spammed hundreds of
-        /// identical errors per second - retour Jonath).</summary>
+        /// identical errors per second - constate en jeu).</summary>
         private static bool disabled;
 
         /// <summary>True once this session plays on a dedicated profile.</summary>
@@ -85,7 +85,7 @@ namespace Grunnchipelago.Client
                 Reload();
                 // Everything the SCENE cached from the old save file, re-read from the new
                 // one - see WorldState for the full list and the rule on where a new leak
-                // belongs [J 2026-08-01].
+                // belongs [2026-08-01].
                 WorldState.ReapplyFromSave();
                 RefreshTitleScreen();
 
@@ -116,7 +116,7 @@ namespace Grunnchipelago.Client
         /// and TimeController.SetCurrentTimeToTitleHour sets the scene's clock. Leaving both
         /// stale let the player CONTINUE a run belonging to the other save - dropped in the
         /// park with no items - and eventually broke the menu outright
-        /// [J 2026-08-01: "l'UI du menu principal a disparu", the hut lit as in save A].
+        /// [2026-08-01: "l'UI du menu principal a disparu", the hut lit as in save A].
         ///
         /// So the game's own title-entry work is replayed: reset the derived values, rebuild
         /// the menu, re-read the title clock.</summary>
@@ -151,7 +151,7 @@ namespace Grunnchipelago.Client
             {
                 // LoadFromFile is an INSTANCE method (SaveManager.cs:2050) - calling it
                 // with a null target threw "Non-static method requires a target" every
-                // frame (retour Jonath). SaveManager is a MonoBehaviour with no static
+                // frame (constate en jeu). SaveManager is a MonoBehaviour with no static
                 // accessor, so fetch the live component.
                 var manager = UnityEngine.Object.FindObjectOfType<SaveManager>();
                 if (manager == null) throw new Exception("SaveManager introuvable en scene.");

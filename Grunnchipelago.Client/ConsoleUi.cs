@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Grunnchipelago.Client
 {
     /// <summary>
-    /// IN-GAME ARCHIPELAGO CONSOLE (demande Jonath 2026-08-01).
+    /// IN-GAME ARCHIPELAGO CONSOLE (demande 2026-08-01).
     ///
     /// Bottom-right overlay, IN GAME ONLY, showing what the server says: item sends, hints,
     /// chat, command results - everything MessageLog reports (ApClient.OnServerMessage).
@@ -25,7 +25,7 @@ namespace Grunnchipelago.Client
         private const float RefWidth = 1920f;
         private const float RefHeight = 1080f;
 
-        // Bottom-right, flush with the bottom edge on a hair of margin [J 2026-08-01].
+        // Bottom-right, flush with the bottom edge on a hair of margin [2026-08-01].
         private const float PanelWidth = 620f;
         private const float PanelHeight = 260f;
         private const float MarginRight = 20f;
@@ -55,7 +55,7 @@ namespace Grunnchipelago.Client
 
         /// <summary>True while the view follows the newest line. Cleared as soon as the
         /// player scrolls up: an arriving message must not yank the history out from under
-        /// them mid-read [J 2026-08-01].</summary>
+        /// them mid-read [2026-08-01].</summary>
         private static bool pinnedToBottom = true;
 
         private const float LineHeight = 22f;
@@ -150,7 +150,7 @@ namespace Grunnchipelago.Client
             {
                 // Enter sends. Escape is deliberately NOT handled: the game opens its pause
                 // menu on that key through a path of its own, so closing the console with it
-                // also paused the game [J 2026-08-01]. F1 is the single toggle.
+                // also paused the game [2026-08-01]. F1 is the single toggle.
                 if (Event.current != null && Event.current.type == EventType.KeyDown)
                 {
                     if (Event.current.keyCode == KeyCode.Return
@@ -162,7 +162,7 @@ namespace Grunnchipelago.Client
                     // F1 closes from INSIDE the input line too. The focused TextField owns
                     // the keyboard control, so Tick's poll fired while the field kept the
                     // focus and the console reopened on the same press - it took unfocusing
-                    // first [J 2026-08-01]. Handled here, the key never reaches the field.
+                    // first [2026-08-01]. Handled here, the key never reaches the field.
                     else if (Event.current.keyCode == ToggleKey && Time.frameCount != toggledOnFrame)
                     {
                         Focused = false;
@@ -189,7 +189,7 @@ namespace Grunnchipelago.Client
         /// ScrollView: in game the cursor is LOCKED at the screen centre (CursorUnlock only
         /// frees it on the title screen), so IMGUI never considers the pointer to be over the
         /// view and the built-in wheel handling never fires. Page keys cover the same ground
-        /// without a mouse at all - Grunn is a keyboard game [J 2026-08-01].</summary>
+        /// without a mouse at all - Grunn is a keyboard game [2026-08-01].</summary>
         private static void HandleScrollInput()
         {
             Event e = Event.current;

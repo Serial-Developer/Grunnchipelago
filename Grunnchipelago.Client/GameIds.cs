@@ -78,7 +78,7 @@ namespace Grunnchipelago.Client
             EndingType.WorldEnd, EndingType.GoodEnd, EndingType.Dog, EndingType.Picnic,
         };
 
-        // Endings that count as DEATHS for DeathLink (decision Jonath 2026-07-13):
+        // Endings that count as DEATHS for DeathLink (decision 2026-07-13):
         // every ending EXCEPT Bus, Picnic and GoodEnd (good/true ending).
         public static readonly HashSet<EndingType> DeathLinkEndings = new HashSet<EndingType>
         {
@@ -94,8 +94,8 @@ namespace Grunnchipelago.Client
         public const string TrapSize = "Size Trap";
         public const string TrapInvertedControls = "Inverted Controls Trap";
 
-        // The 5 world-altering traps were REDESIGNED and RENAMED on 2026-07-27 (demande
-        // Jonath): the four "regrow one element in a random zone" traps became three
+        // The 5 world-altering traps were REDESIGNED and RENAMED on 2026-07-27:
+        // the four "regrow one element in a random zone" traps became three
         // full ZONE RESETS plus a night trap, and the flower trap became the sacred-flower
         // trap. Their ids in ids.json are UNCHANGED (478660304..308) - only the names moved.
         public const string TrapParkReset = "Park Reset Trap";        // id 478660304
@@ -114,7 +114,7 @@ namespace Grunnchipelago.Client
         public const string TrapLegacyReturnTrash = "Return Trash Trap";        // -> Night
         public const string TrapLegacyRegrowMolehills = "Regrow Molehills Trap";// -> Church Reset
 
-        // --- Time features (demande Jonath 2026-07-27) ---------------------------------
+        // --- Time features (demande 2026-07-27) ---------------------------------
         // Frozen scene paths from dump/grunnchipelago_dump.json (interactions of type
         // Wait1Hour). The three PARK benches skip 3 hours instead of 1; the church bench
         // nearest the church door jumps straight to night.
@@ -127,12 +127,12 @@ namespace Grunnchipelago.Client
 
         // bench0 (3) at (10.59, 10.0, 1.28): the closest Wait1Hour bench to the church door
         // (~34 m from churchSideDoorKnock0, interaction type ChurchDoor) - the other church
-        // bench is ~66 m away. Choice confirmed by Jonath 2026-07-27.
+        // bench is ~66 m away. Choice confirmed by 2026-07-27.
         public const string ChurchNightBenchPath =
             "Main/Areas/ChurchArea/Container/Hide_ChurchMid/Props/bench0 (3)/bench_waitInteraction0";
 
         // --- "Deed" location names (ids.json block 478661500+, category "deed") ---------
-        // Rewarded ACTIONS rather than pickups (demande Jonath 2026-07-28). Names must match
+        // Rewarded ACTIONS rather than pickups (demande 2026-07-28). Names must match
         // ids.json EXACTLY - they are resolved by name through the session datapackage.
         public const string DeedPizzaBox = "Deed: Throw Away PizzaBox";
         public const string DeedPrettyFlower = "Deed: Place PrettyFlower in Vase";
@@ -144,7 +144,7 @@ namespace Grunnchipelago.Client
 
         // --- "Chore" location names (ids.json block 478661600+, category "chore") -------
         // The five START-GARDEN maintenance jobs. Vanilla paid 2 gulden the first time each
-        // was finished in the garden; those payouts are checks now (demande Jonath
+        // was finished in the garden; those payouts are checks now (demande
         // 2026-07-30) and the pool holds five "Golden Gulden" worth 2 each in exchange.
         public const string ChoreHedges = "Chore: Trim Every Hedge (Garden)";
         public const string ChoreGrass = "Chore: Cut All the Grass (Garden)";

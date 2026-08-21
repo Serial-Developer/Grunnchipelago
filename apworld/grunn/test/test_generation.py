@@ -34,7 +34,7 @@ class TestDefaultTemplate(GrunnTestBase):
             elif f"Obtain {name}" in UNSOURCED_LOCATIONS:
                 # keys with no reachable vanilla pickup (OldKey / AbandonedKey): the
                 # LOCATION is never created, but the item may still exist in the pool
-                # (AbandonedKey is used by lock_player_hut) [J 2026-07-27]
+                # (AbandonedKey is used by lock_player_hut) [2026-07-27]
                 self.assertNotIn(f"Obtain {name}", names)
             else:
                 self.assertIn(f"Obtain {name}", names)
@@ -99,7 +99,7 @@ class TestGhostsNeedTrumpet(GrunnTestBase):
     """Ghosts are invisible until the Trumpet reveals them (Ghost.Show is only called
     by ShowNearbyGhosts <- PerformTrumpetAction, GameManager.cs:5153-5167), so every
     ghost check requires it. Regression: seed 7 put ChurchKey/Compass/Trowel behind
-    ghosts in an early sphere and the player was hard-blocked in game [J 2026-07-16].
+    ghosts in an early sphere and the player was hard-blocked in game [2026-07-16].
     """
 
     options = {"goal": "all_endings", "ghost_checks": True, "exclude_bridge_key": False}
@@ -303,7 +303,7 @@ class TestChoreChecksEconomy(GrunnTestBase):
 
 class TestExcludeBadEndings(GrunnTestBase):
     """exclude_bad_endings drops the checks of the 8 endings that kill you (demande
-    Jonath 2026-07-30) - exactly the DeathLink set."""
+    2026-07-30) - exactly the DeathLink set."""
 
     options = {"goal": "true_ending", "exclude_bad_endings": True}
 

@@ -96,7 +96,7 @@ namespace Grunnchipelago.Client
             if (pickup == null || pickup.isRepeatablePickup) return false;
             if (pickup.gameObject.name.StartsWith("grunnchipelago", System.StringComparison.Ordinal))
                 return false;   // the bone gift follows vanilla possession rules
-            // A PLACED gulden is a location only under coinsanity (retour Jonath): its
+            // A PLACED gulden is a location only under coinsanity (constate en jeu): its
             // check must keep it hidden across runs. Without coinsanity it is plain
             // money and must respawn every run exactly like vanilla.
             if (pickup.isGulden) return ap.Coinsanity && GuldenIndexOf(pickup) >= 0;
@@ -213,7 +213,7 @@ namespace Grunnchipelago.Client
             // ALL FOUR hedge-maze portals (2 entrances + 2 exits) route on POSSESSING
             // TallIdol. Vanilla: you get the idol by beating the tall man, so within a
             // run "have idol" == "cleared the maze", and it RESETS next run (key items
-            // are per-run) - so next run you redo the puzzle (retour Jonath: "jusqu'a
+            // are per-run) - so next run you redo the puzzle (constate en jeu: "jusqu'a
             // la prochaine run"). We intercept the idol grant, so possession never
             // happens -> the exit never opened AND re-entry never routed to the solved
             // maze. Drive all four by destroyedTallMan (per-run, set when you beat the
@@ -233,7 +233,7 @@ namespace Grunnchipelago.Client
 
             // Magic Pond revived-fish content (MagicPond_FishAlive_ContentHider0, keyItemRef
             // GoldFishAlive) hides on POSSESSION, which strands the check once the alive fish
-            // is received from the multiworld (retour Jonath 2026-07-27). The check now fires
+            // is received from the multiworld (retour 2026-07-27). The check now fires
             // on PLACING the dead fish (MagicPondPlaceFishPatch), and the content shows the
             // check's model - so never hide it on possession: let the pond state alone drive
             // it (the hider's other condition, NotFishInMagicPond, stays vanilla).
@@ -248,7 +248,7 @@ namespace Grunnchipelago.Client
             // the Lighter is owned): drive them from the POLAROID's own check instead,
             // or receiving that key item from the multiworld strands the polaroid check.
             //
-            // CRITICAL (retour Jonath: empty out-of-bounds hedge maze): the polaroid
+            // CRITICAL (constate en jeu: empty out-of-bounds hedge maze): the polaroid
             // must be the hider's OWN target object, never a descendant.
             // GetComponentInChildren matched any polaroid buried in a big container -
             // HedgeMaze_NotObtainedCompass / _ObtainedCompass (Compass hiders wrapping
@@ -301,7 +301,7 @@ namespace Grunnchipelago.Client
     }
 
     /// <summary>Interaction.CheckPreventCondition(PreventType) - Interaction.cs:936.
-    /// THIRD possession layer (session 2, retour Jonath: the church Doorknob never
+    /// THIRD possession layer (session 2, constate en jeu: the church Doorknob never
     /// appeared once the AP Doorknob was received, and never came back). Beyond
     /// pickup visibility and ContentHiders, an Interaction can be blocked outright by
     /// PreventType.KeyItemObtained, which reads SaveManager.ObtainedKeyItem
@@ -353,7 +353,7 @@ namespace Grunnchipelago.Client
     /// (Owner.cs:277). When the player already received AtticKey from the multiworld, that
     /// guard skips the whole grant, so ObtainKeyItem is never called and the "Obtain
     /// AtticKey" check never fires - the same "possession kills the location" class as the
-    /// pickup/shop paths, but on the dialogue path [J 2026-07-22, seed #3: SoulFragment1
+    /// pickup/shop paths, but on the dialogue path [2026-07-22, seed #3: SoulFragment1
     /// sat on Obtain AtticKey and was stranded]. We send the check here regardless of
     /// possession; TrySend dedupes, so the not-owned case (ObtainKeyItem -> our prefix)
     /// is not double-counted.</summary>
@@ -370,7 +370,7 @@ namespace Grunnchipelago.Client
 
     /// <summary>GameManager.PlaceFishInMagicPond (GameManager.cs) - the "Obtain
     /// GoldFishAlive" check fires on PLACING the dead fish in the pond (single criterion,
-    /// retour Jonath 2026-07-27), not on retrieving it. Vanilla only granted the alive
+    /// retour 2026-07-27), not on retrieving it. Vanilla only granted the alive
     /// fish on RETRIEVE (RetrieveFishFromMagicPond -> ObtainKeyItem), which was stranded
     /// once GoldFishAlive was received from the multiworld (the revived-fish content is
     /// hidden on possession). Placing consumes the dead fish (KeyItemUse) and sets
@@ -484,7 +484,7 @@ namespace Grunnchipelago.Client
                 int index = ScenePaths.GuldenIndex(__instance);
                 if (index >= 0)
                 {
-                    // Diagnostic popup removed (session 2, retour Jonath): it had
+                    // Diagnostic popup removed (session 2): it had
                     // identified the unknown gulden spots (#2, #8) - job done. Log only.
                     if (ApClient.Verbose)
                         Plugin.Log?.LogInfo($"[Grunnchipelago] Gulden pickup: {GameIds.GuldenLocationNames[index]}");
@@ -505,7 +505,7 @@ namespace Grunnchipelago.Client
                 // the Trowel in the bunker, GameManager.cs:2231. We intercept that
                 // grant, so BunkerFlood.Tick drives it from the Trowel CHECK every run -
                 // firing it only here, on pickup, broke re-runs once the check was sent
-                // and the pickup vanished, retour Jonath.)
+                // and the pickup vanished, constate en jeu.)
                 if (SaveManager.ObtainedKeyItem(first))
                 {
                     if (ap.KeyItemCheckPending(first))
@@ -556,7 +556,7 @@ namespace Grunnchipelago.Client
     /// TriggerItemObtainPopup (already suppressed) and ObtainKeyItem (already intercepted),
     /// it builds the "&lt;obtenu&gt; poisson rouge en vie" string BY HAND and calls
     /// UIManager.AddPopup with it (line 6095) - so the player read the vanilla item name
-    /// while actually receiving their AP item [J 2026-07-27, in-game].
+    /// while actually receiving their AP item [2026-07-27, in-game].
     /// The check itself left at DEPOSIT time (MagicPondPlaceFishPatch) and the AP item was
     /// announced then, so the retrieval must stay silent. Vanilla sounds are untouched.</summary>
     [HarmonyPatch(typeof(GameManager), nameof(GameManager.RetrieveFishFromMagicPond))]
@@ -745,7 +745,7 @@ namespace Grunnchipelago.Client
 
         // Next to the roses sign / pupitre (plantSign0, dump: -36.5, 10.0, -66.2), on
         // the side AWAY from the RedRoses bed (x -32..-37, z -61..-66) that kept
-        // swallowing the bone (retours Jonath iters 3, 6 - "super bien positionné").
+        // swallowing the bone (constate en jeu iters 3, 6 - "super bien positionné").
         private static readonly Vector3 BonePosition = new Vector3(-37.3f, 10.35f, -67.5f);
         private static readonly Vector3 CompassPosition = new Vector3(-38.6f, 10.35f, -66.6f);
         // Third gift, continuing the same diagonal away from the rose bed (z < -66).
@@ -753,7 +753,7 @@ namespace Grunnchipelago.Client
 
         /// <summary>Destroy the gifts of the PREVIOUS multiworld. They are plain clones we
         /// spawned ourselves, so nothing else cleans them up - and they were still standing
-        /// by the rose sign after switching rooms [J 2026-08-01]. Main thread only.</summary>
+        /// by the rose sign after switching rooms [2026-08-01]. Main thread only.</summary>
         public static void ResetForNewSession()
         {
             foreach (GameObject instance in new[] { boneInstance, compassInstance, strangeKeyInstance })
@@ -771,7 +771,7 @@ namespace Grunnchipelago.Client
                 boneInstance = Spawn(KeyItem.Bone, "grunnchipelago_boneGift", BonePosition);
             if (compassInstance == null && ap.CompassOwnedFromAp)
                 compassInstance = Spawn(KeyItem.Compass, "grunnchipelago_compassGift", CompassPosition);
-            // StrangeKey [J 2026-07-27]: owning it kills the LongHallway ending (the orb-room
+            // StrangeKey [2026-07-27]: owning it kills the LongHallway ending (the orb-room
             // door unlocks on possession, and the small demon only arms while it is locked -
             // Door.cs:770 vs 910). Same gift treatment as the bone and the compass.
             if (strangeKeyInstance == null && ap.StrangeKeyOwnedFromAp)
@@ -802,12 +802,12 @@ namespace Grunnchipelago.Client
             // WORLD-size normalisation. Instantiate WITHOUT a parent keeps the template's
             // LOCAL scale but drops its parents' - so a template sitting under a shrunk
             // parent spawns GIANT. That is exactly what happened to the StrangeKey gift
-            // [J 2026-07-30: "bien trop grosse", and its interaction prompt sat off to the
+            // [2026-07-30: "bien trop grosse", and its interaction prompt sat off to the
             // side because the oversized collider moved with it]. The clone has no parent,
             // so its local scale IS its world scale: copy the template's lossyScale and the
             // gift renders at the size the item really has in game.
             // (Same lesson as ModelSwap.SwapVisual - "la taille du modele depend de sa
-            // position dans le monde", retour Jonath iter 4 - never applied here until now.)
+            // position dans le monde", retour iter 4 - never applied here until now.)
             Vector3 templateWorldScale = template.transform.lossyScale;
             if (templateWorldScale != instance.transform.localScale)
                 Plugin.Log?.LogInfo($"[Grunnchipelago] Gift {item}: echelle corrigee "
@@ -820,7 +820,7 @@ namespace Grunnchipelago.Client
             clone.soldByKid = false;
             clone.cost = 0;
             // The template may already be MODEL-SWAPPED (its location's scouted content
-            // replaced the visuals - retour Jonath: the gift no longer looked like a
+            // replaced the visuals - constate en jeu: the gift no longer looked like a
             // bone). Undo the swap on the clone: drop our holder, re-enable renderers.
             if (clone.visualsObject != null)
             {
@@ -832,7 +832,7 @@ namespace Grunnchipelago.Client
             instance.SetActive(true);
             // Awake already ran Init->ResetState DURING Instantiate, with the
             // TEMPLATE's startState - re-run it now that startState is Show, or the
-            // gift only appears at the next world reset (retour Jonath iter 8: the
+            // gift only appears at the next world reset (retour iter 8: the
             // bone showed up one run late).
             clone.ResetState();
             Plugin.Log?.LogInfo($"[Grunnchipelago] Gift {item} spawned at {position}.");
@@ -857,7 +857,7 @@ namespace Grunnchipelago.Client
         /// the hut - and never touches unlockItemNeeded (Door.cs, ResetState). Every run
         /// reset, world reset or new day therefore left the door open while our requirement
         /// sat there unenforced, and the guard read that requirement and did nothing
-        /// [J 2026-08-01: "j'ai pu ouvrir la porte sans la cle"].
+        /// [2026-08-01: "j'ai pu ouvrir la porte sans la cle"].
         ///
         /// The condition now reads the only thing that actually matters: does the player own
         /// the key. Without it, the door stays locked - whatever reset just ran. With it,
@@ -916,7 +916,7 @@ namespace Grunnchipelago.Client
     /// Interaction.CheckIfCloseEnough is pure PROXIMITY - distance squared under 30, i.e.
     /// about 5,5 m, with no line-of-sight test whatsoever (Interaction.cs:889-905). The hut
     /// walls are thin, so standing outside puts the player well inside that radius and the
-    /// prompt fires straight through the wall [J 2026-08-01, capture: the watering can taken
+    /// prompt fires straight through the wall [2026-08-01, capture: the watering can taken
     /// from outside]. Our swapped models made it obvious - a model bigger than the one it
     /// replaces pokes out and gives something to aim at - but the hole is in the reach test,
     /// not in the model: shrinking the visual would only hide the problem again.
@@ -977,7 +977,7 @@ namespace Grunnchipelago.Client
         }
     }
 
-    /// <summary>Bunker flood (retour Jonath): vanilla raises the water while the player
+    /// <summary>Bunker flood (constate en jeu): vanilla raises the water while the player
     /// HOLDS the Trowel in the bunker (a short timer then TriggerEarthQuake,
     /// GameManager.cs:2221-2242). Our interception means the "Obtain Trowel" pickup
     /// never grants the vanilla Trowel, and once its CHECK is sent the pickup is hidden
@@ -1009,14 +1009,14 @@ namespace Grunnchipelago.Client
     {
         private static bool bijkeuken, created, hooiGarden, maze;
         // Braamstruik = the bramble between the park and the road, burnt with the Lighter
-        // (demande Jonath 2026-08-06). Braamstruik.ResetState hides it for good when
+        // (demande 2026-08-06). Braamstruik.ResetState hides it for good when
         // braamstruikLit is set, and derives braamstruikDestroyed from it, so restoring
         // the pair keeps the passage open on both sides after a run reset.
         private static bool braamLit, braamDestroyed;
         private static readonly List<Lock> locks = new List<Lock>();
 
         /// <summary>Session 2 - the cache is monotonic and STATIC: without this reset a
-        /// new seed inherited the previous multiworld's shortcuts (Jonath: the
+        /// new seed inherited the previous multiworld's shortcuts (seen in game: the
         /// garden-exterior shears shortcut survived a reseed + fresh run).</summary>
         public static void Clear()
         {

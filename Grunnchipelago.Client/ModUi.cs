@@ -78,7 +78,7 @@ namespace Grunnchipelago.Client
             //    !SwitchingState (UIManager.cs:1543-1551). We never applied it, and our
             //    canvas sits at sortingOrder 5000 - above the splash and the loading screen -
             //    so a title state the game was busy covering still painted our credit;
-            //  - a short settle delay. The flash is over in a few frames [J 2026-08-01:
+            //  - a short settle delay. The flash is over in a few frames [2026-08-01:
             //    "flash tres rapidement entre l'ecran sokpop et le chargement"], so anything
             //    that brief is a transition artefact, not a title screen.
             bool titleUp = GameManager.CurGameState == GameManager.GameState.Title
@@ -149,7 +149,7 @@ namespace Grunnchipelago.Client
                 try { data = PolaroidManager.GetPolaroidData(pair.Value); }
                 catch (System.Exception) { }
 
-                // The game's own numbering is NOT the enum order (retour Jonath: the
+                // The game's own numbering is NOT the enum order (constate en jeu: the
                 // list came out shuffled) - sort on myIndex so it reads 1..11.
                 int number = i + 1;
                 if (data != null && !int.TryParse(data.myIndex, out number)) number = i + 1;
@@ -202,9 +202,9 @@ namespace Grunnchipelago.Client
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
 
-            // Mod credit (demande Jonath) - bottom-right of the title screen, in red,
+            // Mod credit (ce que je veux) - bottom-right of the title screen, in red,
             // italic like the vanilla title. Sits ABOVE the "E - sélectionner" prompt
-            // box, whose top edge is ~190 px off the bottom (capture Jonath).
+            // box, whose top edge is ~190 px off the bottom (ma capture).
             titleCredit = MakeText(root.transform, "titleCredit", font,
                 anchor: new Vector2(1f, 0f), pivot: new Vector2(1f, 0f),
                 position: new Vector2(-40f, 205f), size: new Vector2(700f, 100f),
@@ -220,7 +220,7 @@ namespace Grunnchipelago.Client
 
             // Left of the centered ending polaroid (session 2, 1.3, iteration 3):
             // the polaroid CARD renders above our canvas and its left edge sits at
-            // ~-420 from center (capture Jonath) - the column ends at -450 so the
+            // ~-420 from center (ma capture) - the column ends at -450 so the
             // text stays fully visible. Word wrap inside the box + auto-size bounded
             // down when a long item name needs it.
             endingItemPanel = MakeText(root.transform, "endingItemPanel", font,
@@ -235,7 +235,7 @@ namespace Grunnchipelago.Client
 
             // Session 2, 3.2: the 11 endings, RIGHT of the polaroid. Starts at +450
             // from centre for the same reason the item panel ends at -450 - the
-            // polaroid card renders above our canvas (capture Jonath, 1.3 iter 3).
+            // polaroid card renders above our canvas (ma capture, 1.3 iter 3).
             endingListPanel = MakeText(root.transform, "endingListPanel", font,
                 anchor: new Vector2(0.5f, 0.5f), pivot: new Vector2(0f, 0.5f),
                 position: new Vector2(450f, 0f), size: new Vector2(420f, 620f),

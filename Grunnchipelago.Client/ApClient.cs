@@ -66,7 +66,7 @@ namespace Grunnchipelago.Client
         public bool PersistentShortcuts { get; private set; }
         public bool DeathLinkEnabled { get; private set; }
         /// <summary>exclude_bad_endings: the 8 death endings have NO check in this seed
-        /// (demande Jonath 2026-07-30). Purely cosmetic client-side - SendByName already
+        /// (demande 2026-07-30). Purely cosmetic client-side - SendByName already
         /// degrades gracefully on a missing location - but it keeps the log honest.</summary>
         public bool ExcludeBadEndings { get; private set; }
 
@@ -93,7 +93,7 @@ namespace Grunnchipelago.Client
         /// pickup spawns next to the bone gift instead.</summary>
         public bool CompassOwnedFromAp { get; private set; }
 
-        /// <summary>Same treatment for StrangeKey [J 2026-07-27, in-game]: OWNING it makes
+        /// <summary>Same treatment for StrangeKey [2026-07-27, in-game]: OWNING it makes
         /// the final-hallway assailant - and the LongHallway ending - impossible. Door.Trigger
         /// only arms the small demon while the door is still LOCKED (Door.cs:770-773), but the
         /// same call unlocks it as soon as PlayerHasUnlockItem() is true, and that tests mere
@@ -112,7 +112,7 @@ namespace Grunnchipelago.Client
         /// <summary>Raised when the connection targets a DIFFERENT multiworld than the last
         /// one. Drained by Plugin.Update on the MAIN THREAD (it destroys GameObjects): the
         /// world objects we spawned or swapped for the previous room have to go, or they
-        /// leak across rooms [J 2026-08-01: gifts still standing, and checks of room A still
+        /// leak across rooms [2026-08-01: gifts still standing, and checks of room A still
         /// marked sent, which left the BridgeKey unobtainable in room B].</summary>
         public bool NeedsSessionReset { get; set; }
 
@@ -180,7 +180,7 @@ namespace Grunnchipelago.Client
         /// <summary>Why the last attempt failed, for the connection panel. Empty while an
         /// attempt is in flight or after a success: the UI would otherwise have no way to
         /// tell "still trying" from "wrong slot", since Connect runs off-thread and only
-        /// ever wrote to the log [J 2026-08-01: bad credentials left "Connexion..." up for
+        /// ever wrote to the log [2026-08-01: bad credentials left "Connexion..." up for
         /// good].</summary>
         public volatile string LastConnectError = "";
 
@@ -323,7 +323,7 @@ namespace Grunnchipelago.Client
             while (pending.TryDequeue(out _)) { }
             // The gift flags are latched by OnItemReceived and were never cleared: the
             // compass earned in room A re-spawned by the rose sign in room B, right after
-            // GiftPickups had destroyed the previous instance [J 2026-08-01].
+            // GiftPickups had destroyed the previous instance [2026-08-01].
             BoneOwnedFromAp = false;
             CompassOwnedFromAp = false;
             StrangeKeyOwnedFromAp = false;
@@ -354,7 +354,7 @@ namespace Grunnchipelago.Client
         }
 
         /// <summary>Set at login when this seed:slot differs from the last stored one
-        /// (session 2 retour Jonath: the vanilla save + the static ShortcutCache leaked
+        /// (session 2 constate en jeu: the vanilla save + the static ShortcutCache leaked
         /// shortcuts from the previous multiworld into a fresh seed). Plugin.Update
         /// consumes it once the save is available and resets the shortcut state.</summary>
         public bool NeedsShortcutReset { get; set; }
@@ -362,7 +362,7 @@ namespace Grunnchipelago.Client
         /// <summary>Seen-item counters are stored PER SEED:SLOT, not as a single entry.
         ///
         /// A single entry used to be overwritten on every connect, which broke the
-        /// two-multiworld case Jonath asked about [2026-08-01]: play A, switch to B, come
+        /// two-multiworld case I asked about [2026-08-01]: play A, switch to B, come
         /// back to A - and A's counter was gone, so the server's replay looked brand new.
         /// Every item of A fired again: traps re-triggered, popups by the dozen, and
         /// NeedsShortcutReset wiped shortcuts that had been legitimately earned. The save
@@ -488,7 +488,7 @@ namespace Grunnchipelago.Client
             return sent;
         }
 
-        /// <summary>Popup fix (design section 10, simplifie session 2 - retour Jonath:
+        /// <summary>Popup fix (design section 10, simplifie session 2 - constate en jeu:
         /// UN message concret par obtention, pas trois). Another player's item is the
         /// only pickup-time announce ("Envoye : X -> joueur", the send is otherwise
         /// invisible); our own items announce themselves ON RECEIPT (vanilla popup for
@@ -553,7 +553,7 @@ namespace Grunnchipelago.Client
         }
 
         /// <summary>Our own Grunn items display their LOCALIZED in-game name ("pièce
-        /// étrange", not the internal AP name "Coin" - retour Jonath). AP-only items
+        /// étrange", not the internal AP name "Coin" - constate en jeu). AP-only items
         /// (buffs...) and other players' items keep their AP name.</summary>
         private static string LocalItemName(string apName)
         {
@@ -701,7 +701,7 @@ namespace Grunnchipelago.Client
         public void SendPolaroidCheck(PolaroidType type)
         {
             // Ending polaroids are awarded by the endings, never shuffled.
-            // (Session 2 retour Jonath: no "Polaroid : X" / "Recompense : X" popups -
+            // (Session 2 constate en jeu: no "Polaroid : X" / "Recompense : X" popups -
             // the receipt popup alone says what was concretely obtained.)
             if (type.ToString().StartsWith("Ending", StringComparison.Ordinal)) return;
             if (!PolaroidChecks)
@@ -732,7 +732,7 @@ namespace Grunnchipelago.Client
                 AnnounceScoutedContent(id);
         }
 
-        /// <summary>Coinsanity (retour Jonath 2026-07-21) - has this placed gulden's check
+        /// <summary>Coinsanity (retour 2026-07-21) - has this placed gulden's check
         /// been sent? Gulden are stored in PER-RUN ProgressData (coinGrabPosition), so
         /// vanilla respawns them on every new run: correct for money, wrong for a CHECK
         /// that is already collected. Their visibility follows the same randomizer rule
@@ -769,7 +769,7 @@ namespace Grunnchipelago.Client
                 endingsSeen.Add(ending);
             }
             CheckGoal(ending);
-            // Death endings send a DeathLink (decision Jonath: every ending except
+            // Death endings send a DeathLink (decision: every ending except
             // Bus / Picnic / GoodEnd is a death). Received DeathLinks never trigger an
             // ending (they reset the run), so this cannot loop.
             if (DeathLinkEnabled && deathLinkService != null && GameIds.DeathLinkEndings.Contains(ending))
@@ -933,7 +933,7 @@ namespace Grunnchipelago.Client
                     Info("[Grunnchipelago] Compass received - world pickup will spawn near the start.");
                     return;
                 }
-                // StrangeKey too [J 2026-07-27]: owning it unlocks the orb-room door on the
+                // StrangeKey too [2026-07-27]: owning it unlocks the orb-room door on the
                 // first interaction, and the small demon is only armed while that door is
                 // still locked - so the LongHallway ending died on receipt (see the property).
                 if (keyItem == KeyItem.StrangeKey)
@@ -970,7 +970,7 @@ namespace Grunnchipelago.Client
             }
             else if (name == "Gulden")
             {
-                // Session 2 retour Jonath: Gulden is the pool's flavour filler even
+                // Session 2 constate en jeu: Gulden is the pool's flavour filler even
                 // WITHOUT coinsanity (items.py get_filler_item_name) and used to be
                 // granted silently (mystery pickups). Always announce and credit the
                 // coin (+1 is harmless flavour off-coinsanity). Historical gulden are

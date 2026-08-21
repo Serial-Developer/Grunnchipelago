@@ -54,7 +54,7 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     # regions.md: Eglise <-> Parc (barque) : Paddle
     link(c.EGLISE, c.PARC, lambda s: s.has("Paddle", p))
     # Eglise -> Porte cassee (PillarSpace) : la porte doit etre REPAREE avec la poignee.
-    # Le 20 % de l'Eglise n'ouvre PAS le PillarSpace [J 2026-07-21, corrige en playtest] :
+    # Le 20 % de l'Eglise n'ouvre PAS le PillarSpace [2026-07-21, corrige en playtest] :
     # dump portal_ChurchToPillarSpace0/churchToPillarSpaceDoor0 a preventTypes
     # NotRepairedMissingDoorknobDoor, et la reparation exige de POSSEDER le Doorknob
     # (missingDoorknobDoorRepairInteraction0, preventTypes KeyItemNotObtained /
@@ -107,7 +107,7 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     # regions.md: Toilettes -> Tente : donner ToiletPaper (before day 1 noon; time free)
     link(c.TOILET, c.TENTE, lambda s: s.has("ToiletPaper", p))
     # regions.md: Cabane joueur -> Couloir final : IsFinalDay + soir. Confirme libre,
-    # aucun item, juste attendre le dimanche soir [J 2026-07-13]. The edge starts at the
+    # aucun item, juste attendre le dimanche soir [2026-07-13]. The edge starts at the
     # hut (faithful to regions.md) so lock_player_hut gates the Sunday hallway too.
     link(c.CABANE_JOUEUR, c.COULOIR_FINAL)
     # dump: LongHallway <-> SmallChapelOutside <-> MagicPond (free)
@@ -141,7 +141,7 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     # GnomeForest, all behind the jumpscare-gnome doors (DestroyedAllJumpscareGnomes =
     # Hammer). dump portals: portal_StartGardenToRoundHallway0 <-> portal_RoundHallwayToStartGarden0
     # and portal_ParkToRoundHallway0 <-> portal_RoundHallwayToPark0 (both carry gnomeDoor0).
-    # Must be BIDIRECTIONAL [J 2026-07-27]: the entrances alone let you ENTER the passage
+    # Must be BIDIRECTIONAL [2026-07-27]: the entrances alone let you ENTER the passage
     # but never EXIT to the other side, so the third Park route (Hammer via the gnomes) was
     # missing. With the exits, Park is reachable by Lighter (Exterieur), Paddle (Eglise boat)
     # OR Hammer (this passage) - matching the game.
@@ -154,7 +154,7 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     # via AP's origin-return assumption, so only the outbound edge is modelled.
     link(c.EXTERIEUR, c.ZONE_VELO)
     # regions.md: Embarcadere Ferry libre a pied ; traversee = ToyBoat.
-    # PAS de contrainte de jour : aucun check du Ferry n'est jour-2 [J 2026-07-27,
+    # PAS de contrainte de jour : aucun check du Ferry n'est jour-2 [2026-07-27,
     # in-game] - ils sont disponibles tous les jours.
     link(c.EXTERIEUR, c.FERRY, lambda s: s.has("ToyBoat", p))
     # regions.md: fisherman cabin approach is free; ENTERING (interior) needs Bone for the

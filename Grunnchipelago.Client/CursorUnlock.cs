@@ -5,7 +5,7 @@ namespace Grunnchipelago.Client
 {
     /// <summary>
     /// Frees the mouse cursor on the TITLE SCREEN ONLY, so the Archipelago connection panel
-    /// can be clicked (demande Jonath 2026-08-01).
+    /// can be clicked (demande 2026-08-01).
     ///
     /// Grunn plays entirely on the keyboard and pins the cursor: GameManager.HideCursor()
     /// sets CursorLockMode.Locked + visible = false outside the editor
@@ -14,7 +14,7 @@ namespace Grunnchipelago.Client
     /// OnApplicationFocus and Init.
     ///
     /// A first attempt just re-asserted the unlocked state every frame from our own Update.
-    /// That fails and looks broken [J 2026-08-01: "effet de clignotement et il reset a chaque
+    /// That fails and looks broken [2026-08-01: "effet de clignotement et il reset a chaque
     /// fois au centre de l'ecran"]: the two Updates fight, and CursorLockMode.Locked
     /// re-centres the pointer on every frame the game wins. Whoever writes last wins, which
     /// is a race, not a fix.
@@ -61,7 +61,7 @@ namespace Grunnchipelago.Client
 
     /// <summary>Zeroes the analog inputs while one of our panels owns the keyboard.
     ///
-    /// InputCapturePatch alone was not enough [J 2026-08-01: "le jeu continue d'intercepter
+    /// InputCapturePatch alone was not enough [2026-08-01: "le jeu continue d'intercepter
     /// les input, donc mon perso se deplacait pendant que j'ecrivais"]: OnMove and OnLook do
     /// NOT go through HandleInput, they assign InputManager.moveDirection / lookDirection
     /// directly (InputManager.cs:371-378). And since the new Input System only fires on
@@ -82,7 +82,7 @@ namespace Grunnchipelago.Client
             // Same trap as OnMove/OnLook: OnToolCycleScroll assigns scrollDirection
             // straight from the callback (InputManager.cs:415-417), so it never goes
             // through HandleInput either. Scrolling the console history was cycling the
-            // player's tools underneath [J 2026-08-01].
+            // player's tools underneath [2026-08-01].
             InputManager.scrollDirection = Vector2.zero;
         }
     }

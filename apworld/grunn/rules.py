@@ -49,7 +49,7 @@ def can_water(state: CollectionState, world: "GrunnWorld") -> bool:
 
 def can_get_bone(state: CollectionState, world: "GrunnWorld") -> bool:
     # regions.md: "Os : Hammer OU MagicSword OU Trowel OU via le Manoir".
-    # VERIFIED, unchanged [J 2026-07-28, in-game]: the bone lies FREE only on the manor
+    # VERIFIED, unchanged [2026-07-28, in-game]: the bone lies FREE only on the manor
     # hallway table (dump: BigHouse_Hallway/hallwayTable0/bone0); the four other sources
     # are SKELETONS that must be smashed with one of the three tools. The dump does NOT
     # show this - those pickups all carry preventTypes = [] - because the gate is not an
@@ -106,7 +106,7 @@ def can_advance_days(state: CollectionState, world: "GrunnWorld") -> bool:
     the only usable BED is inside the player hut (dump: Hide_PlayerSchuur/interior/bed0,
     type=Bed; the game's only other bed is in the endgame AtticRoom), so with
     lock_player_hut the hut key gates SLEEPING itself, and with it every day-gated check
-    [J 2026-07-27, found in playtest: hut locked -> stuck on day 1 forever].
+    [2026-07-27, found in playtest: hut locked -> stuck on day 1 forever].
     """
     if not world.options.lock_player_hut:
         return True
@@ -136,7 +136,7 @@ OBTAIN_RULES: dict[str, Rule] = {
     # dump: AppleSpace
     "Apple": lambda s, w: _reach(s, w, c.APPLE_SPACE),
     # The ONLY first source of a worm is the garden plate, and it requires the APPLE to be
-    # placed on it [J 2026-07-21, confirme au dump + code] : dump Main/Interactions/worm0
+    # placed on it [2026-07-21, confirme au dump + code] : dump Main/Interactions/worm0
     # preventTypes ObjectInactive + NotPlacedApple, flag ProgressData.placedApple pose par
     # GameManager.PlaceApple (GameManager.cs:4690). The two other worm objects are NOT
     # first sources - both are circular:
@@ -148,12 +148,12 @@ OBTAIN_RULES: dict[str, Rule] = {
     # dump: Bunker (trowel0) OR Toilet (trowel0_demo). The "_demo" suffix is naming only,
     # NOT demo-gated content: the real demo mechanism is hideInDemo + SaveManager.demo
     # (ContentHider.cs:214) and these pickups have hideInDemo:False / startState:Show
-    # / no hider [J 2026-07-13].
+    # / no hider [2026-07-13].
     "Trowel": lambda s, w: _reach(s, w, c.BUNKER) or _reach(s, w, c.TOILET),
     # dump: PlayerSchuur (scissors)
     "Shears": lambda s, w: _reach(s, w, c.CABANE_JOUEUR),
     # dump: Park OR RoundHallway (wateringCan0_demo - naming only, not demo-gated,
-    # see Trowel note) [J 2026-07-13]
+    # see Trowel note) [2026-07-13]
     "WateringCan": lambda s, w: _reach(s, w, c.PARC) or _reach(s, w, c.PASSAGE_GNOMES),
     # dump: Road (item_plank0)
     "Plank": lambda s, w: _reach(s, w, c.EXTERIEUR),
@@ -163,10 +163,10 @@ OBTAIN_RULES: dict[str, Rule] = {
     "Hammer": lambda s, w: _reach(s, w, c.JARDIN) or _reach(s, w, c.LABYRINTHE_COEUR),
     # dump: StartGarden (severedHand0). Requires the TallMan scare at the hut window,
     # which only triggers once the player has been INSIDE the hut (dump:
-    # tallManOutsideWindow0, hideCondition PlayerNotInPlayerSchuur) [J 2026-07-27].
+    # tallManOutsideWindow0, hideCondition PlayerNotInPlayerSchuur) [2026-07-27].
     "SeveredHand": lambda s, w: _reach(s, w, c.CABANE_JOUEUR),
     # dump: Park (pizzaBox0), hidden until the "hangjongeren" show up = day 2
-    # [J 2026-07-27] (pizzaBoxContentHider0 HangjongerenNotAppeared + the hangjong
+    # [2026-07-27] (pizzaBoxContentHider0 HangjongerenNotAppeared + the hangjong
     # hiders' DayIndexIsNot).
     "PizzaBox": lambda s, w: _reach(s, w, c.PARC) and can_advance_days(s, w),
     # dump: GasStation (free) OR HooibaalSchuur shop (2)
@@ -177,7 +177,7 @@ OBTAIN_RULES: dict[str, Rule] = {
     "Cd": lambda s, w: _reach(s, w, c.HOOIBAAL) and can_afford(s, w, c.PRICE_CD),
     # regions.md I.1: break the garden gnome + enter the gas station (which fires the
     # jumpscare), then a portal in the Jardin yields the idol.
-    # HAMMER ONLY [J 2026-07-27, confirmed in code]: regions.md claimed
+    # HAMMER ONLY [2026-07-27, confirmed in code]: regions.md claimed
     # Hammer|MagicSword|Trowel, but Gnome.GetHit (Gnome.cs:182) opens with
     # `if (curEquipmentData.handRightItem != Item.Hammer || curState == Hide) return;`
     # and GameManager.DestroyGnome() has that method as its ONLY caller. Neither the
@@ -187,12 +187,12 @@ OBTAIN_RULES: dict[str, Rule] = {
     and _reach(s, w, c.GAS_STATION)
     and s.has("Hammer", w.player),
     # NOTE: "OldKey" has NO rule and NO location - the key is not obtainable in game
-    # [J 2026-07-27] (see locations.UNSOURCED_LOCATIONS). Same for "AbandonedKey" below.
+    # [2026-07-27] (see locations.UNSOURCED_LOCATIONS). Same for "AbandonedKey" below.
     # dump: PlayerSchuur
     "ToiletKey": lambda s, w: _reach(s, w, c.CABANE_JOUEUR),
     # dump: CornFieldCenter
     "ToiletPaper": lambda s, w: _reach(s, w, c.CHAMP_MAIS),
-    # dump: Church. FREE on purpose - two independent sources [J 2026-07-21]:
+    # dump: Church. FREE on purpose - two independent sources [2026-07-21]:
     #   - searching the examinable TREE HOLE (doorknobBranchHoleInteraction0, preventTypes
     #     = DoorknobBranchHoleSearched only, so no prerequisite at all), which is the
     #     fallback when the knob was NOT already found while gardening;
@@ -214,9 +214,9 @@ OBTAIN_RULES: dict[str, Rule] = {
     "BridgeKey": lambda s, w: True,
     # dump: BigHouseOffice (strangeKey0_old, free) OR StartGarden magpie. The magpie pickup
     # is strangeKey0_demo, child of magpieDeadByWorm0 = the canonical magpie key drop
-    # ("_demo" is naming only, see Trowel note) [J 2026-07-13]. The magpie route needs the
+    # ("_demo" is naming only, see Trowel note) [2026-07-13]. The magpie route needs the
     # Worm to feed it AND the garden at >= 30 % for the magpie to exist at all
-    # (garden_30) [J 2026-07-21].
+    # (garden_30) [2026-07-21].
     "StrangeKey": lambda s, w: _reach(s, w, c.MANOIR)
     or (_reach(s, w, c.JARDIN) and s.has("Worm", w.player) and garden_30(s, w)),
     # regions.md I.4: cross the maze gap + Compass (-> maze heart) + hit the TallMan
@@ -250,7 +250,7 @@ OBTAIN_RULES: dict[str, Rule] = {
     # dump: VeerbootHuis (cabin interior; entering needs Bone -> handled by the region rule)
     "ToyBoat": lambda s, w: _reach(s, w, c.CABANE_PECHEUR_INT),
     # NOTE: "AbandonedKey" has NO rule and NO location: there is no vanilla check for it
-    # [J 2026-07-27]. The ITEM still exists (lock_player_hut uses it to lock the hut) and
+    # [2026-07-27]. The ITEM still exists (lock_player_hut uses it to lock the hut) and
     # is placed elsewhere by fill - only its "Obtain" location is gone.
     # code Owner.cs/EndConversation: the Owner gives AtticKey inside the Hell manor.
     "AtticKey": lambda s, w: _reach(s, w, c.HELL),
@@ -267,7 +267,7 @@ OBTAIN_RULES: dict[str, Rule] = {
     "KidTriangle": lambda s, w: _reach(s, w, c.GAS_STATION) and s.has("Eggball", w.player),
     # regions.md fanfare: Park food truck, 5 gulden (Saturday daytime = free logically).
     "Eggball": lambda s, w: _reach(s, w, c.PARC) and can_afford(s, w, c.PRICE_EGGBALL),
-    # dump: StartGarden. Full chain confirmed [J 2026-07-27]: plant the SpecialSeed in the
+    # dump: StartGarden. Full chain confirmed [2026-07-27]: plant the SpecialSeed in the
     # pot (in the start garden, reachable from the start), water it EVERY DAY, and the
     # bloom appears on DAY 3. Hence: SpecialSeed (dump hider prettyFlower_ContentHider0,
     # condition NotSpecialSeedPlanted) + can_advance_days (day 3).
@@ -276,7 +276,7 @@ OBTAIN_RULES: dict[str, Rule] = {
     "PrettyFlower": lambda s, w: _reach(s, w, c.JARDIN)
     and s.has_all(("SpecialSeed", "WateringCan"), w.player)
     and can_advance_days(s, w),
-    # Revive the dead fish at the MAGIC POND ONLY [J 2026-07-27, confirmed in code]. The
+    # Revive the dead fish at the MAGIC POND ONLY [2026-07-27, confirmed in code]. The
     # RoundHallway fishbowl does NOT revive - it only holds/retrieves the DEAD fish
     # (FishbowlRetrieveDeadFish; there is no "retrieve alive"), and reviving is exclusively
     # GameManager.PlaceFishInMagicPond -> the client fires "Obtain GoldFishAlive" on placing
@@ -303,7 +303,7 @@ def _end_good(s: CollectionState, w: "GrunnWorld") -> bool:
 
 
 ENDING_RULES: dict[str, Rule] = {
-    # code: the mist is a scenario day (MistDay) - day 3 [J 2026-07-27, in-game], so it
+    # code: the mist is a scenario day (MistDay) - day 3 [2026-07-27, in-game], so it
     # needs sleeping (can_advance_days: free unless lock_player_hut).
     "Mist": lambda s, w: _reach(s, w, c.JARDIN) and can_advance_days(s, w),
     # code Interaction.BusSeat (line 34204): `if (dayIndex <= 1) return;` -> day 2+ needed,
@@ -333,7 +333,7 @@ ENDING_RULES: dict[str, Rule] = {
 }
 
 
-# --- "Deed" rules: rewarded ACTIONS (demande Jonath 2026-07-28) ------------------
+# --- "Deed" rules: rewarded ACTIONS (demande 2026-07-28) ------------------
 # Each one is an in-game deed the player performs with an item, hooked client-side on the
 # game's own method (see design/backlog_checks.md for the full trace). They are logical
 # checks: holding the item is what gates them, plus reaching the spot.
@@ -361,12 +361,12 @@ DEED_RULES: dict[str, Rule] = {
     # code GameManager.ReturnWorm (GameManager.cs:5887), interaction WormReturn on the worm
     # hill. The hill sits in the CHURCH corner geometrically (dump:
     # ChurchArea/Hide_ChurchCorner/WormHillContainer) but is only REACHABLE FROM HELL
-    # [J 2026-07-28, in-game] - hence HELL, not EGLISE.
+    # [2026-07-28, in-game] - hence HELL, not EGLISE.
     "Deed: Return Worm to the Worm Hill": lambda s, w: _reach(s, w, c.HELL)
     and s.has("Worm", w.player),
     # code Snail.Award (Snail.cs:177), interaction SnailAward in the PillarSpace. The dump's
     # only prevent is SnailStateIsRacing (the snail must have FINISHED racing) and the race
-    # ends around 23:45 on DAY 2 [J 2026-07-28, in-game] - so it needs sleeping, which
+    # ends around 23:45 on DAY 2 [2026-07-28, in-game] - so it needs sleeping, which
     # matters under lock_player_hut.
     "Deed: Award Medal to the Snail": lambda s, w: _reach(s, w, c.PILLAR_SPACE)
     and s.has("Medal", w.player)
@@ -380,7 +380,7 @@ DEED_RULES: dict[str, Rule] = {
 }
 
 
-# --- "Chore" rules: the five garden maintenance jobs (demande Jonath 2026-07-30) ------
+# --- "Chore" rules: the five garden maintenance jobs (demande 2026-07-30) ------
 # Vanilla pays 2 gulden the first time each job is finished IN THE START GARDEN
 # (GameManager.areaCompleteGuldenAdd = 2, one flag per job:
 #   cutAllGrassInStartGardenArea       GameManager.CutGrass:3131
@@ -388,7 +388,7 @@ DEED_RULES: dict[str, Rule] = {
 #   removedAllMolehillsInStartGardenArea Molehill.cs:184
 #   wateredAllFlowersInStartGardenArea Flower.cs:529
 #   clearedAllTrashInStartGardenArea   Troepje.cs:100 )
-# Those payouts are now CHECKS. Tool requirements are Jonath's [2026-07-30]; each also
+# Those payouts are now CHECKS. Tool requirements are my [2026-07-30]; each also
 # needs the garden itself, which is where the job happens.
 CHORE_RULES: dict[str, Rule] = {
     "Chore: Trim Every Hedge (Garden)": lambda s, w: _reach(s, w, c.JARDIN)
@@ -399,14 +399,14 @@ CHORE_RULES: dict[str, Rule] = {
     and s.has("Trowel", w.player),
     "Chore: Water Every Flower (Garden)": lambda s, w: _reach(s, w, c.JARDIN)
     and can_water(s, w),              # watering can OR blue coin (+ church rain)
-    # The litter one is NOT free: some of it sits INSIDE the toilets [J 2026-07-30], and
+    # The litter one is NOT free: some of it sits INSIDE the toilets [2026-07-30], and
     # the toilet door needs the ToiletKey (regions.py: JARDIN -> TOILET).
     "Chore: Pick Up All the Litter (Garden)": lambda s, w: _reach(s, w, c.JARDIN)
     and _reach(s, w, c.TOILET),
-    # The 8 potted plants, trimmed with shears OR the magic sword [J 2026-07-30]. Unlike the
+    # The 8 potted plants, trimmed with shears OR the magic sword [2026-07-30]. Unlike the
     # five above this one pays NOTHING in vanilla (achievement only) - hence no extra Golden
     # Gulden in the pool. Criterion: pottedPlantTrimmedCur >= trimmedPottedPlantMax = 8
-    # (SaveManager.cs:1350). Locations given by Jonath [2026-07-30], 8 pots exactly:
+    # (SaveManager.cs:1350). Locations noted in game [2026-07-30], 8 pots exactly:
     #   1 player hut (DAY 2 only) - 1 toilets - 2 gas station - 2 gas station office
     #   - 2 manor office
     # ALL of them must be trimmed, so the rule is the INTERSECTION of every access. The gas
@@ -457,7 +457,7 @@ def set_all_rules(world: "GrunnWorld") -> None:
             continue
         set_rule(world.get_location(name), lambda s, r=rule: r(s, world))
 
-    # Ghost checks REQUIRE the Trumpet [J 2026-07-16, in-game + code]: ghosts are
+    # Ghost checks REQUIRE the Trumpet [2026-07-16, in-game + code]: ghosts are
     # invisible and untouchable until revealed, and Ghost.Show() is only ever called
     # by GameManager.ShowNearbyGhosts(), itself only called by PerformTrumpetAction()
     # (GameManager.cs:5153-5167). Touching a hidden ghost is impossible
@@ -467,14 +467,14 @@ def set_all_rules(world: "GrunnWorld") -> None:
     if world.options.ghost_checks:
         for name in locations.GHOST_LOCS:
             add_rule(world.get_location(name), lambda s: s.has("Trumpet", player))
-        # Two ghosts only exist on DAY 2 [J 2026-07-27] -> they need sleeping:
+        # Two ghosts only exist on DAY 2 [2026-07-27] -> they need sleeping:
         #  - #3 = ghost0_redCar0    (dump: ghost0_redCar_ContentHider0, DayIndexIsNot day=2)
         #  - #4 = ghost0_scooterCrash0 (dump: ScooterCrashContentHider0, DayIndexIsNot day=2)
         for name in ("Calm Ghost #3 (Road)", "Calm Ghost #4 (WindyPath)"):
             add_rule(world.get_location(name), lambda s: can_advance_days(s, world))
 
     # Two polaroids only APPEAR in the start garden after talking to the Orb in the
-    # Orb Room [J 2026-07-16, dump: Polaroid_crypt_contentHider0 /
+    # Orb Room [2026-07-16, dump: Polaroid_crypt_contentHider0 /
     # Polaroid_gnomeIdol_contentHider0, condition NotTalkedToOrbInOrbRoom]. The Orb
     # Room is first entered through the final hallway (portal_LongHallwayToOrbRoom0;
     # the StartGarden portal stays hidden until that first talk), so they are gated
@@ -493,7 +493,7 @@ def set_all_rules(world: "GrunnWorld") -> None:
             world.get_location("Polaroid: GasStation"),
             lambda s: s.has("Hammer", player),
         )
-        # Two garden polaroids require having been INSIDE the player hut [J 2026-07-27]:
+        # Two garden polaroids require having been INSIDE the player hut [2026-07-27]:
         #  - MagpieNest: hider polaroidMagpieNest_hider0, condition NotEnteredPlayerSchuur;
         #  - TallManWindow: the shot is the TallMan at the window, and he only appears
         #    while the player is inside (hider tallManOutsideWindow0,
@@ -506,7 +506,7 @@ def set_all_rules(world: "GrunnWorld") -> None:
             )
 
     # Gulden #8 is inside a pot on the road that must be smashed with the Hammer
-    # [J 2026-07-13]. (Gulden locations only exist under coinsanity.)
+    # [2026-07-13]. (Gulden locations only exist under coinsanity.)
     if world.options.coinsanity:
         set_rule(
             world.get_location("Gulden #8 (Unknown)"),

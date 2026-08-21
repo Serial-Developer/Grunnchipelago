@@ -13,7 +13,7 @@ const dump = JSON.parse(readFileSync(`${DIR}/grunnchipelago_dump.json`, 'utf8'))
 // La méthode de résolution est tracée par objet dans zoneConfidence.
 const zoneConfidence = new Map(); // path -> mesure | chemin | proximité | manuel
 
-// Corrections validées en jeu par Jonath (2026-07-11)
+// Corrections validées en jeu (2026-07-11)
 const manualZones = {
   'Main/Interactions/hammer0_car': 'StartGarden (extérieur)', // voiture garée dans le jardin, près de la cabane
   'Main/Interactions/item_plank0': 'Road' // planche contre un mur, à l'EXTÉRIEUR de la station

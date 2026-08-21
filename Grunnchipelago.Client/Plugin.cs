@@ -149,7 +149,7 @@ namespace Grunnchipelago.Client
             // Buff multipliers + timed-trap expiry (restores vanilla when disconnected).
             Effects.Tick(Ap.Connected);
             // "ESC : skip" hint state - the ORB SEQUENCE ONLY (skip logic:
-            // HandleSkipOrbDialogue). Neither owner belongs here [J 2026-08-01]: both are
+            // HandleSkipOrbDialogue). Neither owner belongs here [2026-08-01]: both are
             // ordinary in-game NPCs whose UpdateNormal only runs in GameState.Game
             // (Owner.cs:160, OwnerSaved.cs:144), so offering to skip them turned a plain
             // conversation into a cutscene - and made Escape stop opening the pause menu.
@@ -261,7 +261,7 @@ namespace Grunnchipelago.Client
             Effects.ApplyTrap(name);
         }
 
-        /// <summary>Session 2 (retour Jonath) - the post-death-ending ORB dialogue
+        /// <summary>Session 2 (constate en jeu) - the post-death-ending ORB dialogue
         /// (EndingState.Orb) ignores every key but Interact in vanilla, Escape
         /// included. While it runs, Escape ends the whole sequence: jump to
         /// EndingState.End - the orb fades (HandleOrb only shows it during Orb,
@@ -285,7 +285,7 @@ namespace Grunnchipelago.Client
             Logger.LogInfo("[Grunnchipelago] Orb dialogue skipped (ESC).");
         }
 
-        /// <summary>Received DeathLink sequence (design Jonath 2026-07-13):
+        /// <summary>Received DeathLink sequence (design 2026-07-13):
         /// 1. the screen cuts to black and the player freezes (movement is blocked while
         ///    BlackScreen is up, PlayerControllerNew.cs:687) for FadeToBlackDuration;
         /// 2. a GUARANTEED random nightmare shot + sound displays over the black

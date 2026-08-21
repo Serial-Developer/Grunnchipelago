@@ -16,7 +16,7 @@ namespace Grunnchipelago.Client
     /// - other players' items, and Grunn items with no harvested model, use an
     ///   "Archipelago" model per classification: progression / useful / filler
     ///   (feature #2, PROVISIONAL art direction: tinted polaroid clone scaled up
-    ///   ApModelScale - Jonath picks the final look);
+    ///   ApModelScale - I pick the final look);
     /// - trap-flagged checks disguise as useful OR progression, deterministically per
     ///   seed+location so relaunching never betrays them.
     /// Only the visuals change: colliders, interaction and check flow stay vanilla
@@ -28,20 +28,20 @@ namespace Grunnchipelago.Client
         private enum ApKind { Progression, Useful, Filler }
 
         // Saturated tints (session 2 iter 2: the old grey filler blended into paths,
-        // capture Jonath) - filler is now bright yellow.
+        // ma capture) - filler is now bright yellow.
         private static readonly Color ProgressionTint = new Color(1f, 0.3f, 0.1f);   // AP red-orange
         private static readonly Color UsefulTint = new Color(0.2f, 0.5f, 1f);        // blue
         private static readonly Color FillerTint = new Color(1f, 0.85f, 0.1f);       // yellow
 
         /// <summary>Session 2, 2.2 (iter 2) - the tinted-polaroid AP models were still
-        /// barely visible at 1.75 (captures Jonath): scale up harder and lift the card
+        /// barely visible at 1.75 (mes captures): scale up harder and lift the card
         /// slightly off the ground.</summary>
         /// <summary>Below this world-space size a posed clone counts as "nothing drawn".
         /// The smallest legitimate model is the gulden coin (~5 cm), so 5 mm only ever
         /// catches empty meshes - never a small but real item.</summary>
         private const float MinRenderedSize = 0.005f;
 
-        /// <summary>Emission multiplier. 1.5 is the bloom "glowing orb" look Jonath liked on
+        /// <summary>Emission multiplier. 1.5 is the bloom "glowing orb" look I liked on
         /// the AP cards; the crowns need far less or their pastel palette burns out.</summary>
         private const float DefaultEmission = 1.5f;
         private const float CrownEmission = 0.35f;
@@ -49,12 +49,12 @@ namespace Grunnchipelago.Client
         private const float ApModelScale = 2.75f;
         private const float ApModelLift = 0.12f;
 
-        /// <summary>Retour Jonath iter 5: our own buffs (and disguised traps) use the
+        /// <summary>Constate en jeu iter 5: our own buffs (and disguised traps) use the
         /// soul-fragment model tinted green instead of the AP card.</summary>
         private static readonly Color BuffTint = new Color(0.35f, 1f, 0.4f);
         private const float BuffModelScale = 1.25f;
 
-        /// <summary>Retour Jonath (coinsanity, 2026-07-21): "Gulden" is not a KeyItem and
+        /// <summary>Constate en jeu (coinsanity, 2026-07-21): "Gulden" is not a KeyItem and
         /// not a buff, so a check CONTAINING money fell through to the AP card - tinted
         /// RED because coinsanity makes Gulden progression (items.py:95). With 36 Gulden
         /// in the pool that is red cards everywhere, unreadable. Money now shows the real
@@ -64,34 +64,34 @@ namespace Grunnchipelago.Client
         private const float GuldenModelScale = 1.5f;
 
         /// <summary>Placed gulden lie flat on the ground: their CONTENT model is lifted
-        /// very slightly so it reads without floating (retour Jonath 2026-07-21).</summary>
+        /// very slightly so it reads without floating (retour 2026-07-21).</summary>
         private const float GuldenContentLift = 0.1f;
 
-        /// <summary>The chore coin (demande Jonath 2026-07-30): same coin mesh, tinted a
+        /// <summary>The chore coin (demande 2026-07-30): same coin mesh, tinted a
         /// warm GOLD and a touch bigger, so "worth 2 gulden" reads at a glance without a
         /// second model. Deliberately gold rather than yellow - it must not be mistaken for
         /// the yellow AP filler card.</summary>
-        /// <summary>+15 % over a plain gulden (was +25 %, too much - retour Jonath 2026-07-31):
+        /// <summary>+15 % over a plain gulden (was +25 %, too much - retour 2026-07-31):
         /// enough to read as "worth more" without looking like a different object.</summary>
         private const float GoldenGuldenScaleBoost = 1.15f;
 
-        /// <summary>AP CROWNS (demande Jonath 2026-07-28) - the multiworld models.
+        /// <summary>AP CROWNS (demande 2026-07-28) - the multiworld models.
         ///
-        /// Idea from Jonath: assemble SOUL FRAGMENTS into a ring shaped like the Archipelago
+        /// My idea: assemble SOUL FRAGMENTS into a ring shaped like the Archipelago
         /// logo (a five-petal flower). The fragment is already harvested in the library (it
         /// is the buff model), so a crown is just N copies laid out on a circle under one
         /// holder, archived like any other source.
         ///
-        /// All three crowns carry the SAME SIX petals, laid out like the logo [J 2026-07-30];
+        /// All three crowns carry the SAME SIX petals, laid out like the logo [2026-07-30];
         /// only the COLOURING tells them apart:
         ///   - Filler      : dull grey
         ///   - Useful      : green
         ///   - Progression : multicoloured (the logo's own six hues, one per petal)
-        /// Every constant below is meant to be tuned from Jonath's in-game captures.</summary>
+        /// Every constant below is meant to be tuned from my in-game captures.</summary>
         private const int CrownPetalCount = 6;
 
         /// <summary>Progression wears the logo's six hues, one per petal, sampled from the
-        /// Archipelago logo Jonath supplied (2026-08-01) and listed CLOCKWISE FROM THE TOP as
+        /// Archipelago logo I supplied (2026-08-01) and listed CLOCKWISE FROM THE TOP as
         /// they appear on it - rose, green, orchid, tan, blue-violet, yellow - so the ring
         /// reads in the logo's own order rather than an arbitrary one.</summary>
         private static readonly Color[] LogoPetalColors =
@@ -106,9 +106,9 @@ namespace Grunnchipelago.Client
             new Color(0.91f, 0.88f, 0.59f),    // yellow
         };
 
-        /// <summary>Useful = green, Filler = dull grey [J 2026-07-30].
+        /// <summary>Useful = green, Filler = dull grey [2026-07-30].
         ///
-        /// VALIDATED IN GAME, DO NOT TOUCH [J 2026-08-01: "les couronnes filler et useful sont
+        /// VALIDATED IN GAME, DO NOT TOUCH [2026-08-01: "les couronnes filler et useful sont
         /// tres bien, ne les change pas"]. That includes how Paint renders them - any work on
         /// the colours must stay scoped to the Progression petals and to the gold coin, or it
         /// will silently undo these two.
@@ -119,8 +119,8 @@ namespace Grunnchipelago.Client
 
         /// <summary>Ring radius, as a multiple of one petal's width.
         /// 0.62 was the first guess and the petals overlapped into one solid blob (capture
-        /// Jonath 2026-07-30); 0.80 spreads them just enough to read as six distinct pieces
-        /// - the "slightly exploded" look Jonath asked for - while still holding together as
+        /// 2026-07-30); 0.80 spreads them just enough to read as six distinct pieces
+        /// - the "slightly exploded" look I asked for - while still holding together as
         /// one flower. Push higher only if they should read as separate objects.</summary>
         private const float CrownRadiusFactor = 0.80f;
 
@@ -152,7 +152,7 @@ namespace Grunnchipelago.Client
         /// <summary>Forget everything harvested for the PREVIOUS multiworld, so the next
         /// connection rebuilds from its own scouts. Without this the models, the crowns and
         /// the "already swapped" flag survived a switch between two multiworlds
-        /// [J 2026-08-01]. Must run on the main thread: it destroys GameObjects.</summary>
+        /// [2026-08-01]. Must run on the main thread: it destroys GameObjects.</summary>
         public static void ResetForNewSession()
         {
             // BEFORE anything else: put the scene back. Grunn does not reload the scene on a
@@ -160,7 +160,7 @@ namespace Grunnchipelago.Client
             // the pickups - and BuildLibrary harvests its models FROM those very pickups.
             // Seed 2 therefore archived seed 1's clones: the buff model came out as a coin
             // and the crown petals grew from 0,335 m to 0,535 m by compounding
-            // [J 2026-08-01: "les modeles des boost sont melanges a celui des guldens"].
+            // [2026-08-01: "les modeles des boost sont melanges a celui des guldens"].
             // Pickups left un-swapped in the new seed also kept run 1's renderers switched
             // off, which is the same report seen from the other side ("les objets caches
             // dans la save 1 le sont toujours dans la save 2").
@@ -191,7 +191,7 @@ namespace Grunnchipelago.Client
             // and polaroids deactivated - and the swap used to run right there, on connect.
             // Everything already taken in run 1 was therefore swapped while INACTIVE, which
             // also skips the rendered-size check (it cannot measure a hidden object), and
-            // those checks stayed missing for the whole of run 2 [J 2026-08-01: "les items
+            // those checks stayed missing for the whole of run 2 [2026-08-01: "les items
             // que je ne voyais pas dans la save 1 sont toujours disparus dans la save 2"].
             // Measured: 30 polaroids reported inactive at swap time after a switch, against
             // 7 on a freshly loaded world.
@@ -228,7 +228,7 @@ namespace Grunnchipelago.Client
         }
 
         /// <summary>MEASURE, DON'T GUESS. Right after the swap, NAME every pickup the game
-        /// wants on screen but that draws nothing [J 2026-08-01: "toujours le souci d'objet
+        /// wants on screen but that draws nothing [2026-08-01: "toujours le souci d'objet
         /// invisible dans la save 2", cause still unidentified]. The rendered-size check
         /// inside SwapVisual only covers what WE posed; this sweeps the whole world, so an
         /// object blanked by anything else shows up too.
@@ -316,7 +316,7 @@ namespace Grunnchipelago.Client
                 if (pickup.keyItemObtain == null || pickup.keyItemObtain.Count == 0) continue;
                 KeyItem key = pickup.keyItemObtain[0];
                 // Some pickups have no designated visualsObject (suspected: flowerGem0,
-                // whose location showed the AP card instead of the gem - retour Jonath).
+                // whose location showed the AP card instead of the gem - constate en jeu).
                 // MODEL SOURCE fallback only: harvest the whole pickup object (renderers
                 // included, scripts stripped at archive time); swap TARGETS still
                 // require a real visualsObject.
@@ -324,9 +324,9 @@ namespace Grunnchipelago.Client
                     ? pickup.visualsObject : pickup.gameObject;
                 // Never archive a source without a single mesh: some pickups are pure
                 // interaction markers whose visual lives elsewhere (prettyFlower_remove0
-                // archived 0 renderers - retour Jonath). Handled case by case below.
+                // archived 0 renderers - constate en jeu). Handled case by case below.
                 if (source.GetComponentsInChildren<Renderer>(true).Length == 0) continue;
-                // ARCHIVE a pristine copy (retour Jonath iter 6, "objets enchevetres"):
+                // ARCHIVE a pristine copy (retour iter 6, "objets enchevetres"):
                 // referencing the LIVE visualsObject meant that once a pickup got a
                 // clone embedded by a swap, every later swap using that pickup's model
                 // cloned the embedded model along (sandwich-in-fragment, and
@@ -338,7 +338,7 @@ namespace Grunnchipelago.Client
             // prettyFlowerBase / Leaves / Top - which the game merely ENABLES as the
             // plant grows (Flower.UpdatePrettyFlowerVisuals, Flower.cs:165-175). Harvest
             // the flower object and force the three on, which is the fully grown bloom
-            // Jonath asked for.
+            // I asked for.
             if (GameManager.prettyFlower != null)
             {
                 GameObject bloom = Archive(GameManager.prettyFlower.gameObject);
@@ -353,7 +353,7 @@ namespace Grunnchipelago.Client
             }
 
             // GoldFishAlive has no placed pickup; its LIVING visual is a scene object kept
-            // hidden until revealed. Source order fixed by Jonath in-game (2026-07-21):
+            // hidden until revealed. Source order fixed in-game (2026-07-21):
             // take the fish shown IN THE FISHBOWL once placed - dump
             // fishbowl0/FishAlive_ContentHider0 -> objectRef "FishAliveContainer".
             // The MagicPond content was tried first before and archived EMPTY: the probe
@@ -371,7 +371,7 @@ namespace Grunnchipelago.Client
                     // Archive only zeroes the ROOT's position: that offset survived and the
                     // clone floated ~11 m above the pickup - grabbable (collider on the
                     // ground) but off-screen. Measured by the probe: model centre y=21.25
-                    // for a pickup at y=10.4 [J 2026-07-22].
+                    // for a pickup at y=10.4 [2026-07-22].
                     Renderer[] fishMeshes = alive.GetComponentsInChildren<Renderer>(true);
                     if (fishMeshes.Length == 1 && fishMeshes[0] != null
                         && fishMeshes[0].gameObject != alive)
@@ -388,14 +388,14 @@ namespace Grunnchipelago.Client
                 }
             }
 
-            // KidTriangle borrows another kid instrument (retour Jonath iter 8).
+            // KidTriangle borrows another kid instrument (retour iter 8).
             if (!library.ContainsKey(KeyItem.KidTriangle))
             {
-                // The triangle only exists IN HANDS (retour Jonath iter 9), and it is TWO
+                // The triangle only exists IN HANDS (retour iter 9), and it is TWO
                 // separate objects on two different bones: the instrument in the scruffy
                 // man's LEFT hand (scruffyMan_triangleInstrument0) and its beater in his
                 // RIGHT (scruffyMan_triangleStick0), each behind its own contentHider.
-                // Harvesting only the stick shipped a bare rod [J 2026-08-01: "le modele du
+                // Harvesting only the stick shipped a bare rod [2026-08-01: "le modele du
                 // triangle ne comporte que le baton, et pas le triangle"]. Assemble both.
                 GameObject triangle = BuildTriangleModel();
                 if (triangle != null) library[KeyItem.KidTriangle] = triangle;
@@ -406,7 +406,7 @@ namespace Grunnchipelago.Client
                     library[KeyItem.KidTriangle] = instrument;
             }
 
-            // Generic key fallback (retour Jonath iter 7): AbandonedKey / OldKey /
+            // Generic key fallback (retour iter 7): AbandonedKey / OldKey /
             // AtticKey are ORPHAN keys - no placed pickup, so they showed AP cards.
             // Grunn keys all look alike: any *Key item without a model borrows the
             // first harvested key model.
@@ -435,7 +435,7 @@ namespace Grunnchipelago.Client
         }
 
 
-        /// <summary>Assemble the three AP crowns out of soul fragments (demande Jonath
+        /// <summary>Assemble the three AP crowns out of soul fragments (demande
         /// 2026-07-28). Silently skipped when no fragment was harvested - SwapForScout then
         /// falls back to the tinted polaroid card, exactly as before.</summary>
         private static void BuildApCrowns()
@@ -460,7 +460,7 @@ namespace Grunnchipelago.Client
                 GameObject crown = BuildCrown(petal, CrownPetalCount, radius, kind);
                 if (crown == null) continue;
                 apCrowns[kind] = crown;
-                // Measured final size: what Jonath needs to calibrate ApCrownScale from a
+                // Measured final size: what I need to calibrate ApCrownScale from a
                 // capture rather than by trial and error.
                 Vector3 size = WorldSize(crown) * ApCrownScale;
                 Plugin.Log?.LogInfo($"[Grunnchipelago] Couronne AP {kind} : {CrownPetalCount} petales, "
@@ -525,7 +525,7 @@ namespace Grunnchipelago.Client
             bool matt = color == FillerCrownColor;   // dull filler: no glow
             // CrownEmission, not the default: emission ADDS light, and at 1.5 it pushed the
             // logo's pastel hues past saturation - orchid read as pure magenta, blue-violet
-            // as cyan [J 2026-08-01, "pas exactement comme le logo"]. A gentle glow keeps
+            // as cyan [2026-08-01, "pas exactement comme le logo"]. A gentle glow keeps
             // the hue.
             TintModel(model, color, !matt, emission: CrownEmission);
             foreach (Light light in model.GetComponentsInChildren<Light>(true))
@@ -579,7 +579,7 @@ namespace Grunnchipelago.Client
             copy.transform.localRotation = Quaternion.identity;
             // Bake the source's WORLD scale - clamping degenerate components to 1:
             // the pretty flower is harvested at connect time, BEFORE it grows, at
-            // scale ~0 (retour Jonath iter 9: bake the FULLY GROWN flower, growth is
+            // scale ~0 (retour iter 9: bake the FULLY GROWN flower, growth is
             // a scale animation over the same mesh).
             Vector3 s = source.transform.lossyScale;
             copy.transform.localScale = new Vector3(
@@ -592,7 +592,7 @@ namespace Grunnchipelago.Client
         }
 
         /// <summary>Some models keep their mesh in a child object that the game only
-        /// activates on an event - the pretty flower's grown bloom is the one Jonath
+        /// activates on an event - the pretty flower's grown bloom is the one I
         /// asked for (iter 10: it stayed invisible). When a freshly archived copy has
         /// no usable renderer at all, activate its whole tree so the mesh exists.
         /// Scoped to otherwise-EMPTY copies: models that already display something keep
@@ -608,7 +608,7 @@ namespace Grunnchipelago.Client
                 renderer.enabled = true;
         }
 
-        /// <summary>Magic Pond fish revival (retour Jonath 2026-07-27): the "Obtain
+        /// <summary>Magic Pond fish revival (retour 2026-07-27): the "Obtain
         /// GoldFishAlive" check now fires when the DEAD fish is PLACED (MagicPondPlaceFishPatch),
         /// and the revived-fish content must show the CHECK's model, not the vanilla alive
         /// fish. The content (MagicPond_FishAlive_Content) is not an ItemPickup nor a
@@ -626,7 +626,7 @@ namespace Grunnchipelago.Client
             // object we hand over - and MagicPond_FishAlive_Content is a CONTAINER whose
             // fish mesh sits at a local offset (dump: the hider is at x=6500 while the pond
             // interactions are at x=6503.83). Handing the container over therefore dropped
-            // the model several metres off the water [J 2026-07-27, capture]. Same root
+            // the model several metres off the water [2026-07-27, capture]. Same root
             // cause as the GoldFishAlive HARVEST bug of 2026-07-21, mirrored: target the
             // object that actually CARRIES the mesh, so the model replaces the fish exactly
             // where the fish renders.
@@ -667,7 +667,7 @@ namespace Grunnchipelago.Client
         ///
         /// The worm is swapped like any other pickup, but its clone must not be visible
         /// before the world event. Renderer/activeInHierarchy heuristics DO NOT WORK here
-        /// (retour Jonath 2026-07-21, bug reproduit) : the pickup's startState is Show, so
+        /// (retour 2026-07-21, bug reproduit) : the pickup's startState is Show, so
         /// ItemPickup.SetVisuals force-activates visualsObject (ItemPickup.cs SetVisuals),
         /// and area streaming re-activates it too - both read as "revealed" while the plate
         /// is still empty. The vanilla worm is hidden by a SEPARATE object
@@ -707,7 +707,7 @@ namespace Grunnchipelago.Client
             if (pickup.gameObject.name.StartsWith("grunnchipelago", StringComparison.Ordinal))
                 return 0;   // bone gift really contains a bone
 
-            // Placed gulden (retour Jonath 2026-07-21): under coinsanity they ARE checks
+            // Placed gulden (retour 2026-07-21): under coinsanity they ARE checks
             // and can hold anything (this seed: Gulden #2 = MagicSword, #8 = SoulFragment1,
             // #14 = PurifiedStone), so they now show their real content like any pickup.
             // Their location is not an "Obtain X" - it is resolved by frozen scene path.
@@ -730,7 +730,7 @@ namespace Grunnchipelago.Client
                     GuldenContentLift);
             }
 
-            // Pretty flower: swapped again since iter 8 - Jonath wants the content
+            // Pretty flower: swapped again since iter 8 - I want the content
             // model there, and the growth animation works WITH the normalisation:
             // while the parent scale is ~0 the clone is invisible (SafeRatio caps the
             // ratio), and at full growth (scale 1) it lands at natural world size.
@@ -767,7 +767,7 @@ namespace Grunnchipelago.Client
 
         /// <summary>Shared swap decision (pickups and world polaroids). Our own Grunn
         /// item -> concrete model (feature #1); our own buffs AND trap-flagged checks ->
-        /// green soul-fragment (retour Jonath iter 5; traps MUST share the buff look,
+        /// green soul-fragment (retour iter 5; traps MUST share the buff look,
         /// the pool's own non-key items are only buffs and traps so a card would betray
         /// them); anything else -> AP card by classification (feature #2).
         /// 0 = untouched, 1 = item model, 2 = AP/buff model, 3 = no visual.</summary>
@@ -805,7 +805,7 @@ namespace Grunnchipelago.Client
                     // fragment's material, overwriting the gradient itself, and finally the
                     // lights (there are none either - measured, zero). Whatever paints this
                     // mesh is not reachable from a material, and the honest end state is a
-                    // readable coin rather than a red blob [J 2026-08-01, closed].
+                    // readable coin rather than a red blob [2026-08-01, closed].
                     if (SwapVisual(visualsObject, guldenModel, null,
                                    GuldenModelScale * GoldenGuldenScaleBoost, ApModelLift))
                         return 1;
@@ -814,7 +814,7 @@ namespace Grunnchipelago.Client
                          && guldenModel != null)
                 {
                     // Money shows the real coin instead of the red progression card
-                    // (retour Jonath, coinsanity). Trap-flagged checks are excluded here
+                    // (constate en jeu, coinsanity). Trap-flagged checks are excluded here
                     // so a disguised trap can never leak through the coin look.
                     if (SwapVisual(visualsObject, guldenModel, null, GuldenModelScale, ApModelLift))
                         return 1;
@@ -827,7 +827,7 @@ namespace Grunnchipelago.Client
                 }
             }
 
-            // Multiworld item: the AP CROWN of its class (demande Jonath 2026-07-28) -
+            // Multiworld item: the AP CROWN of its class (demande 2026-07-28) -
             // 5/4/3 soul fragments in a ring, tinted. Falls back to the old tinted polaroid
             // card if no fragment could be harvested this session.
             ApKind kind = KindFor(scout.Flags, locationId, ap.SeedString, ap.MaskItems);
@@ -849,7 +849,7 @@ namespace Grunnchipelago.Client
                 || name == GameIds.BuffCuttingRate;
         }
 
-        /// <summary>Buff model = a soul fragment (retour Jonath iter 5), harvested like
+        /// <summary>Buff model = a soul fragment (retour iter 5), harvested like
         /// any library model (soulFragment1 sits in a bottle in the Big House).</summary>
         private static bool TryGetBuffModel(out GameObject model)
         {
@@ -863,7 +863,7 @@ namespace Grunnchipelago.Client
         /// in-game: a picked polaroid granted a Plank with no visual hint). Rules match
         /// Apply (SwapForScout). After a successful swap the polaroid's WHOLE render
         /// tree is hidden, not just visualsObject - the big frame meshes live outside
-        /// it and framed our clones ("popcorn dans un polaroid geant", retour Jonath
+        /// it and framed our clones ("popcorn dans un polaroid geant", retour
         /// iter 5). Ending polaroids are ending rewards, never locations.
         /// 0 = untouched, 1 = item model, 2 = AP model.</summary>
         private static int ApplyPolaroid(Polaroid polaroid, ApClient ap)
@@ -967,7 +967,7 @@ namespace Grunnchipelago.Client
             clone.transform.localPosition = Vector3.zero;
             clone.transform.localRotation = Quaternion.identity;
 
-            // WORLD-size normalisation (retour Jonath, iter 4: "la taille du modele
+            // WORLD-size normalisation (constate en jeu, iter 4: "la taille du modele
             // depend de sa position dans le monde") - the clone inherits the target
             // parent's scale chain (soulFragment in a scaled bottle = giant, trowel
             // under a shrunk parent = tiny). Cancel it out so the clone always renders
@@ -991,12 +991,12 @@ namespace Grunnchipelago.Client
             // and only switches on the one it wants - the magic trumpet is the plain trumpet
             // plus its magic version, side by side. Instantiate copies each renderer's
             // enabled flag, so the archive already carries the game's choice; forcing them
-            // all on displayed both at once [J 2026-08-01: "le modele de la trompette magique
+            // all on displayed both at once [2026-08-01: "le modele de la trompette magique
             // est dedoublee"]. A model that genuinely comes out with everything off gets a
             // second chance below, where it can be MEASURED instead of assumed.
             // Session 2 iter 2 (capture de nuit): the tint also goes through the emission
             // channel so AP models stay readable in the dark - 1.5 is the bloom "glowing
-            // orb" look Jonath liked, now that the cards render at their normalised size.
+            // orb" look I liked, now that the cards render at their normalised size.
             if (tint.HasValue) TintModel(clone, tint.Value, true, emission);
             // The soul fragment carries a real Light (the white-blue halo, iter 6):
             // Lights are not MonoBehaviours, StripNonVisuals leaves them - tint them
@@ -1007,7 +1007,7 @@ namespace Grunnchipelago.Client
             clone.SetActive(true);
             holder.SetActive(true);   // only renderers/meshes remain: nothing to awake
 
-            // MEASURE, DON'T GUESS [J 2026-08-01: "des endroits ou on devrait avoir des
+            // MEASURE, DON'T GUESS [2026-08-01: "des endroits ou on devrait avoir des
             // checks" et il n'y a rien]. A swap that produces no visible geometry is worse
             // than no swap at all: the vanilla renderers are already off, so the location
             // becomes an invisible check. Verify, and roll back if the clone renders
@@ -1068,7 +1068,7 @@ namespace Grunnchipelago.Client
         /// <summary>Paint every material of a model.
         ///
         /// renderer.material only ever returns SLOT 0, and the coin carries more than one -
-        /// half of it kept its vanilla colour whatever we asked for [J 2026-08-01]. Hence
+        /// half of it kept its vanilla colour whatever we asked for [2026-08-01]. Hence
         /// renderer.materials, all slots.</summary>
         private static void TintModel(GameObject root, Color color, bool emissive,
             float emission = DefaultEmission)
@@ -1099,7 +1099,7 @@ namespace Grunnchipelago.Client
 
             // Only the base colour. Writing every colour slot the shader declares multiplies
             // the colour by itself - gold came out red and the crown's petals turned garish
-            // [J 2026-08-01, measured on the probes].
+            // [2026-08-01, measured on the probes].
             if (material.HasProperty("_Color")) material.color = color;
             if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
 
@@ -1132,7 +1132,7 @@ namespace Grunnchipelago.Client
         /// <summary>FindInactiveByName, but only accepts an object that actually carries a
         /// mesh, and KEEPS SCANNING when a same-named object is an empty container.
         /// An empty source archives to an invisible model - precisely what made the fish
-        /// probe grabbable but invisible (retour Jonath 2026-07-21).</summary>
+        /// probe grabbable but invisible (retour 2026-07-21).</summary>
         private static GameObject FindRenderableByName(string name)
         {
             foreach (Transform t in Resources.FindObjectsOfTypeAll<Transform>())
@@ -1153,7 +1153,7 @@ namespace Grunnchipelago.Client
         /// <summary>Remove every script and collider from a never-activated clone.
         /// Two passes + try/catch cover [RequireComponent] dependency chains.</summary>
         /// <summary>Total AudioSource dropped from clones this session - diagnostic for the
-        /// "many sounds no longer play" report [J 2026-07-30].</summary>
+        /// "many sounds no longer play" report [2026-07-30].</summary>
         private static int strippedAudioSources;
 
         /// <summary>MEASURE, don't guess: after the swap pass, report how many AudioSources

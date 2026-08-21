@@ -3,7 +3,7 @@ using HarmonyLib;
 namespace Grunnchipelago.Client
 {
     /// <summary>
-    /// "Chore" checks (demande Jonath 2026-07-30): the five START-GARDEN maintenance jobs.
+    /// "Chore" checks (demande 2026-07-30): the five START-GARDEN maintenance jobs.
     ///
     /// Vanilla pays <c>GameManager.areaCompleteGuldenAdd</c> = 2 gulden the FIRST time each
     /// job is completed, and only in the start garden - each guarded by its own

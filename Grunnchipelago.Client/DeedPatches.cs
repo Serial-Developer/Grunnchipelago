@@ -3,7 +3,7 @@ using HarmonyLib;
 namespace Grunnchipelago.Client
 {
     /// <summary>
-    /// "Deed" checks (demande Jonath 2026-07-28): checks rewarded for ACTIONS rather than
+    /// "Deed" checks (demande 2026-07-28): checks rewarded for ACTIONS rather than
     /// pickups - using an item on the right spot, completing the school band...
     ///
     /// Every hook below is the game's OWN dedicated method, each guarded by its own
@@ -14,7 +14,7 @@ namespace Grunnchipelago.Client
     /// NOT covered on purpose: "trim every potted plant". The criterion is known
     /// (pottedPlantTrimmedCur >= trimmedPottedPlantMax = 8) but the POSITION of the 8 pots is
     /// absent from dump v0.3, so no logic rule can be written yet - postponed post-launch
-    /// [J 2026-07-28].
+    /// [2026-07-28].
     ///
     /// A seed rolled before these locations existed simply has no such location: SendByName
     /// logs "pas une location" and sends nothing. No exception, no side effect.
@@ -72,7 +72,7 @@ namespace Grunnchipelago.Client
     }
 
     /// <summary>GameManager.ReturnWorm (GameManager.cs:5887), flag returnedWorm - the worm
-    /// hill is church-side geometrically but only REACHABLE FROM HELL [J 2026-07-28].</summary>
+    /// hill is church-side geometrically but only REACHABLE FROM HELL [2026-07-28].</summary>
     [HarmonyPatch(typeof(GameManager), nameof(GameManager.ReturnWorm))]
     public static class DeedWormHillPatch
     {

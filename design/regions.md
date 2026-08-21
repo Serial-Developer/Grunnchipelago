@@ -1,9 +1,9 @@
-# Grunn - Graphe de régions v3 (carte Jonath × données de scène)
+# Grunn - Graphe de régions v3 (ma carte × données de scène)
 
-Consolidation : carte manuelle + 28 points de Jonath (2026-07-12), croisés avec
+Consolidation : carte manuelle + mes 28 points (2026-07-12), croisés avec
 zone_logic.json / dump. Chaque connexion porte sa source :
 - [D] = dérivé des données de scène (fiable)
-- [J#] = point n° # de Jonath (connaissance du jeu)
+- [J#] = mon point n° # (connaissance du jeu)
 - [D+J#] = croisé, confirmé des deux côtés
 - [?] = à clarifier (voir Questions ouvertes)
 
@@ -52,7 +52,7 @@ zone_logic.json / dump. Chaque connexion porte sa source :
 - Spawn (Route, bus) -> **Jardin** : **`BridgeKey`** - LA première clé du jeu (pickup
   `bridgeKey0` sur la Route, près du spawn). Sphère 1 sans la clé = 2 checks :
   la location `Obtain BridgeKey` elle-même + le gulden du bus (ce dernier seulement si
-  coinsanity) -> option YAML `exclude_bridge_key` défaut ON [J 2026-07-12].
+  coinsanity) -> option YAML `exclude_bridge_key` défaut ON [2026-07-12].
   Le bus bloque toute autre sortie [J23]
 - **Jardin** -> **Extérieur** (pont) : cassé au premier passage ; retour = `Plank OU OldPlank` (RepairedBridgeWithPlank / RepairedBridgeWithOldPlank) [D+J23]
 - **Jardin** -> **Cour derrière maison** : libre (planches à retirer, aucun item) [J8]
@@ -61,10 +61,10 @@ zone_logic.json / dump. Chaque connexion porte sa source :
 - **Buanderie** -> **Manoir** : fermée ; s'ouvre définitivement en arrivant dans le manoir via le bureau (`UnlockedBijkeukenShortcut`) [D+J10/15]
 - **Jardin** -> **Église** (portail) : **`GardenKey`** (pickup dans la buanderie - la « clé de l'église » au sens de J10 est techniquement GardenKey ; corrigé 2026-07-12)
 - **Extérieur** -> **Église** : libre - le portail barré ne s'ouvre QUE depuis le côté Extérieur (ChurchGateUnbarred), impossible depuis le côté Église ; une fois ouvert, passage bidirectionnel [D+J-Q1]. L'Église a donc deux accès : portail jardin (GardenKey) ou par l'Extérieur.
-- **Extérieur** -> **Champ de maïs** : libre [J 2026-07-12]
-- **Extérieur** -> **Bunker** : libre [J 2026-07-12]
-- **Cabane pêcheur (intérieur)** : `Bone` à donner au chien - sans os, le chien tue et déclenche la fin Dog [J 2026-07-12] ; l'accès à l'abord de la cabane est libre
-- **Embarcadère Ferry** : libre à pied [J 2026-07-12] ; traversée = DayIndexIs(2) + ToyBoat [D]
+- **Extérieur** -> **Champ de maïs** : libre [2026-07-12]
+- **Extérieur** -> **Bunker** : libre [2026-07-12]
+- **Cabane pêcheur (intérieur)** : `Bone` à donner au chien - sans os, le chien tue et déclenche la fin Dog [2026-07-12] ; l'accès à l'abord de la cabane est libre
+- **Embarcadère Ferry** : libre à pied [2026-07-12] ; traversée = DayIndexIs(2) + ToyBoat [D]
 - **Église** -> **Porte cassée** (PillarSpace probable) : 20% de complétion de l'Église [J-Q2]
 - **Parc** <-> **Extérieur** : `Lighter` (ronce brûlée = BraamstruikDestroyed, permanent dans la run, praticable des deux côtés) [D+J26]
 - **Église** <-> **Parc** (barque) : `Paddle` (BoatTravelToPark/Church) [D+J6]
@@ -73,7 +73,7 @@ zone_logic.json / dump. Chaque connexion porte sa source :
 - **KidCymbals** : pickup dans le HedgeMaze [D]
 - **KidTriangle** : échange derrière la Station essence - le PNJ veut un `Eggball`
   (œuf pané) ; Eggball = 5 gulden au food truck du Parc, ouvert le samedi en journée
-  (jour/horaire = libres logiquement) [J 2026-07-12 + D : TradedEggball]
+  (jour/horaire = libres logiquement) [2026-07-12 + D : TradedEggball]
 - Remise des instruments : gamin de la fanfare au Parc (SchoolBandPerformance) [D]
 
 ### Maison et disque
@@ -118,7 +118,7 @@ zone_logic.json / dump. Chaque connexion porte sa source :
 - **Serre des gnomes (jardin)** : arroser toutes les fleurs étranges = accès Jardin+Parc+Église+Extérieur + capacité d'arrosage -> pièce + FlowerGem [J16]
 - **Économie** : tonte = revenu renouvelable (sécateurs suffisent logiquement pour 10 gulden du bus, disque 5, boussole 4, clé 2, médaille 10) [D+carte]
 
-## Découvertes des données (statut après réponses de Jonath)
+## Découvertes des données (statut après mes réponses)
 
 1. **MagicSword - deux sources, hiérarchie clarifiée [J-Q6]** : l'épée du grenier du Manoir
    (`attic_cardboardBox0_magicSword`) est la source PRINCIPALE (première obtention, via la
@@ -132,7 +132,7 @@ zone_logic.json / dump. Chaque connexion porte sa source :
 4. Le « Temple ? » de la carte = MagicPond (FishInMagicPond/FishRevived + GoldFishAlive/Dead) :
    l'intuition « résurrection poisson » est confirmée.
 
-## Questions résolues (réponses Jonath, 2026-07-12)
+## Questions résolues (mes réponses, 2026-07-12)
 
 - **Q1** : le portail Église<->Extérieur ne s'ouvre QUE depuis le côté Extérieur, sans clé ;
   impossible depuis le côté Église. Intégré aux connexions.
@@ -152,7 +152,7 @@ zone_logic.json / dump. Chaque connexion porte sa source :
 - Trancher l'emplacement exact des vélos (porte cassée vs extérieur) et leurs destinations
   (BikeTravelToRummikub / BikeTravelToPath)
 
-## Séquence finale - zone « Hell » (Jonath, 2026-07-12 ; croisé ScenarioType.Hell)
+## Séquence finale - zone « Hell » (2026-07-12 ; croisé ScenarioType.Hell)
 
 Prérequis d'accès à la crypte (tous nécessaires) :
 
@@ -195,10 +195,10 @@ pupitre (InsertedFlowerGem) -> crypte apparaît -> déposer les 4 idoles (Return
 - Question ouverte : identité de « la première clé du jeu » visée par l'option
   exclude_garden_key (le pickup GardenKey n'est pas en début de partie)
 
-## Compléments (réponses Jonath, 2026-07-12, session 2)
+## Compléments (mes réponses, 2026-07-12, session 2)
 
 - **Clés - mapping définitif** : `GardenKey` (pickup Bijkeuken) = portail Jardin->Église
-  (Jonath la surnommait « clé de l'église », confusion levée). `ChurchKey` (pickup hall
+  (je la surnommais « clé de l'église », confusion levée). `ChurchKey` (pickup hall
   du Manoir) = porte intérieure de l'église (chapelle). Conséquence design : GardenKey
   ne verrouille PAS tout le jeu (l'Église reste accessible par l'Extérieur) - le sort de
   l'option exclude_garden_key est en cours de décision.

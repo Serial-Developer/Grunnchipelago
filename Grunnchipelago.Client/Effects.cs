@@ -25,7 +25,7 @@ namespace Grunnchipelago.Client
         private const float TrapSpeedMultiplier = 0.5f;  // Speed Trap: half speed
         private const float TrapSizeMultiplier = 0.45f;  // Size Trap: shrunk player
 
-        /// <summary>Timed traps last this many IN-GAME hours (2 h, demande Jonath -
+        /// <summary>Timed traps last this many IN-GAME hours (2 h -
         /// 1 h passait trop vite pour se faire sentir).</summary>
         private const int TrapDurationHours = 2;
 
@@ -62,7 +62,7 @@ namespace Grunnchipelago.Client
 
         /// <summary>Drop the timed traps of the PREVIOUS multiworld. They expire on a day and
         /// hour recorded in the other save, which means nothing in the new one - the trap
-        /// would either never lift or lift at once [J 2026-08-01]. Called from
+        /// would either never lift or lift at once [2026-08-01]. Called from
         /// WorldState.ReapplyFromSave; the multipliers themselves follow the item counts,
         /// which ApClient already clears.</summary>
         public static void ResetForNewSession()
@@ -227,7 +227,7 @@ namespace Grunnchipelago.Client
         }
 
         // --- Zone reset traps -------------------------------------------------------------
-        // REDESIGNED 2026-07-27 (demande Jonath). The four "regrow one element in a random
+        // REDESIGNED 2026-07-27 (ce que je veux). The four "regrow one element in a random
         // zone" traps became three FULL ZONE RESETS, one per maintainable zone (Garden /
         // Church / Park): the zone drops back to 0 % and every maintenance job has to be
         // redone - grass, molehills, hedge, flowers to water and litter. Grass is now
@@ -240,7 +240,7 @@ namespace Grunnchipelago.Client
 
         private enum Element { Grass, Flowers, Hedge, Trash, Molehills }
 
-        /// <summary>All five maintenance elements. Jonath's spec lists them per zone
+        /// <summary>All five maintenance elements. my spec lists them per zone
         /// (garden: the five; church: grass/molehills/flowers; park: grass/molehills/
         /// flowers/trash), but an element a zone does not have has a counter of 0 already,
         /// so resetting all five everywhere is the SAME thing - and it is the only way to
@@ -300,7 +300,7 @@ namespace Grunnchipelago.Client
                 if (list != null && bounds != null)
                     list.RemoveAll(v => bounds.ContainsPoint(v.UnityVector));
 
-                // Restore the objects IN WORLD right away (session 2, retour Jonath: the
+                // Restore the objects IN WORLD right away (session 2, constate en jeu: the
                 // counter dropped but nothing grew back, so the zone could never reach
                 // 100 % again that run). Each ResetState re-reads the (now cleared) save
                 // positions via its own CheckForLoadOperation, exactly like ResetWorld
@@ -378,7 +378,7 @@ namespace Grunnchipelago.Client
         /// Calling the real <c>Flower.Cut()</c> (Flower.cs:580) does everything vanilla does:
         /// graveyardFlowerCutCur++, the graveyardFlowerCut sound, and the thresholds
         /// (>= 4 warning, >= 5 ActivateSpookyWorld -> the SacredFlowers ending). That is
-        /// exactly the behaviour Jonath asked for: a player who had already cut one flower
+        /// exactly the behaviour I asked for: a player who had already cut one flower
         /// reaches 5 and gets the ending immediately; a player at 0 lands on 4 and triggers
         /// it the moment they cut a single flower themselves.
         /// If fewer than 4 uncut graveyard flowers are left in the world, the counter is

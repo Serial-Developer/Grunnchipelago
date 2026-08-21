@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Grunnchipelago.Client
 {
     /// <summary>
-    /// TITLE-SCREEN CONNECTION PANEL (demande Jonath 2026-07-31).
+    /// TITLE-SCREEN CONNECTION PANEL (demande 2026-07-31).
     ///
     /// Small floating box on the right of the title screen, just above the version credit:
     /// Host / Port / Slot Name / Password + Connect. Before this, joining a multiworld meant
@@ -57,7 +57,7 @@ namespace Grunnchipelago.Client
         /// <summary>How long "Connexion..." may stay up before it is called a failure. The
         /// auto-reconnect loop retries every 5 s, so 10 s covers a full attempt plus one
         /// retry - long enough not to cry wolf on a slow server, short enough that a typo in
-        /// the slot name does not leave the panel hanging [J 2026-08-01]. A refused login
+        /// the slot name does not leave the panel hanging [2026-08-01]. A refused login
         /// usually reports itself well before this, through LastConnectError.</summary>
         private const float ConnectTimeoutSeconds = 10f;
 
@@ -74,7 +74,7 @@ namespace Grunnchipelago.Client
         public static Action<string, int, string, string> Save;
 
         /// <summary>The MAIN MENU proper - not the Sokpop splash or the loading screens that
-        /// precede it [J 2026-08-01]. GameState is already Title during those, so the state
+        /// precede it [2026-08-01]. GameState is already Title during those, so the state
         /// alone is not enough: the vanilla title TEXT is what actually appears with the
         /// menu, and ModUi uses the very same test to fade its credit in.</summary>
         private static bool OnTitle
@@ -84,7 +84,7 @@ namespace Grunnchipelago.Client
                 if (GameManager.CurGameState != GameManager.GameState.Title) return false;
                 // The game's own rule for its title UI (showUI, UIManager.cs:1543-1551).
                 // Without it a transition still counted as "on the title" and the panel -
-                // cursor included - flickered during the splash [J 2026-08-01, reported on
+                // cursor included - flickered during the splash [2026-08-01, reported on
                 // the credit line, same condition].
                 if (GameManager.BlackScreen || GameManager.SwitchingState) return false;
                 UIManager ui = UIManager.instance;
@@ -148,7 +148,7 @@ namespace Grunnchipelago.Client
 
             GUILayout.Space(4f);
 
-            // ONE button, always "Connect" [J 2026-08-01]. Nobody wants to disconnect for
+            // ONE button, always "Connect" [2026-08-01]. Nobody wants to disconnect for
             // its own sake: you either connect, or you point the fields at another room and
             // connect again - which drops the previous session on the way.
             if (GUILayout.Button("Connect")) Connect(ap);
@@ -235,7 +235,7 @@ namespace Grunnchipelago.Client
                     e.Use();
                     break;
                 case KeyCode.Tab:
-                    // Tab walks the form, Shift+Tab walks it back [J 2026-08-01].
+                    // Tab walks the form, Shift+Tab walks it back [2026-08-01].
                     Move(e.shift ? -1 : 1);
                     e.Use();
                     break;
@@ -298,7 +298,7 @@ namespace Grunnchipelago.Client
                 // Wipe the previous room's traffic HERE, on the click. The deferred session
                 // reset ran a frame or two AFTER login, by which time the server's welcome
                 // batch had already arrived - and got wiped with it, leaving an empty console
-                // on the second multiworld [J 2026-08-01]. An automatic reconnection does not
+                // on the second multiworld [2026-08-01]. An automatic reconnection does not
                 // come through here, so its history is preserved.
                 ConsoleUi.Clear();
                 ap.Connect(host, port, slot, password);
