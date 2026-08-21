@@ -1,4 +1,4 @@
-// build_zone_logic.mjs — Génère la table de logique par zone depuis le dump Grunn
+// build_zone_logic.mjs - Génère la table de logique par zone depuis le dump Grunn
 // Sorties : zone_logic.md (lisible) + zone_logic.json (machine)
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
@@ -146,7 +146,7 @@ function portalZone(p) {
   if (/PortalTest/.test(p.path)) return null;
   const b = baseZone(p);
   if (b) return b.zone;
-  // Convention dev : portal_SourceToDestination — ground truth avant la proximité
+  // Convention dev : portal_SourceToDestination - ground truth avant la proximité
   const m = p.path.match(/portal_(.+?)To(.+?)\d*$/);
   if (m) return m[1];
   return knnZone(p).zone;
@@ -191,7 +191,7 @@ const eventKeyItems = [...referencedKeyItems].filter(k => !placedKeyItems.has(k)
 
 // ---------- Génération Markdown ----------
 const L = [];
-L.push('# Grunn — Table de logique par zone');
+L.push('# Grunn - Table de logique par zone');
 L.push('');
 L.push(`Générée le ${new Date().toISOString()} depuis grunnchipelago_dump.json (${dump.meta.dumper}).`);
 L.push('Source : données de scène extraites du jeu en runtime. Rien n\'est inféré hors des heuristiques signalées.');
@@ -225,9 +225,9 @@ for (const name of zoneNames) {
     L.push('### Pickups');
     for (const p of z.pickups) {
       const what = p.isTool ? `OUTIL ${p.toolType}` : p.keyItems.join(' + ') || '(sans keyItem)';
-      const shop = (p.inShop || p.soldByKid) ? ` — BOUTIQUE ${p.cost} gulden${p.soldByKid ? ' (gamin)' : ''}` : '';
-      const rep = p.repeatable ? ' — répétable' : '';
-      L.push(`- ${what}${shop}${rep} — \`${p.path}\`${conf(p.path)}`);
+      const shop = (p.inShop || p.soldByKid) ? ` - BOUTIQUE ${p.cost} gulden${p.soldByKid ? ' (gamin)' : ''}` : '';
+      const rep = p.repeatable ? ' - répétable' : '';
+      L.push(`- ${what}${shop}${rep} - \`${p.path}\`${conf(p.path)}`);
     }
     L.push('');
   }
@@ -238,24 +238,24 @@ for (const name of zoneNames) {
   }
   if (z.polaroids.length) {
     L.push('### Polaroids');
-    for (const p of z.polaroids) L.push(`- ${p.type} — \`${p.path}\`${conf(p.path)}`);
+    for (const p of z.polaroids) L.push(`- ${p.type} - \`${p.path}\`${conf(p.path)}`);
     L.push('');
   }
   if (z.ghosts.length) {
     L.push('### Fantômes');
-    for (const g of z.ghosts) L.push(`- pos(${g.pos.x}, ${g.pos.z}) — \`${g.path}\`${conf(g.path)}`);
+    for (const g of z.ghosts) L.push(`- pos(${g.pos.x}, ${g.pos.z}) - \`${g.path}\`${conf(g.path)}`);
     L.push('');
   }
   if (z.doors.length) {
     L.push('### Portes verrouillées/barrées');
-    for (const d of z.doors) L.push(`- ${d.type} — locked:${d.locked} barred:${d.barred} — \`${d.path}\``);
+    for (const d of z.doors) L.push(`- ${d.type} - locked:${d.locked} barred:${d.barred} - \`${d.path}\``);
     L.push('');
   }
   if (z.gatedInteractions.length) {
     L.push('### Interactions conditionnées');
     for (const it of z.gatedInteractions) {
       const mode = it.andCheck ? 'ET' : 'OU';
-      const refs = Object.keys(it.refs || {}).length ? ` — refs: ${JSON.stringify(it.refs)}` : '';
+      const refs = Object.keys(it.refs || {}).length ? ` - refs: ${JSON.stringify(it.refs)}` : '';
       L.push(`- ${it.type} [${mode}] ${it.conditions.join(', ')}${refs}`);
     }
     L.push('');
@@ -264,7 +264,7 @@ for (const name of zoneNames) {
     L.push('### Visibilité conditionnée (ContentHiders)');
     for (const h of z.hiders) {
       const mode = h.and ? 'ET' : 'OU';
-      L.push(`- [${mode}] ${h.conditions.join(', ')}${h.objectRef ? ` — objet: ${h.objectRef}` : ''}`);
+      L.push(`- [${mode}] ${h.conditions.join(', ')}${h.objectRef ? ` - objet: ${h.objectRef}` : ''}`);
     }
     L.push('');
   }

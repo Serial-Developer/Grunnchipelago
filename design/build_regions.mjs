@@ -1,4 +1,4 @@
-// build_regions.mjs — Proposition AUTOMATIQUE du graphe de régions (sorties : design/regions_auto.*)
+// build_regions.mjs - Proposition AUTOMATIQUE du graphe de régions (sorties : design/regions_auto.*)
 // Principe : les portails contrôlés par un ContentHider sont des
 // arêtes CONDITIONNELLES. Elles sont exclues du calcul des composantes et
 // émises comme connexions inter-régions avec leur règle d'accès dérivée par
@@ -166,16 +166,16 @@ const out = {
 writeFileSync(`${DIR}/design/regions_auto.json`, JSON.stringify(out, null, 2), 'utf8');
 
 const L = [];
-L.push('# Grunn — Graphe de régions AP v2');
+L.push('# Grunn - Graphe de régions AP v2');
 L.push('');
 L.push('Régions = composantes connexes des portails **libres**. Les portails conditionnés par ContentHider');
 L.push('sont des connexions inter-régions avec règle d\'accès dérivée des données (négation De Morgan');
-L.push('des hideConditions — sémantique vérifiée dans ContentHider.Update).');
+L.push('des hideConditions - sémantique vérifiée dans ContentHider.Update).');
 L.push('');
 L.push(`## ${regions.length} régions candidates`);
 L.push('');
 for (const r of regions) {
-  L.push(`### ${r.id} — ${r.name} (${r.zones.length} zone(s), ${r.checks} checks)`);
+  L.push(`### ${r.id} - ${r.name} (${r.zones.length} zone(s), ${r.checks} checks)`);
   L.push(`Zones : ${r.zones.join(', ')}`);
   L.push('');
 }
@@ -190,7 +190,7 @@ L.push('');
 L.push('## Interactions de voyage (règles auto)');
 L.push('');
 for (const t of travel) {
-  L.push(`- **${t.type}** depuis ${t.zone} — règle : **${t.accessRule}**`);
+  L.push(`- **${t.type}** depuis ${t.zone} - règle : **${t.accessRule}**`);
 }
 L.push('');
 L.push('## À compléter manuellement : adjacences à pied entre régions');

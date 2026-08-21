@@ -1,6 +1,6 @@
-// build_ids.mjs — Génération des IDs items/locations de l'apworld Grunn
+// build_ids.mjs - Génération des IDs items/locations de l'apworld Grunn
 // Sources : enums.txt (ordres d'enum stables du jeu) + dump (positions fantômes/gulden).
-// BASE_ID = 478660000 ("GRUNN" en T9 : 4-7-8-6-6, x10000) — arbitraire, modifiable
+// BASE_ID = 478660000 ("GRUNN" en T9 : 4-7-8-6-6, x10000) - arbitraire, modifiable
 // tant que rien n'est publié.
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
