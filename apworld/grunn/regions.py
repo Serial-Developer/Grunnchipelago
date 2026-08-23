@@ -122,6 +122,15 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     link(c.CABANE_JOUEUR, c.COULOIR_FINAL)
     # dump: LongHallway <-> SmallChapelOutside <-> MagicPond (free)
     link(c.COULOIR_FINAL, c.MAGIC_POND)
+    # Giving the Worm to the fisherman (he sits on a bench in the Windy Path, which is
+    # what CABANE_PECHEUR models) makes him vanish and opens the way to the red chapel
+    # right next to him; the Magic Pond is part of that same area [J 2026-08-23, in-game].
+    # dump: fishermanGiveWormInteraction0 (FishermanGiveWorm, blocked by
+    # KeyItemNotObtained(Worm)) and the fisherMan0 / fishermanVanished0 hiders keyed on
+    # ActivatedRedChapel. He only shows up during the day on Saturday and Sunday, which is
+    # logically free: sleeping advances the clock with no prerequisite.
+    # This is the early route to the pond; COULOIR_FINAL above is the Sunday-night one.
+    link(c.CABANE_PECHEUR, c.MAGIC_POND, lambda s: s.has("Worm", p))
 
     # --- Zone completions (100 % portals) ---------------------------------------
     # regions.md: Jardin 100 % -> Picnic
