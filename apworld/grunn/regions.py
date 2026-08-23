@@ -51,6 +51,11 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     link(c.EXTERIEUR, c.EGLISE)
     # regions.md: Parc <-> Exterieur : Lighter
     link(c.EXTERIEUR, c.PARC, lambda s: s.has("Lighter", p))
+    # The burnt bramble is a two-way passage - it can be crossed from either side and
+    # stays open for the run [regions.md J26]. Coming back out of the park is one of the
+    # ways to reach the Exterieur without a plank or the shears
+    # [J 2026-08-11: GardenKey -> Eglise -> Paddle -> Parc -> Lighter -> outside].
+    link(c.PARC, c.EXTERIEUR, lambda s: s.has("Lighter", p))
     # regions.md: Eglise <-> Parc (barque) : Paddle
     link(c.EGLISE, c.PARC, lambda s: s.has("Paddle", p))
     # Eglise -> Porte cassee (PillarSpace) : la porte doit etre REPAREE avec la poignee.
@@ -64,6 +69,11 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     link(c.EGLISE, c.PILLAR_SPACE, lambda s: s.has("Doorknob", p))
     # dump: Road <-> PillarSpace via the repaired doorknob door (Doorknob)
     link(c.EXTERIEUR, c.PILLAR_SPACE, lambda s: s.has("Doorknob", p))
+    # The broken church door is a two-way passage: going through it from the church side
+    # is one of the ways to reach the Exterieur without a plank or the shears
+    # [J 2026-08-11: GardenKey -> Eglise -> Doorknob -> PillarSpace -> outside].
+    # Region edges are one-way, so the way out has to be declared explicitly.
+    link(c.PILLAR_SPACE, c.EXTERIEUR)
     # regions.md: Exterieur -> Champ de mais (libre, confirme 2026-07-12)
     link(c.EXTERIEUR, c.CHAMP_MAIS)
     # regions.md: Exterieur -> Bunker (libre, confirme 2026-07-12)
@@ -157,9 +167,14 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     # PAS de contrainte de jour : aucun check du Ferry n'est jour-2 [2026-07-27,
     # in-game] - ils sont disponibles tous les jours.
     link(c.EXTERIEUR, c.FERRY, lambda s: s.has("ToyBoat", p))
-    # regions.md: fisherman cabin approach is free; ENTERING (interior) needs Bone for the
-    # dog (else the dog kills the player -> Dog ending).
-    link(c.COUR, c.CABANE_PECHEUR)
+    # regions.md: the fisherman cabin approach (WindyPath) is reached from the Exterieur
+    # only. There is NO free path from the Cour: leaving the yard that way means cutting
+    # the hedge, which is already the COUR -> EXTERIEUR link [J 2026-08-11, in-game].
+    # The scene path of the dog and the fisherman is misleading here - the objects live
+    # under Main/Areas/BehindHouse/ in the dev's hierarchy, but their measured positions
+    # are all inside the WindyPath polygon (dump: AngryDog, fishermanInteraction0,
+    # wormFisherman0, polaroid_bone0).
+    # ENTERING the interior needs Bone for the dog (else the dog kills the player -> Dog).
     link(c.EXTERIEUR, c.CABANE_PECHEUR)
     link(c.CABANE_PECHEUR, c.CABANE_PECHEUR_INT, lambda s: s.has("Bone", p))
 
