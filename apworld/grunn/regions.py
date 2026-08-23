@@ -141,11 +141,13 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     )
     # regions.md: Labyrinthe -> Coeur : Compass
     link(c.LABYRINTHE, c.LABYRINTHE_COEUR, lambda s: s.has("Compass", p))
-    # regions.md: Parc -> Jardin botte de foin : 20 % du Parc + Lighter
+    # regions.md: Parc -> Jardin botte de foin : 20 % du Parc + Lighter.
+    # The 20 % bar is park_20 (any single tool on top of the litter), NOT complete_zone
+    # [J 2026-08-11].
     link(
         c.PARC,
         c.HOOIBAAL,
-        lambda s: r.complete_zone(s, world, c.PARC, full=False) and s.has("Lighter", p),
+        lambda s: r.park_20(s, world) and s.has("Lighter", p),
     )
     # Passage des Gnomes (RoundHallway + GnomeForest) = a HUB linking StartGarden, Park and
     # GnomeForest, all behind the jumpscare-gnome doors (DestroyedAllJumpscareGnomes =

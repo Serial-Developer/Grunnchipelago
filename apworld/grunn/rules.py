@@ -69,11 +69,31 @@ def can_afford(state: CollectionState, world: "GrunnWorld", price: int) -> bool:
     return can_cut_grass(state, world)
 
 
+def park_20(state: CollectionState, world: "GrunnWorld") -> bool:
+    """Park at >= 20 %, the threshold that opens the way to the hay bale (merchant).
+
+    The park holds a lot of litter, which is picked up with bare hands, so ANY single
+    tool (or the Coin, through the rain) is enough on top of it to clear the bar
+    [J in-game 2026-08-11]. This is deliberately looser than complete_zone, which demands
+    mowing AND watering together - same correction as garden_30.
+
+    The church has no equivalent rule: its 20 % only makes the Doorknob appear in the
+    grass, and searching the branch hole for it is free [J 2026-08-11].
+    """
+    return _reach(state, world, c.PARC) and (
+        can_cut_grass(state, world)
+        or can_water(state, world)
+        or state.has("Trowel", world.player)
+    )
+
+
 def complete_zone(state: CollectionState, world: "GrunnWorld", region: str, full: bool) -> bool:
-    """Zone maintenance (20 % unlocks / 100 % completion).
+    """Zone maintenance, used for the 100 % completion portals.
 
     design section 6: access zone + can_cut_grass + can_water (+ Trowel for molehills).
     Molehills (Trowel) are only required for the 100 %.
+    The 20 % thresholds do NOT go through here: see park_20 (and garden_30), which are
+    much looser because a single chore type is enough to clear them.
     """
     ok = _reach(state, world, region) and can_cut_grass(state, world) and can_water(state, world)
     if full:
