@@ -499,11 +499,14 @@ def set_all_rules(world: "GrunnWorld") -> None:
     # Room is first entered through the final hallway (portal_LongHallwayToOrbRoom0;
     # the StartGarden portal stays hidden until that first talk), so they are gated
     # on CouloirFinal - not free garden pickups as their position suggests.
+    # The door at the far end of the hallway needs the StrangeKey: without it the
+    # hallway is a dead end [J 2026-08-23, in-game; dump v0.3 door table:
+    # StrangeKey unlocks LongHallway/door0].
     if world.options.polaroid_checks:
         for name in ("Polaroid: Crypt", "Polaroid: GnomeIdol"):
             add_rule(
                 world.get_location(name),
-                lambda s: _reach(s, world, c.COULOIR_FINAL),
+                lambda s: _reach(s, world, c.COULOIR_FINAL) and s.has("StrangeKey", player),
             )
         # Polaroid: GasStation sits INSIDE the smashed garden gnome (dump: hider
         # objectRef gardengnome_Destroyed, condition GnomeNotDestroyed), so it needs

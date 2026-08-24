@@ -120,8 +120,12 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     # aucun item, juste attendre le dimanche soir [2026-07-13]. The edge starts at the
     # hut (faithful to regions.md) so lock_player_hut gates the Sunday hallway too.
     link(c.CABANE_JOUEUR, c.COULOIR_FINAL)
-    # dump: LongHallway <-> SmallChapelOutside <-> MagicPond (free)
-    link(c.COULOIR_FINAL, c.MAGIC_POND)
+    # The final hallway has nothing to do with the red chapel [J 2026-08-23, in-game]:
+    # without the StrangeKey it just dead-ends, and with it the door at the far end opens
+    # onto the Orb Room, whose exit drops the player back in the start garden.
+    # portal_LongHallwayToOutsideRedChapel0 exists in the scene but is not a route the
+    # player can take, and the pond portal beyond it is hidden by SmallChapelNotShowing
+    # anyway. The pond is reached by giving the Worm to the fisherman, see below.
     # Giving the Worm to the fisherman (he sits on a bench in the Windy Path, which is
     # what CABANE_PECHEUR models) makes him vanish and opens the way to the red chapel
     # right next to him; the Magic Pond is part of that same area [J 2026-08-23, in-game].
@@ -129,7 +133,7 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     # KeyItemNotObtained(Worm)) and the fisherMan0 / fishermanVanished0 hiders keyed on
     # ActivatedRedChapel. He only shows up during the day on Saturday and Sunday, which is
     # logically free: sleeping advances the clock with no prerequisite.
-    # This is the early route to the pond; COULOIR_FINAL above is the Sunday-night one.
+    # This is the ONLY way into the pond.
     link(c.CABANE_PECHEUR, c.MAGIC_POND, lambda s: s.has("Worm", p))
 
     # --- Zone completions (100 % portals) ---------------------------------------
