@@ -505,6 +505,15 @@ def set_all_rules(world: "GrunnWorld") -> None:
             and _reach(s, world, c.EGLISE) and _reach(s, world, c.EXTERIEUR)
             and can_water(s, world),
         )
+        # Gulden #10 is inside the garden gnome and only drops once it is smashed
+        # (dump: .../gardenGnome0/gardengnome_Destroyed/gulden0_gardenGnome), which
+        # takes the Hammer and nothing else - same gate as GnomeIdol above
+        # [J 2026-09-16, in-game]. The other two StartGarden coins (#4, #6) really are
+        # lying around and stay free.
+        add_rule(
+            world.get_location("Gulden #10 (StartGarden)"),
+            lambda s: s.has("Hammer", player),
+        )
 
     # Two polaroids only APPEAR in the start garden after talking to the Orb in the
     # Orb Room [2026-07-16, dump: Polaroid_crypt_contentHider0 /
