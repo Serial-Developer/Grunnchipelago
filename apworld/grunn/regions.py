@@ -25,8 +25,16 @@ def create_all_regions(world: "GrunnWorld") -> None:
 
 
 def connect_all_regions(world: "GrunnWorld") -> None:
-    def link(src: str, dst: str, rule=None) -> None:
-        world.get_region(src).connect(world.get_region(dst), rule=rule)
+    def link(src: str, dst: str, rule=None, needs_region: str = None) -> None:
+        """Connect two regions. needs_region is for rules that call can_reach_region:
+        the entrance has to be registered as an indirect condition, otherwise the
+        generator evaluates it while the region graph is still being built and can
+        leave it blocked for good (Archipelago register_indirect_condition)."""
+        entrance = world.get_region(src).connect(world.get_region(dst), rule=rule)
+        if needs_region is not None:
+            world.multiworld.register_indirect_condition(
+                world.get_region(needs_region), entrance
+            )
 
     r = rules  # shorthand
     p = world.player
@@ -151,6 +159,7 @@ def connect_all_regions(world: "GrunnWorld") -> None:
         c.LABYRINTHE,
         lambda s: r.has_plank(s, world)
         or (s.has("Coin", p) and s.can_reach_region(c.EGLISE, p)),
+        needs_region=c.EGLISE,
     )
     # regions.md: Labyrinthe -> Coeur : Compass
     link(c.LABYRINTHE, c.LABYRINTHE_COEUR, lambda s: s.has("Compass", p))
@@ -167,13 +176,18 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     # Hammer). dump portals: portal_StartGardenToRoundHallway0 <-> portal_RoundHallwayToStartGarden0
     # and portal_ParkToRoundHallway0 <-> portal_RoundHallwayToPark0 (both carry gnomeDoor0).
     # Must be BIDIRECTIONAL [2026-07-27]: the entrances alone let you ENTER the passage
-    # but never EXIT to the other side, so the third Park route (Hammer via the gnomes) was
-    # missing. With the exits, Park is reachable by Lighter (Exterieur), Paddle (Eglise boat)
-    # OR Hammer (this passage) - matching the game.
-    link(c.JARDIN, c.PASSAGE_GNOMES, lambda s: s.has("Hammer", p))
-    link(c.PASSAGE_GNOMES, c.JARDIN, lambda s: s.has("Hammer", p))
-    link(c.PARC, c.PASSAGE_GNOMES, lambda s: s.has("Hammer", p))
-    link(c.PASSAGE_GNOMES, c.PARC, lambda s: s.has("Hammer", p))
+    # but never EXIT to the other side.
+    # The doors also need the GAS STATION, not just the Hammer [issues #1 and #2, 2026-09-16]:
+    # smashing the garden gnome is only half of it, the door appears after going in and out
+    # of the gas station, which is itself outside. Gating the passage on the Hammer alone
+    # made it a way OUT of the garden, so a player holding the Hammer and nothing else was
+    # told to leave through a door that cannot exist yet. Same condition as the GnomeIdol
+    # rule, which had it right all along.
+    gnome_doors = lambda s: s.has("Hammer", p) and s.can_reach_region(c.GAS_STATION, p)
+    link(c.JARDIN, c.PASSAGE_GNOMES, gnome_doors, needs_region=c.GAS_STATION)
+    link(c.PASSAGE_GNOMES, c.JARDIN, gnome_doors, needs_region=c.GAS_STATION)
+    link(c.PARC, c.PASSAGE_GNOMES, gnome_doors, needs_region=c.GAS_STATION)
+    link(c.PASSAGE_GNOMES, c.PARC, gnome_doors, needs_region=c.GAS_STATION)
     # dump (2026-07-12): bike is a round trip Exterieur (OutsideVillage) <-> RummikubSpace
     # (toRummikub0 = out, toPath = return, both preventTypes=[]). The return is implicit
     # via AP's origin-return assumption, so only the outbound edge is modelled.
