@@ -165,16 +165,16 @@ OBTAIN_RULES: dict[str, Rule] = {
     #   - wormMagpie0 is the worm you get back after feeding the magpie (and it is a
     #     repeatable pickup, so it is not an AP location either).
     "Worm": lambda s, w: _reach(s, w, c.JARDIN) and s.has("Apple", w.player),
-    # dump: Bunker (trowel0) OR Toilet (trowel0_demo). The "_demo" suffix is naming only,
-    # NOT demo-gated content: the real demo mechanism is hideInDemo + SaveManager.demo
-    # (ContentHider.cs:214) and these pickups have hideInDemo:False / startState:Show
-    # / no hider [2026-07-13].
-    "Trowel": lambda s, w: _reach(s, w, c.BUNKER) or _reach(s, w, c.TOILET),
+    # dump: Bunker (trowel0). The scene also holds trowel0_demo in the Toilet, but that
+    # pickup does NOT exist in the shipped game [J 2026-09-16, in-game]: the "_demo"
+    # objects are leftover demo content, whatever their hideInDemo flag says. The Bunker
+    # is the only source.
+    "Trowel": lambda s, w: _reach(s, w, c.BUNKER),
     # dump: PlayerSchuur (scissors)
     "Shears": lambda s, w: _reach(s, w, c.CABANE_JOUEUR),
-    # dump: Park OR RoundHallway (wateringCan0_demo - naming only, not demo-gated,
-    # see Trowel note) [2026-07-13]
-    "WateringCan": lambda s, w: _reach(s, w, c.PARC) or _reach(s, w, c.PASSAGE_GNOMES),
+    # dump: Park only. wateringCan0_demo in the RoundHallway is leftover demo content and
+    # is not in the shipped game [J 2026-09-16, in-game]; see the Trowel note above.
+    "WateringCan": lambda s, w: _reach(s, w, c.PARC),
     # dump: Road (item_plank0)
     "Plank": lambda s, w: _reach(s, w, c.EXTERIEUR),
     # dump: Tent (blueCoin0)
@@ -232,11 +232,11 @@ OBTAIN_RULES: dict[str, Rule] = {
     "Paddle": lambda s, w: _reach(s, w, c.JARDIN),
     # regions.md: THE first key, pickup bridgeKey0 on the road at spawn (before Jardin).
     "BridgeKey": lambda s, w: True,
-    # dump: BigHouseOffice (strangeKey0_old, free) OR StartGarden magpie. The magpie pickup
-    # is strangeKey0_demo, child of magpieDeadByWorm0 = the canonical magpie key drop
-    # ("_demo" is naming only, see Trowel note) [2026-07-13]. The magpie route needs the
-    # Worm to feed it AND the garden at >= 30 % for the magpie to exist at all
-    # (garden_30) [2026-07-21].
+    # dump: BigHouseOffice (strangeKey0_old, free) OR StartGarden magpie. The magpie drop
+    # is strangeKey0_demo, child of magpieDeadByWorm0; unlike the other "_demo" objects
+    # this one IS in the shipped game, and it needs the Worm fed to the magpie
+    # [J 2026-09-16, in-game], plus the garden at >= 30 % for the magpie to exist at all
+    # (garden_30) [2026-07-21]. Both conditions are already on the rule below.
     "StrangeKey": lambda s, w: _reach(s, w, c.MANOIR)
     or (_reach(s, w, c.JARDIN) and s.has("Worm", w.player) and garden_30(s, w)),
     # regions.md I.4: cross the maze gap + Compass (-> maze heart) + hit the TallMan
@@ -492,6 +492,19 @@ def set_all_rules(world: "GrunnWorld") -> None:
         #  - #4 = ghost0_scooterCrash0 (dump: ScooterCrashContentHider0, DayIndexIsNot day=2)
         for name in ("Calm Ghost #3 (Road)", "Calm Ghost #4 (WindyPath)"):
             add_rule(world.get_location(name), lambda s: can_advance_days(s, world))
+
+    # The Intratuin gulden sits in the gnome greenhouse, behind the door that only opens
+    # once every strange flower has been watered, which is the FlowerGem condition
+    # [J 2026-09-16, in-game; regions.md J16: the greenhouse holds a coin AND the
+    # FlowerGem]. Intratuin is folded into the Jardin region, so without this rule the
+    # gulden looked free from the start of the run.
+    if world.options.coinsanity:
+        add_rule(
+            world.get_location("Gulden #15 (Intratuin)"),
+            lambda s: _reach(s, world, c.JARDIN) and _reach(s, world, c.PARC)
+            and _reach(s, world, c.EGLISE) and _reach(s, world, c.EXTERIEUR)
+            and can_water(s, world),
+        )
 
     # Two polaroids only APPEAR in the start garden after talking to the Orb in the
     # Orb Room [2026-07-16, dump: Polaroid_crypt_contentHider0 /
