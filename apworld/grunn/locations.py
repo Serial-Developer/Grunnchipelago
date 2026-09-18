@@ -48,12 +48,12 @@ LOCATION_CATEGORY: dict[str, str] = {name: data["category"] for name, data in ID
 #
 # "Polaroid: VoidSkeleton" is ALSO dead content [2026-07-27, confirmed in-game + code].
 # Its scene object (Main/Polaroids/polaroid_skeletonVoid0) exists in the dump but is never
-# activated: it has NO reveal ContentHider (unlike Tent / GardenGnomes, which are event- or
-# day-revealed and collect fine), NO hardcoded grant, and the game explicitly strips it as
+# activated: it has NO reveal ContentHider, NO hardcoded grant, and the game explicitly strips it as
 # "unused" every load (SaveManager.RemoveAndAddCertainPolaroids ->
 # RemoveUnusedPolaroid(PolaroidType.VoidSkeleton)). The client's model-swap pass confirmed
-# it: 31/34 polaroids present at connect, the 3 absent being Tent + GardenGnomes (legit,
-# revealed later) + VoidSkeleton. seed #4 stranded ShyIdol on it -> Hell unreachable.
+# it: 31/34 polaroids present at connect, the 3 absent being VoidSkeleton + GardenGnomes +
+# Tent. At the time the last two were written off as "revealed later"; all three turned out
+# to be dead content. seed #4 stranded ShyIdol on it -> Hell unreachable.
 # "Polaroid: GardenGnomes" is dead content too [2026-07-27, proven in-game]. Its scene
 # object exists in the dump (GnomeForest, inside bigMushroom0) but is NEVER instantiated:
 # the client scans GameManager.allPolaroids every frame and never saw it, even while the
@@ -70,11 +70,23 @@ LOCATION_CATEGORY: dict[str, str] = {name: data["category"] for name, data in ID
 # hut_s7655... stranded the Trowel on "Obtain OldKey" -> run blocked.
 # NOTE: the AbandonedKey ITEM stays in the pool (lock_player_hut needs it); only its
 # location is removed. Their rules are removed from OBTAIN_RULES as well.
+#
+# "Polaroid: Tent" is the FOURTH dead polaroid [J 2026-09-18, proven in-game]: it does not
+# exist in the shipped game. It had survived three earlier passes because the evidence
+# pointed the wrong way - the scene DOES hold Main/Polaroids/polaroid_tent0, the client's
+# model-swap pass saw 31/34 polaroids at connect and filed Tent among the ones "revealed
+# later", and a check count of 116 was read as proof it was live. None of that was a
+# sighting. No player has ever collected it, and a full vanilla run turned nothing up
+# (issue #2). Note that TentSceneContentHider0 is NOT its hider: that one covers
+# tentSceneContainer, the corn-field tent scene, a different object entirely - the polaroid
+# has no hider at all, which is exactly the VoidSkeleton shape.
+# Its id stays reserved in ids.json, like the other three.
 UNSOURCED_LOCATIONS = {
     "Calm Ghost #8 (PillarSpace)",
     "Polaroid: Demon",
     "Polaroid: VoidSkeleton",
     "Polaroid: GardenGnomes",
+    "Polaroid: Tent",
     "Obtain OldKey",
     "Obtain AbandonedKey",
 }
@@ -119,7 +131,8 @@ POLAROID_REGION: dict[str, str] = {
     "Polaroid: TallManWindow": c.JARDIN,
     "Polaroid: Crypt": c.JARDIN,               # object physically in StartGarden
     "Polaroid: BoatPaddle": c.EGLISE,
-    "Polaroid: Tent": c.EGLISE,                # object physically at Church
+    # "Polaroid: Tent" is intentionally ABSENT: dead content, excluded via
+    # UNSOURCED_LOCATIONS above (never created) - resolved 2026-09-18.
     "Polaroid: RedDoor": c.EGLISE,
     "Polaroid: ChurchOutsideDoor": c.EGLISE,
     "Polaroid: FlowerDoor": c.EGLISE,          # ChurchBigHall

@@ -66,6 +66,11 @@ PRICE_COMPASS = 4
 PRICE_OFFICE_KEY = 2
 PRICE_MEDAL = 10
 PRICE_EGGBALL = 5
+# The gas-station lighter is a shop item too (dump lighter0_gasStation0: inShop, cost 5)
+# [J 2026-09-18]. Unlike the others it has two free alternatives - the park one and the road
+# molehill - so paying for it is a convenience, not a bottleneck. Deliberately LEFT OUT of
+# the coinsanity money supply (items.py): money resets with the run.
+PRICE_LIGHTER = 5
 
 # --- "Bad" endings: the ones that KILL the player -------------------------------
 # Exactly the DeathLink set (decision 2026-07-13, mirrored in the client's

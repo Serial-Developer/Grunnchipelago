@@ -245,6 +245,12 @@ def create_all_items(world: "GrunnWorld") -> None:
             c.PRICE_BUS + c.PRICE_CD + c.PRICE_COMPASS
             + c.PRICE_OFFICE_KEY + c.PRICE_MEDAL + c.PRICE_EGGBALL
         )
+        # NOT c.PRICE_LIGHTER, although the gas station sells the lighter for 5 too
+        # [J 2026-09-18]: a RUN RESET puts the purse back to the full received amount, as if
+        # nothing had been spent. Money is therefore per-run, not a lifetime budget - what a
+        # player skips this week they buy next week - so the supply only has to cover the
+        # most expensive single run, and topping it up for an extra purchase would just
+        # hand out free money. The same reasoning is why nothing here is ever "spent".
         gulden_needed -= golden_gulden * GOLDEN_GULDEN_VALUE
         for _ in range(max(0, gulden_needed)):
             itempool.append(create_item(world, "Gulden"))

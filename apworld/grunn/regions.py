@@ -182,8 +182,9 @@ def connect_all_regions(world: "GrunnWorld") -> None:
     # of the gas station, which is itself outside. Gating the passage on the Hammer alone
     # made it a way OUT of the garden, so a player holding the Hammer and nothing else was
     # told to leave through a door that cannot exist yet. Same condition as the GnomeIdol
-    # rule, which had it right all along.
-    gnome_doors = lambda s: s.has("Hammer", p) and s.can_reach_region(c.GAS_STATION, p)
+    # rule, which had it right all along - it now lives in rules.gnome_doors(), shared with
+    # Polaroid: GnomeForestDoor, which spawns with these very doors.
+    gnome_doors = lambda s: r.gnome_doors(s, world)
     link(c.JARDIN, c.PASSAGE_GNOMES, gnome_doors, needs_region=c.GAS_STATION)
     link(c.PASSAGE_GNOMES, c.JARDIN, gnome_doors, needs_region=c.GAS_STATION)
     link(c.PARC, c.PASSAGE_GNOMES, gnome_doors, needs_region=c.GAS_STATION)

@@ -119,6 +119,24 @@ def garden_30(state: CollectionState, world: "GrunnWorld") -> bool:
     )
 
 
+def gnome_doors(state: CollectionState, world: "GrunnWorld") -> bool:
+    """The jumpscare-gnome doors (StartGarden <-> RoundHallway <-> Park).
+
+    Smashing the garden gnome is only half of it: the doors appear after going in and out
+    of the GAS STATION, which is itself outside [issues #1 and #2, 2026-09-16]. The tool is
+    not negotiable either - Gnome.GetHit (Gnome.cs:182) opens with
+    `if (curEquipmentData.handRightItem != Item.Hammer || curState == Hide) return;`, so
+    neither the sword nor the trowel can break a gnome (see the GnomeIdol rule below).
+
+    Factored out because three different things ride on the exact same gate: the four
+    PassageGnomes edges (regions.py), the GnomeIdol obtain, and Polaroid: GnomeForestDoor,
+    which hangs on one of those gnomes (dump:
+    Hide_Road/GnomeJumpscareContainer/gardenGnome0 (15)/polaroid_gnomeForestDoor0, behind
+    GnomeJumpscareContentHider0 / NotTriggeredGnomeJumpscare).
+    """
+    return state.has("Hammer", world.player) and _reach(state, world, c.GAS_STATION)
+
+
 def can_advance_days(state: CollectionState, world: "GrunnWorld") -> bool:
     """Can the player reach day 2+ (i.e. SLEEP)?
 
@@ -189,10 +207,48 @@ OBTAIN_RULES: dict[str, Rule] = {
     # [2026-07-27] (pizzaBoxContentHider0 HangjongerenNotAppeared + the hangjong
     # hiders' DayIndexIsNot).
     "PizzaBox": lambda s, w: _reach(s, w, c.PARC) and can_advance_days(s, w),
-    # dump: GasStation (free) OR HooibaalSchuur shop (2)
-    "OfficeKey": lambda s, w: _reach(s, w, c.GAS_STATION) or _reach(s, w, c.HOOIBAAL),
-    # dump: Park (free) OR Road (free) OR GasStation shop (5)
-    "Lighter": lambda s, w: _reach(s, w, c.EXTERIEUR) or _reach(s, w, c.PARC) or _reach(s, w, c.GAS_STATION),
+    # dump: GasStation (officeKey0) OR HooibaalSchuur shop (2).
+    # The GAS STATION source needs the HAMMER [issue #2, 2026-09-17, in-game]: the key sits
+    # BEHIND THE COUNTER, which cannot be entered on day 1 while the shop is open and the
+    # lady is standing there - the only way to it is to break in once the station has shut.
+    # The dump backs the break-in: the station door is only open on day 1 between 12:00 and
+    # 18:00 (GasStation_DoorOpen_ContentHider0, DayIndexIsNot day=1 12-18) and outside that
+    # window it is gasStationDoorClosed0 until GasStationDoorDestroyed
+    # (GasStation_DoorClosed_/DoorDestroyed_ContentHider0), which is exactly the
+    # "libre au debut ; Hammer apres fermeture" regions.md already notes on the
+    # Exterieur -> GasStation link.
+    # The break-in is DAY 2 behaviour and the day is NOT free under lock_player_hut, since
+    # the only bed is in the hut [J 2026-09-18, confirmed in-game] - hence can_advance_days,
+    # exactly like PizzaBox and the two day-2 ghosts. The reporter of issue #2 was playing
+    # with lock_player_hut on, which is what made this reachable-looking check unreachable.
+    # The shop source keeps its price: the Hooibaal kid sells the key for 2 gulden
+    # (dump officeKey0_shop, cost 2; zone_logic.md "Zone : HooibaalSchuur") [J 2026-09-18].
+    # It was the only branch of a shop item without can_afford, and with the gas station now
+    # gated it is also the only Hammer-free route, so the omission had become load-bearing.
+    "OfficeKey": lambda s, w: (
+        _reach(s, w, c.HOOIBAAL) and can_afford(s, w, c.PRICE_OFFICE_KEY)
+    ) or (
+        _reach(s, w, c.GAS_STATION) and s.has("Hammer", w.player) and can_advance_days(s, w)
+    ),
+    # EXACTLY THREE places [J 2026-09-18, in-game], and the old rule had all three free:
+    #  - PARK: lighter0_park0 just lying there (dump: cost 0, grabType Grab, MACRO:Park;
+    #    LighterParkContentHider0 only hides it once the Lighter is obtained). Free.
+    #  - ROAD: lighter0_molehill0, buried in a molehill by the bins (3 cm from
+    #    Hide_Road/Molehills (1)/molehill0_lighter, LighterMolehillContentHider0 /
+    #    ObjectIsActive) -> TROWEL.
+    #  - GAS STATION: lighter0_gasStation0, a SHOP item (dump: inShop true, cost 5,
+    #    grabType Steal) -> 5 gulden, hence PRICE_LIGHTER. It also exists on DAY 1 ONLY
+    #    (LighterGasStationHider0, DayIndexIsNot day=1), which is logically free: the run
+    #    starts on day 1.
+    # NOT a fourth source: lighter0_car0, the lighter in the yellow car. It is in the dump
+    # (grabType Steal, cost 0) with LighterYellowCarContentHider0 piling ObjectIsActive +
+    # SecondObjectIsNotActive on top, but the three places above are the whole list
+    # [J 2026-09-18], so it is left out rather than modelled on a guess.
+    # This rule matters more than it looks: the Lighter is what opens the Park, and the Park
+    # is what opens the Hooibaal shop.
+    "Lighter": lambda s, w: _reach(s, w, c.PARC)
+    or (_reach(s, w, c.EXTERIEUR) and s.has("Trowel", w.player))
+    or (_reach(s, w, c.GAS_STATION) and can_afford(s, w, c.PRICE_LIGHTER)),
     # dump: HooibaalSchuur shop (5)
     "Cd": lambda s, w: _reach(s, w, c.HOOIBAAL) and can_afford(s, w, c.PRICE_CD),
     # regions.md I.1: break the garden gnome + enter the gas station (which fires the
@@ -203,9 +259,9 @@ OBTAIN_RULES: dict[str, Rule] = {
     # and GameManager.DestroyGnome() has that method as its ONLY caller. Neither the
     # sword nor the trowel can break a gnome, so the old rule was too permissive - it
     # could hide a REQUIRED idol behind a trowel-only route and strand the seed.
-    "GnomeIdol": lambda s, w: _reach(s, w, c.JARDIN)
-    and _reach(s, w, c.GAS_STATION)
-    and s.has("Hammer", w.player),
+    # That "Hammer + gas station" gate is shared with the passage doors and with
+    # Polaroid: GnomeForestDoor, so it lives in gnome_doors() above.
+    "GnomeIdol": lambda s, w: _reach(s, w, c.JARDIN) and gnome_doors(s, w),
     # NOTE: "OldKey" has NO rule and NO location - the key is not obtainable in game
     # [2026-07-27] (see locations.UNSOURCED_LOCATIONS). Same for "AbandonedKey" below.
     # dump: PlayerSchuur
@@ -263,7 +319,19 @@ OBTAIN_RULES: dict[str, Rule] = {
     "SoulFragment2": lambda s, w: _reach(s, w, c.HELL) and s.has("Hammer", w.player),
     "SoulFragment3": lambda s, w: _reach(s, w, c.HELL),
     # regions.md Hell: attic cardboard box; the attic door needs AtticKey (Door.cs:684;
-    # dump v0.3 door table: AtticKey unlocks bigHouseAtticDoor0).
+    # dump v0.3 door table: AtticKey unlocks bigHouseAtticDoor0). ONE source, full stop.
+    #
+    # Do NOT add the park sword. The scene holds a second MagicSword pickup in a park
+    # molehill (Hide_Park/ParkSwordContainer/itemPickup_magicSword0_overworld, 0.51 m from
+    # ParkSwordContainer/molehill0_magicSword) and zone_logic.md duly lists it under
+    # "Zone : Park (exterieur)" as a plain tool pickup - it is NOT one [J 2026-09-18,
+    # in-game]. Its whole container is hidden by ParkSword_ContentHider0 on
+    # NotFoundGoodEnding, the ONLY use of that condition in the entire scene: the molehill
+    # only turns up once the good or true ending has been reached, and it comes up EMPTY if
+    # the attic sword was already collected. Reaching the good ending requires the sword
+    # (see _end_good), so this can never be a first source - it is a victory-lap prop.
+    # It was briefly modelled as a second source and reverted the same day; the mistake is
+    # worth naming, because the pickup looks entirely ordinary in the dump.
     "MagicSword": lambda s, w: _reach(s, w, c.HELL) and s.has("AtticKey", w.player),
     # dump: RummikubSpace; needs Lighter (code: LitRummikubHooibaal)
     "PurifiedStone": lambda s, w: _reach(s, w, c.ZONE_VELO) and s.has("Lighter", w.player),
@@ -279,8 +347,14 @@ OBTAIN_RULES: dict[str, Rule] = {
     "ChurchKey": lambda s, w: _reach(s, w, c.MANOIR),
     # dump: GlassHouse
     "SpecialSeed": lambda s, w: _reach(s, w, c.GLASS_HOUSE),
-    # dump: GnomeForest
-    "KidTrumpet": lambda s, w: _reach(s, w, c.PASSAGE_GNOMES),
+    # dump: GnomeForest, and BURIED IN A MOLEHILL like the coin and the dead fish, so it
+    # takes the TROWEL [J 2026-09-18, confirmed in-game]:
+    # NonEuclidian/GnomeForest/Hide_GnomeForest/kidTrumpet0 is held back by
+    # KidTrumpet_ContentHider0 (objectRef kidTrumpet0, hideCondition ObjectIsActive) and
+    # sits 2 cm from Hide_GnomeForest/molehill0_kidTrumpet.
+    # It feeds "Deed: Complete the School Band", so the Trowel gates that too.
+    "KidTrumpet": lambda s, w: _reach(s, w, c.PASSAGE_GNOMES)
+    and s.has("Trowel", w.player),
     # dump: HedgeMaze
     "KidCymbals": lambda s, w: _reach(s, w, c.LABYRINTHE),
     # regions.md fanfare: trade an Eggball to the person behind the gas station.
@@ -302,8 +376,13 @@ OBTAIN_RULES: dict[str, Rule] = {
     # GameManager.PlaceFishInMagicPond -> the client fires "Obtain GoldFishAlive" on placing
     # the dead fish there. The old PASSAGE_GNOMES alternative was a false route.
     "GoldFishAlive": lambda s, w: _reach(s, w, c.MAGIC_POND) and s.has("GoldFishDead", w.player),
-    # dump: Park (goldfishDead0)
-    "GoldFishDead": lambda s, w: _reach(s, w, c.PARC),
+    # dump: Park (goldfishDead0), and it is BURIED IN A MOLEHILL, so it takes the TROWEL
+    # [J 2026-09-18, confirmed in-game]: Molehill_goldfishDead_ContentHider0 (objectRef
+    # goldfishDead0, hideCondition ObjectIsActive = while the molehill is still standing)
+    # and molehill0_goldfish 6 cm away - the same shape as Gulden #9.
+    # This is the ONLY source of the dead fish, so the Trowel now gates the whole chain
+    # behind it: Obtain GoldFishAlive (magic pond) and the fishbowl deed.
+    "GoldFishDead": lambda s, w: _reach(s, w, c.PARC) and s.has("Trowel", w.player),
     # dump: HooibaalSchuur shop (10)
     "Medal": lambda s, w: _reach(s, w, c.HOOIBAAL) and can_afford(s, w, c.PRICE_MEDAL),
     # dump: Hill (Plage, unlocked by Eglise 100 %)
@@ -514,6 +593,18 @@ def set_all_rules(world: "GrunnWorld") -> None:
             world.get_location("Gulden #10 (StartGarden)"),
             lambda s: s.has("Hammer", player),
         )
+        # Gulden #9 sits in a MOLEHILL among the church graves and only surfaces once the
+        # hill is dug out, which takes the TROWEL [issue #2, 2026-09-17, in-game]. dump:
+        # Main/Gulden/MolehillGuldenContainer0/gulden0 (6) (MACRO:Church) is held back by
+        # GuldenMolehillContentHider0 (objectRef MolehillGuldenContainer0, hideCondition
+        # ObjectIsActive = while the molehill is still there), and it sits 2 cm from
+        # Hide_ChurchMid/Molehills/molehill0_gulden - the molehill named after it. Same
+        # shape as #10 and #15: a coin that looked free because nothing hides the pickup
+        # itself, only the thing it is buried in.
+        add_rule(
+            world.get_location("Gulden #9 (Church)"),
+            lambda s: s.has("Trowel", player),
+        )
 
     # Two polaroids only APPEAR in the start garden after talking to the Orb in the
     # Orb Room [2026-07-16, dump: Polaroid_crypt_contentHider0 /
@@ -538,17 +629,55 @@ def set_all_rules(world: "GrunnWorld") -> None:
             world.get_location("Polaroid: GasStation"),
             lambda s: s.has("Hammer", player),
         )
-        # Two garden polaroids require having been INSIDE the player hut [2026-07-27]:
+        # Three garden polaroids require having been INSIDE the player hut [2026-07-27]:
         #  - MagpieNest: hider polaroidMagpieNest_hider0, condition NotEnteredPlayerSchuur;
         #  - TallManWindow: the shot is the TallMan at the window, and he only appears
         #    while the player is inside (hider tallManOutsideWindow0,
         #    condition PlayerNotInPlayerSchuur).
+        #  - DeadGardener: the shot is the gardener's severed hand in the twigs under that
+        #    same window, and it rides on the very same scare (dump:
+        #    Hide_StartGarden_back0/outsideWindowTwigs0/polaroid_deadGardener0, hidden by
+        #    outsideWindowTwigsHider0, condition PlayerNotSawTallManOutsideWindow)
+        #    [issue #2, 2026-09-17, in-game]. Modelled exactly like "Obtain SeveredHand",
+        #    which is the same scare and already reads _reach(CabaneJoueur) [decision J
+        #    2026-09-18]; the reported "22h" time window is logically free.
         # Free normally, but gated by the key under lock_player_hut.
-        for name in ("Polaroid: MagpieNest", "Polaroid: TallManWindow"):
+        for name in ("Polaroid: MagpieNest", "Polaroid: TallManWindow", "Polaroid: DeadGardener"):
             add_rule(
                 world.get_location(name),
                 lambda s: _reach(s, world, c.CABANE_JOUEUR),
             )
+        # Polaroid: FlowerDoor hangs inside the CHURCH BIG HALL (dump:
+        # NonEuclidian/ChurchBigHall/Hide_ChurchBigHall/polaroid_flowerDoor0, areas
+        # [ChurchBigHall]), and that hall has exactly one way in:
+        # portal_ChurchHallwayToChurchBigHall0, whose door is locked by the ChurchKey (dump
+        # v0.3 door table - the same door can_reach_hell goes through). ChurchBigHall has no
+        # region of its own, it is folded into Eglise (constants.py), so without an explicit
+        # rule the polaroid looked free as soon as the church was reachable
+        # [issue #2, 2026-09-17, confirmed in-game].
+        add_rule(
+            world.get_location("Polaroid: FlowerDoor"),
+            lambda s: s.has("ChurchKey", player),
+        )
+        # Polaroid: GnomeForestDoor spawns WITH the gnome door on the bridge, so it carries
+        # the same condition as the PassageGnomes edges: Hammer + gas station
+        # [issue #2, 2026-09-17, in-game]. Sourcing in gnome_doors() above; its object is a
+        # child of the GnomeJumpscareContainer, which the dump hides on
+        # NotTriggeredGnomeJumpscare. Its region is the Exterieur (the Road), which the gas
+        # station already implies - the Hammer is what was missing.
+        add_rule(
+            world.get_location("Polaroid: GnomeForestDoor"),
+            lambda s: gnome_doors(s, world),
+        )
+        # Polaroid: BackGardenFence is hung on the MAGPIE itself (dump:
+        # Characters/Magpie/polaroid_backGardenFence0, hidden by
+        # polaroid_backGardenFence_hider0, condition NotUnlockedMagpie - the very flag
+        # garden_30 models), so it appears only once the start garden is at >= 30 %: the
+        # same gate as the magpie route of the StrangeKey [issue #2, 2026-09-17, in-game].
+        add_rule(
+            world.get_location("Polaroid: BackGardenFence"),
+            lambda s: garden_30(s, world),
+        )
 
     # Gulden #8 is inside a pot on the road that must be smashed with the Hammer
     # [2026-07-13]. (Gulden locations only exist under coinsanity.)

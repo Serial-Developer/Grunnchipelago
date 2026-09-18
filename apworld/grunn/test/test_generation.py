@@ -39,6 +39,15 @@ class TestDefaultTemplate(GrunnTestBase):
             else:
                 self.assertIn(f"Obtain {name}", names)
 
+    def test_dead_content_never_becomes_a_location(self) -> None:
+        # Four polaroids, one ghost and two keys exist in the scene/enum but can never be
+        # obtained. An item placed on one of them is lost for good - every entry in this set
+        # cost a stranded seed before it was found, the latest being Polaroid: Tent
+        # [J 2026-09-18]. Their ids stay reserved in ids.json; the locations must not exist.
+        names = {loc.name for loc in self.multiworld.get_locations(self.player)}
+        for dead in UNSOURCED_LOCATIONS:
+            self.assertNotIn(dead, names, f"{dead} can never be checked in game")
+
     def test_item_location_parity(self) -> None:
         pool = len(self.multiworld.itempool)
         unfilled = len(self.multiworld.get_unfilled_locations(self.player))
@@ -78,7 +87,10 @@ class TestHellChain(GrunnTestBase):
     options = {"goal": "true_ending", "exclude_bridge_key": False}
 
     def test_magicsword_requires_attickey(self) -> None:
-        # AtticKey opens the attic door (Door.cs:684); the attic Magic Sword needs it.
+        # AtticKey opens the attic door (Door.cs:684); the attic Magic Sword needs it, and
+        # it is the ONLY source. The park molehill sword is NOT a second one: its container
+        # is hidden on NotFoundGoodEnding and comes up empty once the attic one is taken
+        # [J 2026-09-18]. Regression guard - it was briefly modelled as a route.
         self.collect_all_but("AtticKey")
         sword = self.world.get_location("Obtain MagicSword")
         self.assertFalse(sword.can_reach(self.multiworld.state), "MagicSword must require AtticKey")
@@ -145,7 +157,7 @@ class TestLockPlayerHut(GrunnTestBase):
         # (dump: polaroidMagpieNest_hider0 / NotEnteredPlayerSchuur). Under
         # lock_player_hut that means the key gates them - never the other way round.
         self.collect_all_but("AbandonedKey")
-        for name in ("Polaroid: MagpieNest", "Polaroid: TallManWindow"):
+        for name in ("Polaroid: MagpieNest", "Polaroid: TallManWindow", "Polaroid: DeadGardener"):
             location = self.world.get_location(name)
             self.assertFalse(
                 location.can_reach(self.multiworld.state),
@@ -287,7 +299,7 @@ class TestChoreChecksEconomy(GrunnTestBase):
         expected = (
             constants.PRICE_BUS + constants.PRICE_CD + constants.PRICE_COMPASS
             + constants.PRICE_OFFICE_KEY + constants.PRICE_MEDAL + constants.PRICE_EGGBALL
-        )
+        )   # deliberately not PRICE_LIGHTER - see the note in items.py (money resets)
         self.assertEqual(
             plain + golden * GOLDEN_GULDEN_VALUE, expected,
             "the total spendable money must match the sum of every shop price",
@@ -336,3 +348,194 @@ class TestExcludeBadEndingsIgnoredOnAllEndings(GrunnTestBase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestIssue2LogicFixes(GrunnTestBase):
+    """Reduced-inventory checks for the logic fixes reported in issue #2 (2026-09-17).
+
+    Every test starts from an EMPTY state and collects only the handful of items needed to
+    stand in front of the check, so what it asserts is the GATE itself and not the region
+    graph around it. lock_player_hut is off here - the hut is not what these rules are
+    about; the one rule that does depend on it (Polaroid: DeadGardener) is covered by
+    TestLockPlayerHut and by TestDeadGardenerPolaroid below.
+    """
+
+    options = {
+        "goal": "true_ending",
+        "coinsanity": True,
+        "polaroid_checks": True,
+        "exclude_bridge_key": False,
+        "lock_player_hut": False,
+    }
+
+    def _can_reach(self, name: str) -> bool:
+        return self.world.get_location(name).can_reach(self.multiworld.state)
+
+    def test_church_molehill_gulden_needs_the_trowel(self) -> None:
+        # Gulden #9 is buried in the molehill by the church graves.
+        self.collect_by_name(("BridgeKey", "GardenKey"))
+        self.assertFalse(
+            self._can_reach("Gulden #9 (Church)"),
+            "Gulden #9 must not be free just because the church is reachable",
+        )
+        self.collect_by_name("Trowel")
+        self.assertTrue(self._can_reach("Gulden #9 (Church)"))
+
+    def test_gas_station_office_key_needs_the_hammer(self) -> None:
+        # Standing in the gas station is not enough: the key is behind the counter and
+        # only a break-in reaches it.
+        self.collect_by_name(("BridgeKey", "Plank"))
+        self.assertFalse(
+            self._can_reach("Obtain OfficeKey"),
+            "the gas station route to the OfficeKey must require the Hammer",
+        )
+        self.collect_by_name("Hammer")
+        self.assertTrue(self._can_reach("Obtain OfficeKey"))
+
+    def test_shop_office_key_needs_the_two_gulden(self) -> None:
+        # The other source is a PURCHASE: the Hooibaal kid sells the key for 2 gulden
+        # [J 2026-09-18]. Standing in the shop penniless is not enough under coinsanity.
+        self.collect_by_name(("BridgeKey", "Plank", "Lighter", "Shears"))
+        self.assertFalse(self.multiworld.state.has("Hammer", self.player))
+        self.assertFalse(
+            self._can_reach("Obtain OfficeKey"),
+            "the Hooibaal OfficeKey costs 2 gulden - reaching the shop is not enough",
+        )
+        self.collect(self.get_items_by_name("Gulden")[:2])
+        self.assertTrue(
+            self._can_reach("Obtain OfficeKey"),
+            "buying the OfficeKey at the Hooibaal shop must stay a Hammer-free route",
+        )
+
+    def test_molehill_pickups_need_the_trowel(self) -> None:
+        # Everything the game buries in a molehill [J 2026-09-18]. The Hammer is here for
+        # the gnome doors, which is how the GnomeForest (KidTrumpet) is reached at all.
+        self.collect_by_name(("BridgeKey", "Plank", "Lighter", "Shears", "Hammer"))
+        buried = ("Obtain GoldFishDead", "Obtain KidTrumpet", "Gulden #9 (Church)")
+        for name in buried:
+            self.assertFalse(
+                self._can_reach(name),
+                f"{name} must require the Trowel (the game buries it in a molehill)",
+            )
+        self.collect_by_name(("GardenKey", "Trowel"))
+        for name in buried:
+            self.assertTrue(
+                self._can_reach(name),
+                f"{name} must be reachable once the Trowel can open the molehill",
+            )
+
+    def test_lighter_has_exactly_three_routes(self) -> None:
+        # Park (free) / road molehill (Trowel) / gas station (5 gulden) [J 2026-09-18].
+        # Reaching the road and the station is NOT enough on its own any more.
+        self.collect_by_name(("BridgeKey", "Plank"))
+        self.assertFalse(
+            self._can_reach("Obtain Lighter"),
+            "the road and the gas station no longer hand the Lighter over for free",
+        )
+        self.collect_by_name("Trowel")
+        self.assertTrue(
+            self._can_reach("Obtain Lighter"),
+            "the road molehill must give the Lighter once the Trowel is in hand",
+        )
+
+    def test_lighter_can_be_bought_at_the_gas_station(self) -> None:
+        # The shop route, in isolation: no Trowel, no way into the park.
+        self.collect_by_name(("BridgeKey", "Plank"))
+        self.collect(self.get_items_by_name("Gulden")[:constants.PRICE_LIGHTER])
+        self.assertFalse(self.multiworld.state.has("Trowel", self.player))
+        self.assertTrue(
+            self._can_reach("Obtain Lighter"),
+            "5 gulden at the gas station must be a Lighter route of its own",
+        )
+
+    def test_lighter_lies_free_in_the_park(self) -> None:
+        # The park one needs no tool and no money - the boat is the way in (Paddle), so
+        # this route does not presuppose the Lighter it hands out.
+        self.collect_by_name(("BridgeKey", "GardenKey", "Paddle"))
+        self.assertFalse(self.multiworld.state.has("Trowel", self.player))
+        self.assertTrue(
+            self._can_reach("Obtain Lighter"),
+            "the park Lighter just lies there: church -> boat -> park must be enough",
+        )
+
+    def test_flower_door_polaroid_needs_the_church_key(self) -> None:
+        # The polaroid hangs in the ChurchBigHall, behind the locked interior door.
+        self.collect_by_name(("BridgeKey", "GardenKey"))
+        self.assertFalse(
+            self._can_reach("Polaroid: FlowerDoor"),
+            "Polaroid: FlowerDoor must require the ChurchKey",
+        )
+        self.collect_by_name("ChurchKey")
+        self.assertTrue(self._can_reach("Polaroid: FlowerDoor"))
+
+    def test_gnome_forest_door_polaroid_needs_the_gnome_doors(self) -> None:
+        # Same gate as the PassageGnomes edges: the polaroid spawns with the door.
+        self.collect_by_name(("BridgeKey", "Plank"))
+        self.assertFalse(
+            self._can_reach("Polaroid: GnomeForestDoor"),
+            "Polaroid: GnomeForestDoor must require the Hammer, not just the road",
+        )
+        self.collect_by_name("Hammer")
+        self.assertTrue(self._can_reach("Polaroid: GnomeForestDoor"))
+
+    def test_gnome_forest_door_polaroid_needs_the_gas_station_too(self) -> None:
+        # The Hammer alone does not conjure the door: the jumpscare needs the gas station,
+        # which is outside - exactly the loop reported in issue #1 for the passage doors.
+        self.collect_by_name(("BridgeKey", "Hammer"))
+        self.assertFalse(
+            self._can_reach("Polaroid: GnomeForestDoor"),
+            "Polaroid: GnomeForestDoor must require reaching the gas station",
+        )
+
+    def test_back_garden_fence_polaroid_needs_the_magpie(self) -> None:
+        # The polaroid is hung on the magpie, which only appears at 30 % garden.
+        self.collect_by_name("BridgeKey")
+        self.assertFalse(
+            self._can_reach("Polaroid: BackGardenFence"),
+            "Polaroid: BackGardenFence must require the garden at 30 % (the magpie)",
+        )
+        self.collect_by_name("Shears")
+        self.assertTrue(self._can_reach("Polaroid: BackGardenFence"))
+
+
+class TestDeadGardenerPolaroid(GrunnTestBase):
+    """Polaroid: DeadGardener rides on the TallMan scare at the hut window, so it needs the
+    hut itself - the same condition as "Obtain SeveredHand" [decision J 2026-09-18].
+    Under lock_player_hut that means the Abandoned Key, which is what makes it testable
+    with a reduced inventory.
+    """
+
+    options = {
+        "goal": "true_ending",
+        "polaroid_checks": True,
+        "exclude_bridge_key": False,
+        "lock_player_hut": True,
+    }
+
+    def test_gas_station_break_in_needs_to_reach_day_2(self) -> None:
+        # Breaking into the closed station is day-2 behaviour, and under lock_player_hut the
+        # only bed is in the hut - so the Abandoned Key gates it too [J 2026-09-18].
+        self.collect_by_name(("BridgeKey", "Plank", "Hammer"))
+        self.assertFalse(
+            self.world.get_location("Obtain OfficeKey").can_reach(self.multiworld.state),
+            "the gas station break-in must require sleeping, i.e. the hut, when it is locked",
+        )
+        self.collect_by_name("AbandonedKey")
+        self.assertTrue(
+            self.world.get_location("Obtain OfficeKey").can_reach(self.multiworld.state),
+            "Hammer + gas station + a bed must be enough for the break-in",
+        )
+
+    def test_polaroid_follows_the_severed_hand(self) -> None:
+        self.collect_by_name("BridgeKey")
+        for name in ("Polaroid: DeadGardener", "Obtain SeveredHand"):
+            self.assertFalse(
+                self.world.get_location(name).can_reach(self.multiworld.state),
+                f"{name} must require getting inside the hut",
+            )
+        self.collect_by_name("AbandonedKey")
+        for name in ("Polaroid: DeadGardener", "Obtain SeveredHand"):
+            self.assertTrue(
+                self.world.get_location(name).can_reach(self.multiworld.state),
+                f"{name} must be reachable once the hut is open",
+            )
