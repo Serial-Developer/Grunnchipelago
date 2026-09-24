@@ -202,6 +202,39 @@ namespace Grunnchipelago.Client
                                 + $"cible '{target}', item {hider.keyItemRef}.");
         }
 
+        /// <summary>Does this pickup hand out exactly <paramref name="item"/>? Strict on the
+        /// first entry, like the vanilla pickup code reads it.</summary>
+        private static bool HandsOut(ItemPickup pickup, KeyItem item)
+        {
+            return pickup != null && pickup.keyItemObtain != null
+                && pickup.keyItemObtain.Count > 0 && pickup.keyItemObtain[0] == item;
+        }
+
+        /// <summary>Nearest ItemPickup on <paramref name="start"/> or above it.
+        /// Written out on purpose instead of GetComponentInParent: in Unity 2019.4 that call
+        /// skips inactive objects and has no includeInactive overload. A hidden objectRef is
+        /// switched OFF (ContentHider.SetEnabled calls objectRef.SetActive), and the answer is
+        /// cached per hider on its first evaluation, so an ancestor that happened to be
+        /// inactive at that moment would pin the hider to possession semantics for the whole
+        /// session. GetComponent ignores activation.</summary>
+        private static ItemPickup NearestPickupAbove(Transform start)
+        {
+            for (Transform t = start; t != null; t = t.parent)
+            {
+                ItemPickup pickup = t.GetComponent<ItemPickup>();
+                if (pickup != null) return pickup;
+            }
+            return null;
+        }
+
+        private static string HierarchyPath(Transform t)
+        {
+            string path = t.name;
+            for (Transform parent = t.parent; parent != null; parent = parent.parent)
+                path = parent.name + "/" + path;
+            return path;
+        }
+
         private static void Postfix(ContentHider __instance, HideCondition _c, ref bool __result)
         {
             if (_c != HideCondition.KeyItemObtained && _c != HideCondition.KeyItemNotObtained) return;
@@ -269,32 +302,52 @@ namespace Grunnchipelago.Client
                 return;
             }
 
-            // The hider must TARGET that pickup, not merely contain it somewhere deep:
-            // objectRef is the pickup's own object or its direct parent. Anything wider
-            // is a zone container (the hedge-maze variants nest dozens of objects) and
-            // must keep vanilla semantics - flipping one blanked the whole maze.
+            // The hider must TARGET that pickup, not merely contain it somewhere deep.
+            // Exactly two shapes qualify. Anything wider is a zone container (the
+            // hedge-maze variants nest dozens of objects) and must keep vanilla semantics -
+            // flipping one blanked the whole maze.
+            //  1. DOWN: objectRef is the pickup's own object or its direct parent
+            //     (officeKey0_shop, hammer0_car, lighter0_park0...).
+            //  2. UP: objectRef sits INSIDE the pickup, i.e. the hider switches off the
+            //     pickup's own content. The church doorknob is built that way: the hider
+            //     lives on Main/Interactions/missingDoorknob0_branchHole, the ItemPickup
+            //     itself, and hides its child missingDoorknobContent; missingDoorknob0_grass
+            //     is the same. A downward search can never see a pickup ABOVE its target, so
+            //     both hiders kept possession semantics, and receiving the Doorknob from the
+            //     multiworld killed its check at both sources (issue #2).
+            //     Only the NEAREST pickup above counts, and only if it hands out the hider's
+            //     own key item. That strict match is what keeps a container from qualifying.
             if (!hidesPickup.TryGetValue(key, out bool isPickupHider))
             {
-                isPickupHider = false;
+                string route = null;
                 GameObject target = __instance.objectRef;
                 if (target != null)
+                {
                     foreach (ItemPickup pickup in target.GetComponentsInChildren<ItemPickup>(true))
                     {
-                        if (pickup == null || pickup.keyItemObtain == null
-                            || pickup.keyItemObtain.Count == 0
-                            || pickup.keyItemObtain[0] != __instance.keyItemRef) continue;
+                        if (!HandsOut(pickup, __instance.keyItemRef)) continue;
                         if (pickup.gameObject == target
                             || pickup.transform.parent == target.transform)
                         {
-                            isPickupHider = true;
+                            route = "pickup cible";
                             break;
                         }
                     }
+                    if (route == null)
+                    {
+                        ItemPickup owner = NearestPickupAbove(target.transform);
+                        if (HandsOut(owner, __instance.keyItemRef))
+                            route = "pickup parent " + HierarchyPath(owner.transform);
+                    }
+                }
+                isPickupHider = route != null;
                 hidesPickup[key] = isPickupHider;
+                // Logged once, at classification, with the route that matched: the flip
+                // list in the session log is the audit of every hider that left vanilla.
+                if (isPickupHider) LogFlip(__instance, route);
             }
             if (!isPickupHider) return;
 
-            LogFlip(__instance, "pickup");
             bool sent = ap.KeyItemCheckSent(__instance.keyItemRef);
             __result = _c == HideCondition.KeyItemObtained ? sent : !sent;
         }
