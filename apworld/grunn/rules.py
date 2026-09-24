@@ -98,6 +98,14 @@ def complete_zone(state: CollectionState, world: "GrunnWorld", region: str, full
     ok = _reach(state, world, region) and can_cut_grass(state, world) and can_water(state, world)
     if full:
         ok = ok and state.has("Trowel", world.player)
+        # The garden's 100 % counts the litter INSIDE the toilet building (dump: five
+        # troepje under NonEuclidian/ToiletBuilding/Hide_ToiletBuilding/Troepjes, measured
+        # in the Toilet zone), so it also needs the ToiletKey that opens that door
+        # [2026-09-20, confirmed on a vanilla run]. The church big hall and Intratuin hold
+        # no chores, and the unzoned litter is all on the road, which is not a maintained
+        # area, so this stays scoped to the garden.
+        if region == c.JARDIN:
+            ok = ok and _reach(state, world, c.TOILET)
     return ok
 
 
