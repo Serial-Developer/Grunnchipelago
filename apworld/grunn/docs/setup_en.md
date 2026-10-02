@@ -20,6 +20,14 @@
 If `BepInEx/plugins/` was not created, BepInEx did not load: check that you unzipped into
 the folder holding `Grunn.exe` and that you took the **x64** build.
 
+### BepInEx on Linux
+
+Grunn works fine with the default Proton version shipped by Steam, so no changes are required there. Make sure to download Windows version of BepInEx and unzip it where described above in steps 1 and 2. However, before going to step 3 and launching the game to generate the folders, you need to right-click **Grunn** → *Properties...* → *General* and paste the following in *Launch Options* there:
+
+    WINEDLLOVERRIDES="winhttp=n,b" %command%
+
+This will make Proton recognize the modified winhttp.dll library provided by BepInEx and load the mod framework properly.
+
 ## Installing the mod
 
 1. Create the folder `BepInEx/plugins/Grunnchipelago/`.
