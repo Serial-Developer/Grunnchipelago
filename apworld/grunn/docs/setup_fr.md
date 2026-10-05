@@ -10,7 +10,7 @@
 
 ## Installer BepInEx
 
-1. Localisez le dossier du jeu : dans Steam, clic droit sur **Grunn** → *Gérer* →
+1. Localisez le dossier du jeu : dans Steam, clic droit sur **Grunn**, puis *Gérer*, puis
    *Parcourir les fichiers locaux*. Vous devez arriver sur un dossier contenant `Grunn.exe`.
 2. Décompressez l'archive BepInEx **dans ce dossier**, de sorte que `BepInEx/` se retrouve à
    côté de `Grunn.exe`.
@@ -20,6 +20,21 @@
 Si `BepInEx/plugins/` n'a pas été créé, c'est que BepInEx ne s'est pas chargé : vérifiez que
 vous avez bien décompressé dans le dossier contenant `Grunn.exe`, et que vous avez pris la
 version **x64**.
+
+### BepInEx sous Linux
+
+Grunn fonctionne avec la version de Proton fournie par défaut par Steam, aucun réglage n'est
+nécessaire de ce côté. Téléchargez bien la version Windows de BepInEx et décompressez-la comme
+indiqué aux étapes 1 et 2 ci-dessus. En revanche, avant de passer à l'étape 3 et de lancer le
+jeu pour générer les dossiers, faites un clic droit sur **Grunn**, puis *Propriétés...*, puis
+*Général*, et collez la ligne suivante dans *Options de lancement* :
+
+```
+WINEDLLOVERRIDES="winhttp=n,b" %command%
+```
+
+Proton reconnaît ainsi la bibliothèque winhttp.dll modifiée fournie par BepInEx et charge
+correctement le framework de mods.
 
 ## Installer le mod
 

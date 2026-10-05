@@ -10,7 +10,7 @@
 
 ## Installing BepInEx
 
-1. Find your game folder: in Steam, right-click **Grunn** → *Manage* → *Browse local files*.
+1. Find your game folder: in Steam, right-click **Grunn**, then *Manage*, then *Browse local files*.
    You should land on a folder containing `Grunn.exe`.
 2. Unzip the BepInEx archive **into that folder**, so that `BepInEx/` sits next to
    `Grunn.exe`.
@@ -22,7 +22,7 @@ the folder holding `Grunn.exe` and that you took the **x64** build.
 
 ### BepInEx on Linux
 
-Grunn works fine with the default Proton version shipped by Steam, so no changes are required there. Make sure to download Windows version of BepInEx and unzip it where described above in steps 1 and 2. However, before going to step 3 and launching the game to generate the folders, you need to right-click **Grunn** → *Properties...* → *General* and paste the following in *Launch Options* there:
+Grunn works fine with the default Proton version shipped by Steam, so no changes are required there. Make sure to download the Windows version of BepInEx and unzip it where described above in steps 1 and 2. However, before going to step 3 and launching the game to generate the folders, you need to right-click **Grunn**, then *Properties...*, then *General*, and paste the following in *Launch Options* there:
 
     WINEDLLOVERRIDES="winhttp=n,b" %command%
 
